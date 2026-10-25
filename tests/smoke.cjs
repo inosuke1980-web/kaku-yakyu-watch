@@ -13,7 +13,7 @@ for(let n=0;n<1000;n++){
  const g=()=>vm.runInContext('game',ctx);
  const typ=g().t.kind;results.tactics[typ]=(results.tactics[typ]||0)+1;
  while(!g().ended&&steps++<10000){
-  vm.runInContext('pitch()',ctx);const x=g();
+  vm.runInContext('resolvePitch()',ctx);const x=g();
   if(!(x.outs>=0&&x.outs<=3&&x.balls>=0&&x.balls<=3&&x.strikes>=0&&x.strikes<=2)) results.violations.push('count:'+n+':'+steps);
   const bs=x.bases.filter(Boolean).map(p=>p.id);if(bs.length!==new Set(bs).size)results.violations.push('base duplication:'+n);
  }
