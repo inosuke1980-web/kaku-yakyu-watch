@@ -142,3 +142,24 @@ const extraBase=vm.runInContext(`(()=>{
 assert.ok(extraBase.fastWeak>extraBase.slowStrong,'faster runner against weak arm should take third more often');
 assert.ok(extraBase.fastWeak+extraBase.fastWeakOut>0,'first-to-third attempts should occur');
 console.log('EXTRA BASE CHECKS PASS',JSON.stringify(extraBase));
+
+const gameContext=vm.runInContext(`(()=>{
+ const output={};
+ const cases=[['early',0,3,0],['cautious',0,8,0],['twoOut',2,8,0],['protect',1,8,1],['chase',2,8,-1]];
+ for(const [label,outs,inning,diff] of cases){
+  init();const g=game;g.outs=outs;g.inning=inning;g.half=0;
+  g.teams[0].runs[0]=Math.max(0,diff);g.teams[1].runs[0]=Math.max(0,-diff);
+  const runner=g.teams[0].players[6];runner.speed=60;
+  let attempts=0;
+  for(let i=0;i<4000;i++){
+   const decision=decideSingleAdvance(runner,0,[200,-40],60,false);
+   attempts+=Number(!!decision.attempt);
+  }
+  output[label]=attempts;
+ }
+ return output;
+})()`,ctx);
+assert.ok(gameContext.cautious<gameContext.early,'late close game with no outs should protect runners');
+assert.ok(gameContext.twoOut>gameContext.early,'two outs should increase first-to-third attempts');
+assert.ok(gameContext.chase>gameContext.protect,'late trailing team with two outs should push harder than protecting a lead');
+console.log('GAME CONTEXT RUNNING CHECKS PASS',JSON.stringify(gameContext));
