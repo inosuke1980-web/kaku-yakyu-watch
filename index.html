@@ -33,7 +33,7 @@
 .scoreboard-scroll td.attack-team{background:#1f382f}
 .scoreboard-hint{font-size:11px;color:#a7c6b5;margin:5px 0 0}
 @media(max-width:750px){.scoreboard-scroll th:first-child,.scoreboard-scroll td:first-child{min-width:102px;width:112px;max-width:112px}.scoreboard-scroll th,.scoreboard-scroll td{padding:6px 4px}}
-.current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.4.4 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
+.current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.4.5 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
 <section class="card"><h2>試合生成の条件</h2><div class="flex" style="gap:12px">
 <label>カテゴリー <select id="category"><option value="random">ランダム（現在は高校のみ）</option><option value="high">高校野球</option><option value="university" disabled>大学野球（今後追加）</option><option value="corporate" disabled>社会人野球（今後追加）</option><option value="pro" disabled>プロ野球（今後追加）</option></select></label>
 <label>試合種別 <select id="matchType"><option value="random">ランダム</option><option value="official">公式戦</option><option value="practice">練習試合</option></select></label>
@@ -522,6 +522,31 @@ function animateFlyLeadAndReturn(beforeBases,halfAtStart,inningAtStart){
  animationHoldUntil=Math.max(animationHoldUntil,Date.now()+returnAt+returnDuration+160);
 }
 // Presentation-only timing: no changes to the already-resolved base/out call.
+// Curve around the OUTSIDE of the diamond while arriving exactly on each bag.
+// Pure geometry shared by existing baserunners and the batter-runner.
+function roundedBasePath(from,to,t,bulge=13){
+ const clamped=clamp(t,0,1),u=1-clamped;
+ const center=[200,170],mid=[(from[0]+to[0])/2,(from[1]+to[1])/2];
+ const away=[mid[0]-center[0],mid[1]-center[1]];
+ const length=Math.hypot(away[0],away[1])||1;
+ const control=[mid[0]+bulge*away[0]/length,mid[1]+bulge*away[1]/length];
+ return [u*u*from[0]+2*u*clamped*control[0]+clamped*clamped*to[0],
+  u*u*from[1]+2*u*clamped*control[1]+clamped*clamped*to[1]];
+}
+function moveRunnerRoundBase(circle,destination,duration,mode,token){
+ if(!circle)return;
+ const origin=[Number(circle.getAttribute('cx')),Number(circle.getAttribute('cy'))],begun=performance.now();
+ circle.style.transition='none';
+ function frame(now){
+  if(token!==animationToken)return;
+  const t=clamp((now-begun)/Math.max(1,duration),0,1);
+  const eased=mode==='stop'?1-(1-t)*(1-t):mode==='charge'?t*t:t;
+  const point=roundedBasePath(origin,destination,eased);
+  circle.setAttribute('cx',point[0].toFixed(2));circle.setAttribute('cy',point[1].toFixed(2));
+  if(t<1)requestAnimationFrame(frame);
+ }
+ requestAnimationFrame(frame);
+}
 function runnerChoreography(from,to,speed,close=null){
  const legs=to-from;
  const startDelay=70;
@@ -575,8 +600,7 @@ function animateBaseRunners(beforeBases,beforeRuns,halfAtStart,inningAtStart){
   plan.segments.forEach((leg,i)=>{
    const destination=bases[from+i+1];
    later(leg.delay,()=>{
-    circle.style.transition='cx '+leg.duration+'ms '+(leg.mode==='stop'?'ease-out':leg.mode==='charge'?'ease-in':'linear')+',cy '+leg.duration+'ms '+(leg.mode==='stop'?'ease-out':leg.mode==='charge'?'ease-in':'linear');
-    circle.setAttribute('cx',destination[0]);circle.setAttribute('cy',destination[1]);
+    moveRunnerRoundBase(circle,destination,leg.duration,leg.mode,token);
     circle.setAttribute('data-run-state',leg.mode);
     if(leg.mode==='charge'){circle.setAttribute('stroke','#ffefaa');circle.setAttribute('stroke-width','3')}
    });
@@ -744,9 +768,9 @@ function animateBatterRun(result,speed=55,groundPlan=null){
    else go(first[0],first[1],firstDuration);
  });
  if(result==='hit2'||result==='hit3'||result==='homeRun'){
-   later(finishFirst+80,()=>go(second[0],second[1],560));
-   if(result==='hit3'||result==='homeRun')later(finishFirst+690,()=>go(third[0],third[1],560));
-   if(result==='homeRun')later(finishFirst+1310,()=>go(200,293,650));
+   later(finishFirst+80,()=>moveRunnerRoundBase(runner,second,560,'run',token));
+   if(result==='hit3'||result==='homeRun')later(finishFirst+690,()=>moveRunnerRoundBase(runner,third,560,'run',token));
+   if(result==='homeRun')later(finishFirst+1310,()=>moveRunnerRoundBase(runner,[200,293],650,'run',token));
  }
  const finishAt=result==='homeRun'?finishFirst+2100:result==='hit3'?finishFirst+1370:result==='hit2'?finishFirst+710:result==='fly'?700:Math.max(finishFirst+190,groundPlan?.decisionMs||0);
  animationHoldUntil=Math.max(animationHoldUntil,Date.now()+finishAt+140);
