@@ -540,3 +540,28 @@ assert.equal(wallRebound.invalid,0,'wall strikes, bounces and retrieval must fol
 assert.match(html,/showPitchResult\('フェンス直撃！','play'\)/,'wall impact should be announced during animation');
 assert.match(html,/targetInfo\.rebound\|\|targetInfo\.rollEnd\|\|targetInfo\.point/,'relay should start at recovered ball position');
 console.log('FENCE DOUBLE REBOUND CHECKS PASS',JSON.stringify(wallRebound));
+
+const relayChoices=vm.runInContext(`(()=>{
+ return {
+  single:outfieldRelayDecision(false,null,null,'single'),
+  double:outfieldRelayDecision(false,null,null,'double'),
+  triple:outfieldRelayDecision(false,null,null,'triple'),
+  scoringDouble:outfieldRelayDecision(true,null,null,'double'),
+  home:outfieldRelayDecision(false,{safe:true},null,'single'),
+  third:outfieldRelayDecision(false,null,{safe:false},'double'),
+  sacrifice:outfieldRelayDecision(true,null,null,'fly')
+ };
+})()`,ctx);
+for(const kind of ['single','double','triple','scoringDouble']){
+ assert.equal(relayChoices[kind].throwAgain,false,kind+' must not throw uselessly to a base');
+ assert.equal(relayChoices[kind].goal,null,kind+' should hold ball at relay');
+}
+assert.equal(relayChoices.home.throwAgain,true);
+assert.deepEqual(Array.from(relayChoices.home.goal),[200,293]);
+assert.equal(relayChoices.third.throwAgain,true);
+assert.deepEqual(Array.from(relayChoices.third.goal),[77,169]);
+assert.equal(relayChoices.sacrifice.throwAgain,true);
+assert.deepEqual(Array.from(relayChoices.sacrifice.goal),[200,293]);
+assert.match(html,/if\(relay\.throwAgain\)later\(atRelay\+relayPause/,'second throw must only be scheduled for a live play');
+assert.match(html,/中継でボールを保持/,'routine relay must visibly end at cutoff');
+console.log('OUTFIELD RELAY DECISION CHECKS PASS');
