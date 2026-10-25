@@ -938,3 +938,25 @@ for(const alignment of [middleInfieldPositions.regular,middleInfieldPositions.in
 assert.deepEqual(Array.from(middleInfieldPositions.coverage.origin),[143,107],'range origin must follow actual shortstop alignment');
 assert.match(html,/\['P',200,203\],\['C',200,315\],\.\.\.\['1B','2B','SS','3B'\]\.map/,'initial visual positions must share alignment state');
 console.log('MIDDLE INFIELD DEPTH AND ALIGNMENT CONSISTENCY PASS');
+
+const middleShiftAudit=vm.runInContext(`(()=>{
+ const player=bats=>({bats});
+ const state=(first,outs,bats)=>({
+  bases:[first?{id:'runner'}:null,null,null],outs,inning:3,half:0,ended:false,
+  teams:[{bat:0,players:Array.from({length:14},(_,i)=>player(i===5?bats:'右打')),runs:[0]},{runs:[0]}]
+ });
+ const right=defensiveAlignment(state(false,1,'右打'));
+ const left=defensiveAlignment(state(false,1,'左打'));
+ const force=defensiveAlignment(state(true,1,'右打'));
+ const twoOut=defensiveAlignment(state(true,2,'右打'));
+ const forceLeft=defensiveAlignment(state(true,1,'左打'));
+ return {right,left,force,twoOut,forceLeft};
+})()`,ctx);
+assert.ok(middleShiftAudit.left.positions.SS[0]>middleShiftAudit.right.positions.SS[0],'left batter shifts SS toward first-base side');
+assert.ok(middleShiftAudit.left.positions['2B'][0]>middleShiftAudit.right.positions['2B'][0],'left batter shifts 2B toward first-base side');
+assert.ok(middleShiftAudit.force.positions.SS[0]>middleShiftAudit.right.positions.SS[0],'runner on first shifts SS toward second');
+assert.ok(middleShiftAudit.force.positions['2B'][0]<middleShiftAudit.right.positions['2B'][0],'runner on first shifts 2B toward second');
+assert.deepEqual(Array.from(middleShiftAudit.twoOut.positions.SS),Array.from(middleShiftAudit.right.positions.SS),'no force-position shift with two outs');
+assert.ok(middleShiftAudit.forceLeft.positions.SS[0]<200&&middleShiftAudit.forceLeft.positions['2B'][0]>200,'combined shift preserves correct sides');
+assert.match(html,/const hitter=lineup\?\.\[\[5,6,7,8,9,10,11,12,13\]\[\(attacking\.bat\|\|0\)%9\]\]/,'alignment must use the actual upcoming batter');
+console.log('MIDDLE INFIELD FORCE AND BATTER HANDEDNESS SHIFTS PASS');
