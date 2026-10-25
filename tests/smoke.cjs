@@ -451,3 +451,23 @@ assert.match(broadcastMini.other,/1回裏/);
 assert.match(broadcastMini.final,/試合終了/);
 assert.ok(broadcastMini.names.every(n=>n.length<=4));
 console.log('BROADCAST MINI SCOREBOARD CHECKS PASS');
+
+const miniBases=vm.runInContext(`(()=>{
+ init();const g=game,items=[];
+ for(let mask=0;mask<8;mask++){
+  g.bases=[0,1,2].map(i=>(mask&(1<<i))?g.teams[0].players[i+5]:null);
+  const html=miniBaseDiamond();
+  const lit=(html.match(/mini-base [^"]* occupied/g)||[]).length;
+  const baseValues=[...html.matchAll(/data-base="([123])"/g)].map(m=>Number(m[1]));
+  items.push({mask,lit,baseValues,label:html.match(/aria-label="([^"]+)"/)?.[1]});
+ }
+ return items;
+})()`,ctx);
+assert.equal(miniBases.length,8);
+for(const b of miniBases){
+ assert.equal(b.lit,[0,1,2].filter(i=>b.mask&(1<<i)).length,'base lamp count should match actual occupancy');
+ assert.deepEqual(Array.from(b.baseValues),[2,3,1],'diamond should use physical second/third/first order');
+ assert.ok(b.label?.startsWith('走者'),'base occupancy must have a readable label');
+}
+assert.match(html,/class="mini-diamond"/,'mini diamond must be styled');
+console.log('MINI BASE DIAMOND ALL EIGHT SITUATIONS PASS');
