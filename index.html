@@ -42,7 +42,7 @@ function resetOutfieldPositions(){
  const base={LF:[99,-5],CF:[200,-75],RF:[301,-5]};
  for(const circle of f.querySelectorAll('circle')){
   const place=base[circle.getAttribute('data-position')];if(!place)continue;
-  circle.style.transition='none';circle.setAttribute('rx','');circle.setAttribute('ry','');
+  circle.style.transition='none';circle.setAttribute('r','10');
   circle.setAttribute('cx',place[0]);circle.setAttribute('cy',place[1]);
   const name=circle.getAttribute('data-position'),label=f.querySelector('text[data-position="'+name+'"]');
   if(label){label.setAttribute('x',place[0]);label.setAttribute('y',place[1]+3)}
@@ -513,7 +513,7 @@ function animate(kind,targetInfo=null,runnerSpeed=55){
    playTimers.push(setTimeout(()=>{
     if(token!==animationToken)return;
     nearest.style.transition='cx '+Math.round(duration*.23)+'ms ease-out,cy '+Math.round(duration*.23)+'ms ease-out';
-    nearest.setAttribute('rx','14');nearest.setAttribute('ry','6');
+    nearest.setAttribute('r','13');
     move(target[0],target[1]);
    },approachDuration));
   }
@@ -527,7 +527,7 @@ function animate(kind,targetInfo=null,runnerSpeed=55){
   playTimers.push(setTimeout(()=>{
    if(token!==animationToken)return;
    nearest.style.transition='none';
-   nearest.setAttribute('rx','');nearest.setAttribute('ry','');
+   nearest.setAttribute('r','10');
    move(x,y);
   },duration+240));
  }
