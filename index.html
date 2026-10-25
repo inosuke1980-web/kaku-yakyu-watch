@@ -463,7 +463,7 @@ if(!complete&&game.strikes>=3){showPitchResult('三振！','strike');outBatter(p
 if(complete){bat.bat++;game.balls=game.strikes=0}
 if(game.ended){render();return}
 if(game.outs>=3)endHalf();else{if(!complete&&trySteal()&&game.outs>=3)endHalf();else maybeChangePitcher()}
-render(beforeBases);animateBaseRunners(beforeBases,beforeRuns,halfAtStart,inningAtStart);if(game.flyReturn)animateFlyLeadAndReturn(beforeBases,halfAtStart,inningAtStart);if(activeRoster===0||activeRoster===1)renderRoster(activeRoster)}
+render(beforeBases);animateBaseRunners(beforeBases,beforeRuns,halfAtStart,inningAtStart);if(game.crossPlayVisual)animateClosePlayGestures(game.crossPlayVisual);if(game.flyReturn)animateFlyLeadAndReturn(beforeBases,halfAtStart,inningAtStart);if(activeRoster===0||activeRoster===1)renderRoster(activeRoster)}
 
 // 1球の演出が終わるまでは、次の投球を開始しない。
 const PITCH_TYPES=[
@@ -734,7 +734,7 @@ function animateOutfieldReturn(kind,scoring=false,arm=55,homePlay=null,targetInf
  const relayMs=throwFlightMs(arm,landed,cutoff),relayPause=130,finalMs=throwFlightMs(65,cutoff,goal);
  const atRelay=release+relayMs,atGoal=atRelay+relayPause+finalMs;
  const closePlay=homePlay?{...homePlay,base:'home'}:thirdBasePlay?{...thirdBasePlay,base:'third'}:null;
- if(closePlay){game.crossPlayVisual=crossPlayClock(closePlay,atGoal);animateClosePlayGestures(game.crossPlayVisual)}
+ if(closePlay)game.crossPlayVisual=crossPlayClock(closePlay,atGoal);
  // The middle infielder runs out to receive the relay and returns after the play.
  const relayPosition=(fielder==='LF'?'SS':'2B');
  const relayFielder=field.querySelector&&field.querySelector('circle[data-position="'+relayPosition+'"]');
