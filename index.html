@@ -1194,11 +1194,13 @@ function animateGround(outcome,direction,batterSpeed=55,arm=55,timing=null){
  ball.style.transition='none';ball.setAttribute('cx','200');ball.setAttribute('cy','283');ball.setAttribute('r','4');
  showPitchResult(direction.label,'play');
  animateBatterRun(outcome==='double'?'doublePlay':outcome==='force'||outcome==='safe'?'forceSafe':'groundOut',batterSpeed,{runnerMs,decisionMs});
- showFirstCoverSprite(firstCover,firstLabel,token,fieldMs,player,decisionMs,holdUntil);
+ if(outcome!=='force')showFirstCoverSprite(firstCover,firstLabel,token,fieldMs,player,decisionMs,holdUntil);
  if(relay)animateSecondBaseCover(relay,firstArrival,holdUntil,token);
  // Fielder moves towards the ground ball.
  moveGroundFielder(defender,label,fielded,fieldMs,token);
- if(player==='1B'){
+ if(outcome==='force'){
+  // There is no throw to first; the first baseman remains in position.
+ }else if(player==='1B'){
   // Same player: only leave the ball after it has been fielded.
   later(fieldMs+25,()=>moveGroundFielder(firstCover,firstLabel,first,225,token));
  }else{
@@ -1214,7 +1216,7 @@ function animateGround(outcome,direction,batterSpeed=55,arm=55,timing=null){
  later(decisionMs,()=>showPitchResult(outcome==='double'?'ダブルプレー！':outcome==='force'?'二塁アウト・一塁セーフ':outcome==='safe'?'内野安打！':'一塁アウト！',(outcome==='force'||outcome==='safe')?'ball':'strike'));
  // Keep 1B physically on the bag through the call before returning to position.
  later(holdUntil,()=>{
-  moveGroundFielder(firstCover,firstLabel,firstOrigin,350,token);
+  if(outcome!=='force')moveGroundFielder(firstCover,firstLabel,firstOrigin,350,token);
   if(player!=='1B')moveGroundFielder(defender,label,origin,350,token);
  });
 }
