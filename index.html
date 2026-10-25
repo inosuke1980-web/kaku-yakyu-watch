@@ -57,7 +57,7 @@ if(dest>=3)scored.push(r);else {while(dest>i&&neu[dest])dest--;if(neu[dest])thro
 }
 if(bases===4)scored.push(p);else neu[bases-1]=p;
 game.bases=neu;creditRuns(scored,p);
-log(`${p.name} ${style==='liner'?'鋭いライナーが間を抜けた！ ':''}${bases===4?'ホームラン！':bases===3?'三塁打！':bases===2?'二塁打！':'ヒット！'}${scored.length?' '+scored.length+'点追加。':''}`);animate(style==='liner'?(bases===2?'linerHit2':'linerHit'):bases===4?'home':bases===1?'single':'double')}
+log(`${p.name} ${style==='liner'?'鋭いライナーが間を抜けた！ ':''}${bases===4?'ホームラン！':bases===3?'三塁打！':bases===2?'二塁打！':'ヒット！'}${scored.length?' '+scored.length+'点追加。':''}`);animate(style==='liner'?(bases===2?'linerHit2':'linerHit'):bases===4?'home':bases===1?'single':'double',null,p.speed)}
 // 内野ゴロ：二塁封殺／併殺／一塁アウトのいずれかを状況から決定する。
 function groundBall(p){const b=game.bases,pi=pitcher();p.ab++;const direction=choose(GROUND_DIRECTIONS);
 if(b[0]&&game.outs<=1&&chance(clamp(.12+(pi.field-p.speed)*.0015,.05,.24))){
@@ -76,7 +76,7 @@ if(!isSac)p.ab++;else p.sf=(p.sf||0)+1;
 game.outs++;pi.outsPitched++;
 const scored=[];if(isSac){scored.push(b[2]);b[2]=null;p.rbi++}else if(game.outs<3&&b[1]&&!b[2]&&chance(.12)){b[2]=b[1];b[1]=null}
 if(scored.length)addRuns(1,scored);
-log(`${p.name} 外野フライ、捕球。${isSac?' タッチアップで三塁走者が生還、犠牲フライ！':''}`);animate('fly')}
+log(`${p.name} 外野フライ、捕球。${isSac?' タッチアップで三塁走者が生還、犠牲フライ！':''}`);animate('fly',null,p.speed)}
 function fieldingError(p){const {bat,def}=current(),b=game.bases,scored=[];p.ab++;def.errors++;
 for(let i=2;i>=0;i--){if(!b[i])continue;if(i===2){scored.push(b[i]);b[i]=null}else{b[i+1]=b[i];b[i]=null}}b[0]=p;creditRuns(scored,p,false);
 log(`${p.name} のゴロを野手が後逸！ 失策で出塁。${scored.length?' '+scored.length+'点追加。':''}`);animate('single')}
@@ -282,8 +282,7 @@ function animateGround(outcome,direction,batterSpeed=55,arm=55){
   reposition(origin[0],origin[1]);
  });
 }
-function animate(kind,targetInfo=null){
- const runnerSpeed=game&&!game.ended?batter().speed:55;
+function animate(kind,targetInfo=null,runnerSpeed=55){
  const runnerType=kind==='linerHit'?'hit1':kind==='linerHit2'?'hit2':kind==='single'?'hit1':kind==='double'?'hit2':kind==='home'?'homeRun':kind==='fly'?'fly':null;
  if(runnerType)animateBatterRun(runnerType,runnerSpeed);
  const ball=$('ball'),shadow=$('ballShadow'),field=$('fielders'),token=animationToken;
