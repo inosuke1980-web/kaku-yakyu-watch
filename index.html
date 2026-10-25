@@ -1111,7 +1111,7 @@ function groundFirstCover(defenderPosition,outcome){
 }
 // An always-visible foreground sprite makes first-base coverage obvious even
 // when the runner/base circles overlap the normal (lower) fielder layer.
-function showFirstCoverSprite(firstBasePlayer,firstBaseLabel,token,fieldMs,player,decisionMs,holdUntil){
+function showFirstCoverSprite(firstBasePlayer,firstBaseLabel,token,fieldMs,player,decisionMs,holdUntil,receiveAt=decisionMs-110){
  const layer=$('firstBaseCoverForeground');if(!layer||!firstBasePlayer)return;
  layer.replaceChildren();
  const ns='http://www.w3.org/2000/svg';
@@ -1129,8 +1129,20 @@ function showFirstCoverSprite(firstBasePlayer,firstBaseLabel,token,fieldMs,playe
  const go=(xy,duration)=>moveGroundFielder(sprite,letter,xy,duration,token);
  if(player==='1B')later(fieldMs+25,()=>go([323,169],225));
  else go([323,169],Math.min(520,Math.max(260,decisionMs-250)));
- // Highlight the fielder standing on the actual first-base bag during the call.
- later(Math.max(fieldMs+225,decisionMs-80),()=>{sprite.setAttribute('stroke','#ffe77b');sprite.setAttribute('stroke-width','4')});
+ // Stretch to the incoming throw, receive it and hold the bag for the out call.
+ // The sprite uses its own layer so the runner does not obscure the glove.
+ later(Math.max(0,receiveAt-120),()=>{
+  sprite.setAttribute('data-first-phase','stretch');
+  go([320,166],105);
+ });
+ later(receiveAt,()=>{
+  sprite.setAttribute('data-first-phase','catch');
+  sprite.setAttribute('stroke','#ffe77b');
+  sprite.setAttribute('stroke-width','4');
+  sprite.setAttribute('r','12');
+  go([323,169],95);
+ });
+ later(decisionMs,()=>sprite.setAttribute('data-first-phase','call'));
  later(holdUntil,()=>{
   go(start,350);
   later(360,()=>{
@@ -1245,7 +1257,8 @@ function animateGround(outcome,direction,batterSpeed=55,arm=55,timing=null){
  const origin=[Number(defender.getAttribute('cx')),Number(defender.getAttribute('cy'))];
  const firstOrigin=[Number(firstCover.getAttribute('cx')),Number(firstCover.getAttribute('cy'))];
  const later=(ms,fn)=>playTimers.push(setTimeout(()=>{if(token===animationToken)fn()},Math.max(0,ms)));
- const moveBall=(x,y,duration)=>{ball.style.transition='none';ball.getAttribute('cx');ball.style.transition='cx '+duration+'ms linear,cy '+duration+'ms linear';ball.setAttribute('cx',x);ball.setAttribute('cy',y)};
+ // SVG cx/cy CSS transitions are unreliable on iOS; use animation frames.
+ const moveBall=(x,y,duration)=>moveGroundFielder(ball,null,[x,y],duration,token);
  const fieldMs=timing?timing.pickup:600,releaseMs=timing?timing.releaseMs:fielderReleaseMs();
  const atSecond=outcome==='double'||outcome==='force';
  const relay=atSecond?groundSecondRelayPlan(direction,{arm}):null;
@@ -1261,7 +1274,7 @@ function animateGround(outcome,direction,batterSpeed=55,arm=55,timing=null){
  ball.style.transition='none';ball.setAttribute('cx','200');ball.setAttribute('cy','283');ball.setAttribute('r','4');
  showPitchResult(direction.label,'play');
  animateBatterRun(outcome==='double'?'doublePlay':outcome==='force'||outcome==='safe'?'forceSafe':'groundOut',batterSpeed,{runnerMs,decisionMs});
- if(outcome!=='force')showFirstCoverSprite(firstCover,firstLabel,token,fieldMs,player,decisionMs,holdUntil);
+ if(outcome!=='force')showFirstCoverSprite(firstCover,firstLabel,token,fieldMs,player,decisionMs,holdUntil,arrival);
  if(relay){
   animateSecondBaseCover(relay,firstArrival,holdUntil,token,outcome==='double');
   animateForceAtSecond(game.forceOutVisual,firstArrival,holdUntil,token);
@@ -1282,7 +1295,10 @@ function animateGround(outcome,direction,batterSpeed=55,arm=55,timing=null){
   if(player==='1B')moveBall(first[0],first[1],225);
   else moveBall(atSecond?second[0]:first[0],atSecond?second[1]:first[1],firstLeg);
  });
- if(outcome==='double')later(secondThrowAt,()=>moveBall(first[0],first[1],transferMs));
+ if(outcome==='double')later(secondThrowAt,()=>{
+  // The relay starts precisely when the pivot finishes transferring the ball.
+  moveBall(first[0],first[1],transferMs);
+ });
  later(decisionMs,()=>showPitchResult(outcome==='double'?'ダブルプレー！':outcome==='force'?'二塁アウト・一塁セーフ':outcome==='safe'?'内野安打！':'一塁アウト！',(outcome==='force'||outcome==='safe')?'ball':'strike'));
  // Keep 1B physically on the bag through the call before returning to position.
  later(holdUntil,()=>{
