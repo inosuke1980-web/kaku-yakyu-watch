@@ -33,7 +33,7 @@
 .scoreboard-scroll td.attack-team{background:#1f382f}
 .scoreboard-hint{font-size:11px;color:#a7c6b5;margin:5px 0 0}
 @media(max-width:750px){.scoreboard-scroll th:first-child,.scoreboard-scroll td:first-child{min-width:102px;width:112px;max-width:112px}.scoreboard-scroll th,.scoreboard-scroll td{padding:6px 4px}}
-.current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.5.3 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
+.current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.5.4 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
 <section class="card"><h2>試合生成の条件</h2><div class="flex" style="gap:12px">
 <label>カテゴリー <select id="category"><option value="random">ランダム（現在は高校のみ）</option><option value="high">高校野球</option><option value="university" disabled>大学野球（今後追加）</option><option value="corporate" disabled>社会人野球（今後追加）</option><option value="pro" disabled>プロ野球（今後追加）</option></select></label>
 <label>試合種別 <select id="matchType"><option value="random">ランダム</option><option value="official">公式戦</option><option value="practice">練習試合</option></select></label>
@@ -81,6 +81,28 @@ function school(pref){return pref+choose(areas)+choose(schoolEnd)}
 function player(pref,idx,tier){const grade=rnd(1,3),isP=idx<5,pos=isP?'投手':idx<7?'捕手':idx<14?'内野手':'外野手',talent=clamp(Math.round(47+tier*6+(Math.random()-.5)*42),12,96),attr=()=>clamp(talent+rnd(-22,22),5,99);const real=actualMiddle[pref]&&chance(.5),middle=real?choose(actualMiddle[pref]):`${pref}${choose(areas)}${choose(['第一中学校','中学校','学園中学校'])}`;return {id:makePlayerId(),name:choose(surnames)+' '+choose(given),grade,pos,number:idx+1,throws:chance(.12)?'左投':'右投',bats:chance(.35)?'左打':'右打',height:rnd(160,188),weight:rnd(56,90),middle,club:chance(.65)?'中学軟式野球部':'地域硬式クラブ',bio:choose(['地区大会出場','地区大会ベスト8','主将経験','県大会出場','高校入学後に成長','堅実なプレーが持ち味']),contact:attr(),power:attr(),eye:attr(),speed:attr(),field:attr(),arm:attr(),control:attr(),stuff:attr(),stamina:attr(),pitches:0,outsPitched:0,runsAllowed:0,er:0,bbAllowed:0,kP:0,ab:0,h:0,r:0,rbi:0,bb:0,k:0,hr:0};}
 function team(pref,level){return {name:school(pref),pref,level,players:Array.from({length:20},(_,i)=>player(pref,i,level)),runs:Array(9).fill(null),hits:0,errors:0,bat:0,pitcher:0,used:new Set()}}
 let game=null,timer=null,flightTimer=null,playing=false,frame=0,activeRoster=0,animationToken=0,playTimers=[],animationHoldUntil=0;
+// Visual occupancy is delayed until the animated runner actually reaches the bag.
+// The simulator's game.bases remains authoritative for all scoring and rules.
+const pendingRunnerArrivals=new Map();
+function stageRunnerArrival(id,arrivalMs,token){
+ pendingRunnerArrivals.set(id,token);
+ playTimers.push(setTimeout(()=>{
+  if(token!==animationToken||pendingRunnerArrivals.get(id)!==token)return;
+  pendingRunnerArrivals.delete(id);
+  const layer=$('runners');
+  const marker=layer?.querySelector?.('circle[data-runner="'+id+'"]');
+  if(marker)marker.setAttribute('opacity','1');
+  renderMiniScore();
+ },Math.max(1,arrivalMs)));
+}
+function runnerMarkerVisible(person,index,beforeBases=null){
+ if(pendingRunnerArrivals.has(person.id))return false;
+ if(beforeBases){
+  const earlier=beforeBases.findIndex(p=>p&&p.id===person.id);
+  if(earlier>=0&&earlier!==index)return false;
+ }
+ return true;
+}
 // Appearance variants are purely visual: they never change pitch, ball or fielding physics.
 function applyParkStyle(style){
  const ground=$('parkSurface'),texture=$('parkSurfaceTexture'),mow=$('parkMowing');
@@ -106,7 +128,7 @@ function resetOutfieldPositions(){
   if(label){label.setAttribute('x',place[0]);label.setAttribute('y',place[1]+3)}
  }
 }
-function stop(){const coverLayer=$('firstBaseCoverForeground');if(coverLayer)coverLayer.replaceChildren();const covering=$('fielders');if(covering&&covering.querySelector){for(const type of ['circle','text']){const el=covering.querySelector(type+'[data-position="1B"]');if(el)el.setAttribute('opacity','1')}}playing=false;clearTimeout(timer);clearTimeout(flightTimer);for(const id of playTimers)clearTimeout(id);playTimers=[];timer=flightTimer=null;animationHoldUntil=0;animationToken++;const moving=$('movingRunners');if(moving)moving.replaceChildren();const runner=$('batterRunner');if(runner){runner.style.transition='none';runner.setAttribute('visibility','hidden')}resetOutfieldPositions()}
+function stop(){const coverLayer=$('firstBaseCoverForeground');if(coverLayer)coverLayer.replaceChildren();const covering=$('fielders');if(covering&&covering.querySelector){for(const type of ['circle','text']){const el=covering.querySelector(type+'[data-position="1B"]');if(el)el.setAttribute('opacity','1')}}playing=false;clearTimeout(timer);clearTimeout(flightTimer);for(const id of playTimers)clearTimeout(id);playTimers=[];timer=flightTimer=null;animationHoldUntil=0;animationToken++;pendingRunnerArrivals.clear();const moving=$('movingRunners');if(moving)moving.replaceChildren();const runner=$('batterRunner');if(runner){runner.style.transition='none';runner.setAttribute('visibility','hidden')}resetOutfieldPositions()}
 function log(msg){if(!game)return;const prefix=game.inning+'回'+(game.half?'裏':'表');game.events.push('【'+prefix+'】 '+msg);if(game.events.length>250)game.events.shift();$('log').replaceChildren(...game.events.slice(-90).reverse().map(s=>{let d=document.createElement('div');d.textContent=s;return d}))}
 function current(){return {bat:game.teams[game.half],def:game.teams[1-game.half]}}
 function addRuns(n,runnerIds=[]){const {bat}=current();bat.runs[game.inning-1]=(bat.runs[game.inning-1]||0)+n;for(const p of runnerIds)p.r++;if(game.half===1&&game.inning>=9&&total(1)>total(0))finish('サヨナラ')}
@@ -904,6 +926,15 @@ function animateBatterRun(result,speed=55,groundPlan=null){
    if(result==='hit3'||result==='homeRun')later(finishFirst+690,()=>moveRunnerRoundBase(runner,third,560,'run',token));
    if(result==='homeRun')later(finishFirst+1310,()=>moveRunnerRoundBase(runner,[200,293],650,'run',token));
  }
+ // The player is already on game.bases logically; the stationary SVG marker
+ // must wait for the animated runner to reach his final base.
+ if(['hit1','hit2','hit3','forceSafe'].includes(result)){
+  const player=batter();
+  if(player&&game.bases.some(p=>p&&p.id===player.id)){
+   const arrival=result==='hit3'?finishFirst+1250:result==='hit2'?finishFirst+640:finishFirst;
+   stageRunnerArrival(player.id,arrival,token);
+  }
+ }
  const finishAt=result==='homeRun'?finishFirst+2100:result==='hit3'?finishFirst+1370:result==='hit2'?finishFirst+710:result==='fly'?700:Math.max(finishFirst+190,groundPlan?.decisionMs||0);
  animationHoldUntil=Math.max(animationHoldUntil,Date.now()+finishAt+140);
  later(finishAt,()=>{runner.style.transition='none';runner.setAttribute('visibility','hidden')});
@@ -1282,7 +1313,7 @@ function animateOutfieldReturn(kind,scoring=false,arm=55,homePlay=null,targetInf
 // Compact broadcast-style field overlay, independent of inning table scrolling.
 function miniTeamName(name){return String(name).replace(/高校$/,'').slice(-4)}
 function miniBaseDiamond(){
- const occupied=game?.bases||[];
+ const occupied=(game?.bases||[]).map(p=>p&&!pendingRunnerArrivals.has(p.id)?p:null);
  const base=(name,i)=>'<i class="mini-base '+name+(occupied[i]?' occupied':'')+'" data-base="'+(i+1)+'"></i>';
  return '<div class="mini-diamond" aria-label="'+
    (occupied.some(Boolean)?'走者 '+occupied.map((r,i)=>r?i+1+'塁':'').filter(Boolean).join('・'):'走者なし')+
@@ -1299,7 +1330,7 @@ function renderMiniScore(){
  const mini=$('miniScore');if(!mini)return;
  mini.innerHTML=miniScoreMarkup();
 }
-function render(beforeBases=null){if(!game)return;renderMiniScore();const {bat,def}=current(),a=game.teams[0],h=game.teams[1];$('event').textContent=game.t.title;$('away').textContent=a.name;$('home').textContent=h.name;$('score').innerHTML=`${total(0)} - ${total(1)}<small>${game.ended?'試合終了':game.inning+'回'+(game.half?'裏':'表')}</small>`;$('status').textContent=game.ended?'終了':playing?'試合中':'一時停止';$('count').textContent=`B ${game.balls} / S ${game.strikes} / O ${game.outs}`;const dots=$('countDots');if(dots){const groups=[['B',game.balls,3,'ball'],['S',game.strikes,2,'strike'],['O',game.outs,2,'out']];dots.replaceChildren();dots.setAttribute('aria-label',`ボール${game.balls}、ストライク${game.strikes}、アウト${game.outs}`);for(const [name,value,max,kind] of groups){const head=document.createElement('span');head.textContent=name;dots.append(head);for(let j=0;j<max;j++){const dot=document.createElement('span');dot.className='dot'+(j<value?' on '+kind:'');dots.append(dot)}const num=document.createElement('span');num.className='count-number';num.textContent=String(value);dots.append(num)}}$('pitchCount').textContent=`総投球 ${game.totalPitches}球`;$('matchup').textContent=`投手 ${pitcher().name}（${pitcher().pitches}球） / 打者 ${batter().name}`;let n=Math.max(9,game.inning);let headers=Array.from({length:n},(_,i)=>`<th${!game.ended&&i===game.inning-1?' class="current-inning"':''}>${i+1}</th>`).join('');$('lines').innerHTML=`<table><tr><th>TEAM</th>${headers}<th class="sticky-stat stat-r">R</th><th class="sticky-stat stat-h">H</th><th class="sticky-stat stat-e">E</th></tr>${[a,h].map((t,side)=>`<tr><td${!game.ended&&side===game.half?' class="attack-team"':''}>${esc(t.name)}</td>${Array.from({length:n},(_,i)=>{const live=!game.ended&&side===game.half&&i===game.inning-1;const played=t.runs[i]!==null&&t.runs[i]!==undefined;return `<td${live?' class="live-score"':''}>${played?t.runs[i]:live?'':'-'}</td>`}).join('')}<td class="sticky-stat stat-r">${t.runs.reduce((sum,x)=>sum+(x||0),0)}</td><td class="sticky-stat stat-h">${t.hits}</td><td class="sticky-stat stat-e">${t.errors}</td></tr>`).join('')}</table>`;let r=$('runners');r.replaceChildren();[[323,169],[200,47],[77,169]].forEach(([x,y],i)=>{if(game.bases[i]){let c=document.createElementNS('http://www.w3.org/2000/svg','circle');c.setAttribute('cx',x);c.setAttribute('cy',y);c.setAttribute('r','8');c.setAttribute('data-runner',game.bases[i].id);r.append(c);}});let f=$('fielders');if(!f.childNodes.length){
+function render(beforeBases=null){if(!game)return;renderMiniScore();const {bat,def}=current(),a=game.teams[0],h=game.teams[1];$('event').textContent=game.t.title;$('away').textContent=a.name;$('home').textContent=h.name;$('score').innerHTML=`${total(0)} - ${total(1)}<small>${game.ended?'試合終了':game.inning+'回'+(game.half?'裏':'表')}</small>`;$('status').textContent=game.ended?'終了':playing?'試合中':'一時停止';$('count').textContent=`B ${game.balls} / S ${game.strikes} / O ${game.outs}`;const dots=$('countDots');if(dots){const groups=[['B',game.balls,3,'ball'],['S',game.strikes,2,'strike'],['O',game.outs,2,'out']];dots.replaceChildren();dots.setAttribute('aria-label',`ボール${game.balls}、ストライク${game.strikes}、アウト${game.outs}`);for(const [name,value,max,kind] of groups){const head=document.createElement('span');head.textContent=name;dots.append(head);for(let j=0;j<max;j++){const dot=document.createElement('span');dot.className='dot'+(j<value?' on '+kind:'');dots.append(dot)}const num=document.createElement('span');num.className='count-number';num.textContent=String(value);dots.append(num)}}$('pitchCount').textContent=`総投球 ${game.totalPitches}球`;$('matchup').textContent=`投手 ${pitcher().name}（${pitcher().pitches}球） / 打者 ${batter().name}`;let n=Math.max(9,game.inning);let headers=Array.from({length:n},(_,i)=>`<th${!game.ended&&i===game.inning-1?' class="current-inning"':''}>${i+1}</th>`).join('');$('lines').innerHTML=`<table><tr><th>TEAM</th>${headers}<th class="sticky-stat stat-r">R</th><th class="sticky-stat stat-h">H</th><th class="sticky-stat stat-e">E</th></tr>${[a,h].map((t,side)=>`<tr><td${!game.ended&&side===game.half?' class="attack-team"':''}>${esc(t.name)}</td>${Array.from({length:n},(_,i)=>{const live=!game.ended&&side===game.half&&i===game.inning-1;const played=t.runs[i]!==null&&t.runs[i]!==undefined;return `<td${live?' class="live-score"':''}>${played?t.runs[i]:live?'':'-'}</td>`}).join('')}<td class="sticky-stat stat-r">${t.runs.reduce((sum,x)=>sum+(x||0),0)}</td><td class="sticky-stat stat-h">${t.hits}</td><td class="sticky-stat stat-e">${t.errors}</td></tr>`).join('')}</table>`;let r=$('runners');r.replaceChildren();[[323,169],[200,47],[77,169]].forEach(([x,y],i)=>{if(game.bases[i]){let c=document.createElementNS('http://www.w3.org/2000/svg','circle');c.setAttribute('cx',x);c.setAttribute('cy',y);c.setAttribute('r','8');c.setAttribute('data-runner',game.bases[i].id);if(!runnerMarkerVisible(game.bases[i],i,beforeBases))c.setAttribute('opacity','0');r.append(c);}});let f=$('fielders');if(!f.childNodes.length){
 // Home plate is at (200,293); first base is right and third base is left.
 const positions=[['P',200,203],['C',200,315],['1B',286,189],['2B',250,121],['SS',150,121],['3B',114,189],['LF',99,-5],['CF',200,-75],['RF',301,-5]];
 positions.forEach(([name,x,y])=>{const ns='http://www.w3.org/2000/svg',c=document.createElementNS(ns,'circle'),label=document.createElementNS(ns,'text');
