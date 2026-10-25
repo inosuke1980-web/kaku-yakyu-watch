@@ -405,3 +405,26 @@ console.log('FIRST BASE COVER CHECKS PASS',JSON.stringify(firstBaseCover));
  }
  console.log('FOREGROUND FIRST-BASE COVER VISUAL CHECKS PASS');
 }
+
+const outfieldHitVarieties=vm.runInContext(`(()=>{
+ init();const totals={groundThrough:0,gapLiner:0,overHead:0};
+ let invalid=0,rolling=0;
+ for(let i=0;i<3000;i++){
+  const plan=outfieldHitPlan(i%2?1:2,'normal');
+  totals[plan.flight]++;
+  if(plan.flight==='groundThrough'){
+   if(!plan.rollEnd||plan.rollEnd[1]>=plan.point[1])invalid++;
+   rolling++;
+  }
+  if(plan.flight==='overHead'&&plan.point[1]>-80)invalid++;
+  if(plan.flight==='gapLiner'&&(plan.point[1]<-80||plan.point[1]>0))invalid++;
+  if(!plan.fielder||!['LF','CF','RF'].includes(plan.defender))invalid++;
+ }
+ const liner=outfieldHitPlan(2,'liner');
+ return {totals,invalid,rolling,liner:liner.flight};
+})()`,ctx);
+assert.ok(Object.values(outfieldHitVarieties.totals).every(n=>n>0),'all three hit varieties should appear');
+assert.equal(outfieldHitVarieties.invalid,0,'ball landing and roll locations should match the hit type');
+assert.equal(outfieldHitVarieties.liner,'gapLiner','liner hit should have a low trajectory');
+assert.match(html,/function outfieldHitDescription\(/,'trajectory-specific commentary should exist');
+console.log('OUTFIELD HIT VARIETIES CHECKS PASS',JSON.stringify(outfieldHitVarieties));
