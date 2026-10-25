@@ -632,3 +632,24 @@ assert.match(html,/moveRunnerRoundBase\(runner,second,560,'run',token\)/,'batter
 assert.match(html,/moveRunnerRoundBase\(runner,third,560,'run',token\)/,'batter must round second on triples');
 assert.match(html,/if\(token!==animationToken\)return/,'curved movement must be cancellable');
 console.log('ROUNDING BASEPATH GEOMETRY AND BATTER RUNNER CHECKS PASS');
+
+const fieldingErrorVarieties=vm.runInContext(`(()=>{
+ const results={tunnel:0,bobble:0,wildThrow:0},invalid=[];
+ for(let i=0;i<10000;i++){
+  const type=groundErrorType({arm:55});
+  results[type]++;
+  const direction={defender:'SS',point:[158,156]};
+  const plan=groundErrorPlan(direction,type);
+  if(!Number.isFinite(plan.target[0])||!Number.isFinite(plan.target[1]))invalid.push(type);
+  if(type==='tunnel'&&!(plan.target[1]<plan.contact[1]))invalid.push('tunnel should pass behind infielder');
+  if(type==='bobble'&&!(plan.target[0]<plan.contact[0]))invalid.push('bobble should move sideways');
+  if(plan.contactMs<=0||plan.looseMs<=0)invalid.push('timing');
+ }
+ return {results,invalid};
+})()`,ctx);
+assert.ok(Object.values(fieldingErrorVarieties.results).every(n=>n>100),'all three error types must occur');
+assert.equal(fieldingErrorVarieties.invalid.length,0,'error motion must be geometrically valid');
+assert.match(html,/animateFieldingError\(errorType,p\.speed,errorPlan,direction\)/,'ground errors must use error-specific animation');
+assert.match(html,/トンネル！/,'tunnel must be called distinctly');
+assert.match(html,/はじいた！/,'bobble must be called distinctly');
+console.log('GROUND FIELDING ERROR VARIETIES CHECKS PASS',JSON.stringify(fieldingErrorVarieties.results));
