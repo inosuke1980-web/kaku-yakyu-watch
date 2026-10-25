@@ -10,7 +10,7 @@
 .scoreboard-scroll td.attack-team{background:#1f382f}
 .scoreboard-hint{font-size:11px;color:#a7c6b5;margin:5px 0 0}
 @media(max-width:750px){.scoreboard-scroll th:first-child,.scoreboard-scroll td:first-child{min-width:102px;width:112px;max-width:112px}.scoreboard-scroll th,.scoreboard-scroll td{padding:6px 4px}}
-.current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.3.3 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
+.current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.3.4 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
 <section class="card"><h2>試合生成の条件</h2><div class="flex" style="gap:12px">
 <label>カテゴリー <select id="category"><option value="random">ランダム（現在は高校のみ）</option><option value="high">高校野球</option><option value="university" disabled>大学野球（今後追加）</option><option value="corporate" disabled>社会人野球（今後追加）</option><option value="pro" disabled>プロ野球（今後追加）</option></select></label>
 <label>試合種別 <select id="matchType"><option value="random">ランダム</option><option value="official">公式戦</option><option value="practice">練習試合</option></select></label>
@@ -146,7 +146,30 @@ function decideSingleAdvance(runner,origin,point,arm,occupiedThird){
  }
  return {target:1};
 }
+// One trajectory plan controls both the ball flight and its displayed description.
+// Different exit angles and landing points produce recognizable outfield hits.
+function outfieldHitPlan(bases,style='normal'){
+ const zones=[
+  {defender:'LF',label:'左翼',playerIndex:14,x:90},
+  {defender:'CF',label:'中堅',playerIndex:15,x:200},
+  {defender:'RF',label:'右翼',playerIndex:16,x:310}
+ ];
+ const zone=choose(zones);
+ let flight=style==='liner'?'gapLiner':choose(['groundThrough','gapLiner','overHead']);
+ if(bases===4)flight='overHead';
+ const offset=rnd(-22,22);
+ const point=flight==='groundThrough'?[clamp(zone.x+offset,36,364),rnd(5,35)]
+  :flight==='gapLiner'?[clamp(zone.x+(zone.x===200?55:zone.x<200?50:-50)+offset,35,365),rnd(-72,-25)]
+  :[clamp(zone.x+offset,30,370),rnd(-114,-87)];
+ const rollEnd=flight==='groundThrough'?[clamp(point[0]+rnd(-15,15),30,370),point[1]-rnd(55,100)]:null;
+ return {flight,point,rollEnd,defender:zone.defender,label:zone.label,
+  fielder:current().def.players[zone.playerIndex],flightMs:flight==='groundThrough'?620:flight==='gapLiner'?850:1230};
+}
+function outfieldHitDescription(info){
+ return info.flight==='groundThrough'?'外野へゴロが抜けた！':info.flight==='overHead'?'外野手の頭を越えた！':'外野手の間を抜くライナー！';
+}
 function hit(p,bases,style='normal',targetInfo=null){
+ if(!targetInfo&&bases!==4)targetInfo=outfieldHitPlan(bases,style);
  const defender=targetInfo?.fielder||current().def.players[14+(game.totalPitches%6)];
  const fieldArm=defender.arm,fieldSkill=defender.field;
  const landing=targetInfo?.point||(bases===1?[277,138]:[311,-33]);
@@ -210,8 +233,8 @@ function hit(p,bases,style='normal',targetInfo=null){
  if(bases===4)showPitchResult('HOMERUN!','homerun');
  if(homePlay)log(homePlay.wild?'外野からの返球が逸れた！ 失策を記録。'+(homePlay.extraAdvance?' 走者が追加進塁。':''):homePlay.safe?'本塁クロスプレー、セーフ！':'本塁クロスプレー、タッチアウト！');
  if(game.thirdBasePlay)log(game.thirdBasePlay.safe?'一塁走者が三塁を狙ってセーフ！':'一塁走者、三塁でタッチアウト！');
- log(`${p.name} ${style==='liner'?'鋭いライナーが間を抜けた！ ':''}${bases===4?'ホームラン！':bases===3?'三塁打！':bases===2?'二塁打！':'ヒット！'}${scored.length?' '+scored.length+'点追加。':''}`);
- animate(style==='liner'?(bases===2?'linerHit2':'linerHit'):bases===4?'home':bases===1?'single':'double',targetInfo,p.speed);
+ log(`${p.name} ${targetInfo?.flight?outfieldHitDescription(targetInfo)+' ':style==='liner'?'鋭いライナーが間を抜けた！ ':''}${bases===4?'ホームラン！':bases===3?'三塁打！':bases===2?'二塁打！':'ヒット！'}${scored.length?' '+scored.length+'点追加。':''}`);
+ animate(targetInfo?.flight?targetInfo.flight:style==='liner'?(bases===2?'linerHit2':'linerHit'):bases===4?'home':bases===1?'single':'double',targetInfo,p.speed,bases);
  if(bases!==4)animateOutfieldReturn(bases===1?'single':bases===2?'double':'triple',scored.length>0,fieldArm,homePlay,targetInfo,game.thirdBasePlay);
 }
 // 内野ゴロ：二塁封殺／併殺／一塁アウトのいずれかを状況から決定する。
@@ -736,21 +759,21 @@ function animateGround(outcome,direction,batterSpeed=55,arm=55,timing=null){
   if(player!=='1B')moveGroundFielder(defender,label,origin,350,token);
  });
 }
-function animate(kind,targetInfo=null,runnerSpeed=55){
- const runnerType=kind==='outfieldError'?'hit1':kind==='linerHit'?'hit1':kind==='linerHit2'?'hit2':kind==='single'?'hit1':kind==='double'?'hit2':kind==='home'?'homeRun':kind==='fly'?'fly':null;
+function animate(kind,targetInfo=null,runnerSpeed=55,hitBases=null){
+ const runnerType=targetInfo?.flight?(hitBases===1?'hit1':hitBases===2?'hit2':hitBases===3?'hit3':'homeRun'):kind==='outfieldError'?'hit1':kind==='linerHit'?'hit1':kind==='linerHit2'?'hit2':kind==='single'?'hit1':kind==='double'?'hit2':kind==='home'?'homeRun':kind==='fly'?'fly':null;
  if(runnerType)animateBatterRun(runnerType,runnerSpeed);
  // Delay the catch call until the ball reaches the fielder. Do not spoil the result.
  const ball=$('ball'),shadow=$('ballShadow'),field=$('fielders'),token=animationToken;
  const targets={out:[152,152],fly:[96,-36],home:[326,-117],single:[277,138],double:[311,-33],linerHit:[245,-104],linerHit2:[165,-112]};
  const target=targetInfo?targetInfo.point:targets[kind]||targets.single;
- const start=[200,283],duration=(kind==='linerHit'||kind==='linerHit2')?540:kind==='linerOut'?460:kind==='fly'||kind==='outfieldError'?1150:kind==='home'?1250:830;
- const isFly=['fly','home','double','outfieldError'].includes(kind),isLiner=kind==='linerHit'||kind==='linerHit2'||kind==='linerOut';
+ const start=[200,283],duration=targetInfo?.flight?targetInfo.flightMs:(kind==='linerHit'||kind==='linerHit2')?540:kind==='linerOut'?460:kind==='fly'||kind==='outfieldError'?1150:kind==='home'?1250:830;
+ const isFly=targetInfo?.flight?kind==='overHead':['fly','home','double','outfieldError'].includes(kind),isLiner=targetInfo?.flight?kind==='gapLiner':kind==='linerHit'||kind==='linerHit2'||kind==='linerOut';
  animationHoldUntil=Math.max(animationHoldUntil,Date.now()+duration+300);
  if(shadow){shadow.setAttribute('rx','0');shadow.setAttribute('ry','0')}
  ball.style.transition='none';ball.setAttribute('cx',start[0]);ball.setAttribute('cy',start[1]);ball.setAttribute('r','4');
  const defenders=field&&field.querySelectorAll?[...field.querySelectorAll('circle')]:[];
  let nearest=targetInfo?defenders.find(d=>d.getAttribute('data-position')===targetInfo.defender):null;
- if(!nearest&&['fly','single','double','linerHit','linerHit2','outfieldError'].includes(kind))nearest=defenders.reduce((best,d)=>{const dx=Number(d.getAttribute('cx'))-target[0],dy=Number(d.getAttribute('cy'))-target[1];return dx*dx+dy*dy<best.distance?{d,distance:dx*dx+dy*dy}:best},{d:null,distance:Infinity}).d;
+ if(!nearest&&(targetInfo?.flight||['fly','single','double','linerHit','linerHit2','outfieldError'].includes(kind)))nearest=defenders.reduce((best,d)=>{const dx=Number(d.getAttribute('cx'))-target[0],dy=Number(d.getAttribute('cy'))-target[1];return dx*dx+dy*dy<best.distance?{d,distance:dx*dx+dy*dy}:best},{d:null,distance:Infinity}).d;
  if(nearest){
   const x=Number(nearest.getAttribute('cx')),y=Number(nearest.getAttribute('cy'));
   const label=field.querySelector('text[data-position="'+nearest.getAttribute('data-position')+'"]');
@@ -758,7 +781,7 @@ function animate(kind,targetInfo=null,runnerSpeed=55){
   const diving=!!(targetInfo&&targetInfo.caught&&targetInfo.diving);
   const missed=!!(targetInfo&&targetInfo.nearMiss);
   const approachDuration=Math.round(duration*(diving?.74:.90));
-  const halfway=diving?[x+(target[0]-x)*.72,y+(target[1]-y)*.72]:missed?[x+(target[0]-x)*.80,y+(target[1]-y)*.80]:target;
+  const halfway=targetInfo?.flight==='overHead'?[x+(target[0]-x)*.72,y+(target[1]-y)*.52]:targetInfo?.flight==='groundThrough'?[x+(target[0]-x)*.82,y+(target[1]-y)*.84]:diving?[x+(target[0]-x)*.72,y+(target[1]-y)*.72]:missed?[x+(target[0]-x)*.80,y+(target[1]-y)*.80]:target;
   nearest.style.transition='cx '+approachDuration+'ms ease-out,cy '+approachDuration+'ms ease-out';
   requestAnimationFrame(()=>{if(token===animationToken)move(halfway[0],halfway[1])});
   if(diving){
@@ -786,8 +809,13 @@ function animate(kind,targetInfo=null,runnerSpeed=55){
  const begun=performance.now();
  function step(now){
   if(token!==animationToken)return;
-  const t=Math.min(1,(now-begun)/duration),x=start[0]+(target[0]-start[0])*t,y=start[1]+(target[1]-start[1])*t;
-  const lift=isFly?66*Math.sin(Math.PI*t):isLiner?10*Math.sin(Math.PI*t):0;
+  const t=Math.min(1,(now-begun)/duration);
+  const rolling=kind==='groundThrough';
+  const groundBreak=.55;
+  const groundProgress=rolling?Math.min(1,t/groundBreak):t;
+  const x=rolling&&t>groundBreak?target[0]+(targetInfo.rollEnd[0]-target[0])*(t-groundBreak)/(1-groundBreak):start[0]+(target[0]-start[0])*groundProgress;
+  const y=rolling&&t>groundBreak?target[1]+(targetInfo.rollEnd[1]-target[1])*(t-groundBreak)/(1-groundBreak):start[1]+(target[1]-start[1])*groundProgress;
+  const lift=isFly?90*Math.sin(Math.PI*t):isLiner?16*Math.sin(Math.PI*t):0;
   ball.setAttribute('cx',x.toFixed(1));ball.setAttribute('cy',(y-lift).toFixed(1));
   ball.setAttribute('r',String(isFly?4.5+2*Math.sin(Math.PI*t):isLiner?4.2:4));
   if(shadow){shadow.setAttribute('cx',x.toFixed(1));shadow.setAttribute('cy',y.toFixed(1));shadow.setAttribute('rx',String(isFly?5+3*Math.sin(Math.PI*t):isLiner?5:0));shadow.setAttribute('ry',String(isFly?2.5:1.5))}
@@ -874,7 +902,7 @@ function animateOutfieldReturn(kind,scoring=false,arm=55,homePlay=null,targetInf
   return dist<best.dist?{el,dist}:best;
  },{el:null,dist:Infinity}).el;
  const fielder=targetInfo?.defender||chosen?.getAttribute('data-position')||'CF';
- const flightMs=kind==='fly'?1150:kind==='single'?830:kind==='triple'||kind==='double'?1430:540;
+ const flightMs=targetInfo?.flightMs??(kind==='fly'?1150:kind==='single'?830:kind==='triple'||kind==='double'?1430:540);
  const gatherMs=190,release=flightMs+gatherMs;
  const relayMs=throwFlightMs(arm,landed,cutoff),relayPause=130,finalMs=throwFlightMs(65,cutoff,goal);
  const atRelay=release+relayMs,atGoal=atRelay+relayPause+finalMs;
