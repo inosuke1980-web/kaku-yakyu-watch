@@ -407,7 +407,7 @@ console.log('FIRST BASE COVER CHECKS PASS',JSON.stringify(firstBaseCover));
 }
 
 const outfieldHitVarieties=vm.runInContext(`(()=>{
- init();const totals={groundThrough:0,gapLiner:0,overHead:0};
+ init();const totals={groundThrough:0,gapLiner:0,overHead:0,fenceDouble:0};
  let invalid=0,rolling=0;
  for(let i=0;i<3000;i++){
   const plan=outfieldHitPlan(i%2?1:2,'normal');
@@ -516,3 +516,27 @@ assert.ok(fenceIntegrity.closest>=11.9,'fair hits must retain a visible gap befo
 assert.equal(fenceIntegrity.homerCount,10000);
 assert.match(html,/M12 171 L12 82 Q25 -80 200 -122 Q375 -80 388 82/,'stadium and fence calculation should have corresponding control points');
 console.log('CURVED FENCE HIT / HOME RUN SEPARATION CHECKS PASS',JSON.stringify(fenceIntegrity));
+
+const wallRebound=vm.runInContext(`(()=>{
+ init();
+ let doubles=0,invalid=0;
+ const samples=[];
+ for(let i=0;i<10000;i++){
+  const p=outfieldHitPlan(2,'normal');
+  if(p.flight!=='fenceDouble')continue;
+  doubles++;
+  if(Math.abs(p.point[1]-outfieldFenceY(p.point[0])-12)>.01)invalid++;
+  if(!p.rebound||p.rebound[1]<=outfieldFenceY(p.rebound[0])+12)invalid++;
+  if(p.rebound[1]<=p.point[1])invalid++;
+  if(p.flightMs<1200||p.wallAt<=0||p.wallAt>=1)invalid++;
+  if(samples.length<3)samples.push({wall:p.point,bounce:p.rebound});
+  const pursuit=outfieldPursuitPlan('fenceDouble',p,[p.point[0],-5],p.flightMs);
+  if(!pursuit.latePickup||pursuit.destination[0]!==p.rebound[0]||pursuit.destination[1]!==p.rebound[1])invalid++;
+ }
+ return {doubles,invalid,samples};
+})()`,ctx);
+assert.ok(wallRebound.doubles>1000&&wallRebound.doubles<5000,'fence doubles should be an occasional extra-base hit');
+assert.equal(wallRebound.invalid,0,'wall strikes, bounces and retrieval must follow the physical fence');
+assert.match(html,/showPitchResult\('フェンス直撃！','play'\)/,'wall impact should be announced during animation');
+assert.match(html,/targetInfo\.rebound\|\|targetInfo\.rollEnd\|\|targetInfo\.point/,'relay should start at recovered ball position');
+console.log('FENCE DOUBLE REBOUND CHECKS PASS',JSON.stringify(wallRebound));
