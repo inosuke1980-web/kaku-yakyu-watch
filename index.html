@@ -33,7 +33,7 @@
 .scoreboard-scroll td.attack-team{background:#1f382f}
 .scoreboard-hint{font-size:11px;color:#a7c6b5;margin:5px 0 0}
 @media(max-width:750px){.scoreboard-scroll th:first-child,.scoreboard-scroll td:first-child{min-width:102px;width:112px;max-width:112px}.scoreboard-scroll th,.scoreboard-scroll td{padding:6px 4px}}
-.current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.4.3 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
+.current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.4.4 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
 <section class="card"><h2>試合生成の条件</h2><div class="flex" style="gap:12px">
 <label>カテゴリー <select id="category"><option value="random">ランダム（現在は高校のみ）</option><option value="high">高校野球</option><option value="university" disabled>大学野球（今後追加）</option><option value="corporate" disabled>社会人野球（今後追加）</option><option value="pro" disabled>プロ野球（今後追加）</option></select></label>
 <label>試合種別 <select id="matchType"><option value="random">ランダム</option><option value="official">公式戦</option><option value="practice">練習試合</option></select></label>
@@ -521,6 +521,25 @@ function animateFlyLeadAndReturn(beforeBases,halfAtStart,inningAtStart){
  }
  animationHoldUntil=Math.max(animationHoldUntil,Date.now()+returnAt+returnDuration+160);
 }
+// Presentation-only timing: no changes to the already-resolved base/out call.
+function runnerChoreography(from,to,speed,close=null){
+ const legs=to-from;
+ const startDelay=70;
+ const basic=runnerSegmentMs(speed);
+ const pursuit=!!close;
+ const segment=pursuit?Math.round(Math.max(240,(close.runnerArrival-startDelay)/legs)):basic;
+ const stopping=!pursuit&&to<3&&((from===0&&to===1)||(from===1&&to===2));
+ // Slow down visibly in the final approach when holding at a base.
+ const slowdown=stopping?Math.min(180,Math.round(segment*.22)):0;
+ const finalMs=segment+slowdown;
+ const segments=Array.from({length:legs},(_,i)=>({
+  delay:startDelay+i*segment,
+  duration:i===legs-1?finalMs:segment,
+  mode:pursuit&&i===legs-1?'charge':stopping&&i===legs-1?'stop':'run'
+ }));
+ const arrival=startDelay+(legs-1)*segment+finalMs;
+ return {startDelay,segments,arrival,mode:pursuit?'charge':stopping?'stop':'run',close:!!close};
+}
 function animateBaseRunners(beforeBases,beforeRuns,halfAtStart,inningAtStart){
  if(!game||game.half!==halfAtStart||game.inning!==inningAtStart)return;
  const layer=$('movingRunners'),staticLayer=$('runners');if(!layer)return;
@@ -549,19 +568,23 @@ function animateBaseRunners(beforeBases,beforeRuns,halfAtStart,inningAtStart){
    if(marker)marker.setAttribute('opacity','0');
   }
   const close=game.crossPlayVisual&&game.crossPlayVisual.id===person.id?game.crossPlayVisual:null;
-  const startDelay=70;
-  const segment=close?Math.round(Math.max(240,(close.runnerArrival-startDelay)/(to-from))):Math.round(clamp(740-(person.speed-50)*3.2,570,900));
-  const finish=startDelay+(to-from)*segment;
+  const plan=runnerChoreography(from,to,person.speed,close);
+  const finish=plan.arrival;
   longest=Math.max(longest,finish+(close?350:0));
   const later=(ms,fn)=>playTimers.push(setTimeout(()=>{if(token===animationToken)fn()},ms));
-  for(let step=from+1;step<=to;step++){
-   const destination=bases[step];
-   later(startDelay+(step-from-1)*segment,()=>{
-    circle.style.transition='cx '+segment+'ms linear,cy '+segment+'ms linear';
+  plan.segments.forEach((leg,i)=>{
+   const destination=bases[from+i+1];
+   later(leg.delay,()=>{
+    circle.style.transition='cx '+leg.duration+'ms '+(leg.mode==='stop'?'ease-out':leg.mode==='charge'?'ease-in':'linear')+',cy '+leg.duration+'ms '+(leg.mode==='stop'?'ease-out':leg.mode==='charge'?'ease-in':'linear');
     circle.setAttribute('cx',destination[0]);circle.setAttribute('cy',destination[1]);
+    circle.setAttribute('data-run-state',leg.mode);
+    if(leg.mode==='charge'){circle.setAttribute('stroke','#ffefaa');circle.setAttribute('stroke-width','3')}
    });
-  }
-  later(finish+(close?340:70),()=>{
+  });
+  if(plan.mode==='stop')later(finish,()=>{
+   circle.setAttribute('r','9');circle.setAttribute('stroke','#8ef2c3');circle.setAttribute('stroke-width','2.5');
+  });
+  later(finish+(close?340:plan.mode==='stop'?200:70),()=>{
    circle.setAttribute('visibility','hidden');
    if(to<3&&staticLayer&&staticLayer.querySelector){
     const marker=staticLayer.querySelector('circle[data-runner="'+person.id+'"]');
