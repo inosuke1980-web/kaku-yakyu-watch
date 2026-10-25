@@ -829,3 +829,31 @@ assert.match(html,/releaseMs=timing\?timing\.releaseMs:fielderReleaseMs\(\)/,'gr
 assert.match(html,/secondThrowAt=firstArrival\+fielderReleaseMs\(65,65,true\)/,'double play must wait for second pivot release');
 assert.match(html,/relayPause=fielderReleaseMs\(65,65,true\)/,'outfield relay animation must wait for transfer');
 console.log('SOFT INFIELD CHARGE AND SHARED THROW CLOCKS PASS');
+
+const arrivalMarkerAudit=vm.runInContext(`(()=>{
+ const oldRunner={id:'existing'},newRunner={id:'newBatter'};
+ const before=[oldRunner,null,null];
+ const results={
+  oldAtFirst:runnerMarkerVisible(oldRunner,0,before),
+  oldTeleportSecond:runnerMarkerVisible(oldRunner,1,before),
+  newAtFirstBeforeStaging:runnerMarkerVisible(newRunner,0,before)
+ };
+ const token=animationToken;
+ stageRunnerArrival(newRunner.id,1250,token);
+ results.newBeforeArrival=runnerMarkerVisible(newRunner,0,before);
+ results.miniBaseHidden=pendingRunnerArrivals.has(newRunner.id);
+ const pendingToken=pendingRunnerArrivals.get(newRunner.id);
+ pendingRunnerArrivals.delete(newRunner.id);
+ results.newAfterArrival=runnerMarkerVisible(newRunner,0,before);
+ return {results,pendingToken,token};
+})()`,ctx);
+assert.equal(arrivalMarkerAudit.results.oldAtFirst,true,'stationary runner should remain visible');
+assert.equal(arrivalMarkerAudit.results.oldTeleportSecond,false,'existing runner must not teleport to next base');
+assert.equal(arrivalMarkerAudit.results.newBeforeArrival,false,'new batter marker must stay hidden while running');
+assert.equal(arrivalMarkerAudit.results.miniBaseHidden,true,'mini diamond should share arrival gate');
+assert.equal(arrivalMarkerAudit.results.newAfterArrival,true,'stationary marker can appear on actual arrival');
+assert.equal(arrivalMarkerAudit.pendingToken,arrivalMarkerAudit.token,'arrival must be guarded by animation token');
+assert.match(html,/if\(!runnerMarkerVisible\(game\.bases\[i\],i,beforeBases\)\)c\.setAttribute\('opacity','0'\)/,'main base overlay must gate marker visibility at render');
+assert.match(html,/const occupied=\(game\?\.bases\|\|\[\]\)\.map\(p=>p&&!pendingRunnerArrivals\.has\(p\.id\)\?p:null\)/,'mini diamond should hide incoming batter');
+assert.match(html,/stageRunnerArrival\(player\.id,arrival,token\)/,'batter animation must register arrival clock');
+console.log('RUNNER MARKERS WAIT FOR BASE ARRIVAL PASS');
