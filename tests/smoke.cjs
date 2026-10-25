@@ -1013,6 +1013,10 @@ assert.equal(secondCoverAudit.second.arm,81,'pivot arm should come from roster')
 assert.ok(secondCoverAudit.ssRelay.pickupToSecond>0&&secondCoverAudit.ssRelay.pivotRelease>0&&secondCoverAudit.ssRelay.secondToFirst>0,'realistic throw and transfer clocks');
 assert.notEqual(secondCoverAudit.ssRelay.secondToFirst,secondCoverAudit.secondRelay.secondToFirst,'pivot throwing strength changes relay speed');
 assert.match(html,/if\(relay\)animateSecondBaseCover\(relay,firstArrival,holdUntil,token\)/,'animation uses second base pivot');
-assert.match(html,/const dpArrival=relay\?timing\.pickup\+timing\.releaseMs\+relay\.pickupToSecond\+relay\.pivotRelease\+relay\.secondToFirst:Infinity/,'double play verdict uses same pivot timing');
+assert.match(html,/const dpArrival=relay\?quickTiming\.pickup\+quickTiming\.releaseMs\+relay\.pickupToSecond\+relay\.pivotRelease\+relay\.secondToFirst:Infinity/,'double play verdict uses quick fielding and actual pivot timing');
 assert.match(html,/if\(outcome!=='force'\)showFirstCoverSprite/,'force play must not unnecessarily cover first');
 console.log('SECOND BASE PIVOT AND DOUBLE PLAY RELAY PASS');
+
+assert.match(html,/animateGround\('double',direction,p\.speed,fielder\.arm,quickTiming\)/,'double-play animation must use the same quick fielding clock as the call');
+assert.match(html,/releaseMs:fielderReleaseMs\(fielder\.field,fielder\.arm,true\)/,'double-play turn needs a quick first release');
+console.log('DOUBLE PLAY QUICK RELAY CLOCK PASS');
