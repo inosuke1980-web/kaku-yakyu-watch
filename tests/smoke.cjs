@@ -309,3 +309,52 @@ assert.ok(firstBaseCover.every(x=>x.cover==='1B'&&x.needed),'first baseman must 
 assert.ok(firstBaseCover.filter(x=>x.position==='1B').every(x=>x.backup==='2B'),'second baseman should be designated backup when first baseman fields ball');
 assert.match(html,/const base=\{LF:\[99,-5\],CF:\[200,-75\],RF:\[301,-5\],SS:\[150,121\],'2B':\[250,121\],'1B':\[286,189\]\}/,'first baseman must reset after cover');
 console.log('FIRST BASE COVER CHECKS PASS',JSON.stringify(firstBaseCover));
+
+{
+ // Actually advance animation frames (instead of merely inspecting a cover plan).
+ const groundSource=src.slice(src.indexOf('function moveGroundFielder('),src.indexOf('function animate(kind,'));
+ assert.ok(groundSource.includes('function animateGround('),'ground animation source missing');
+ function exerciseGroundCover(position,outcome='out'){
+  let now=0,frames=[],timers=[];
+  const element=(name,x,y)=>({style:{},attributes:{cx:String(x),cy:String(y),'data-position':name},
+   setAttribute(k,v){this.attributes[k]=String(v)},
+   getAttribute(k){return this.attributes[k]??null}});
+  const coordinates={SS:[150,121],'1B':[286,189],'2B':[250,121],'3B':[114,189]};
+  const circles=Object.fromEntries(Object.entries(coordinates).map(([k,p])=>[k,element(k,...p)]));
+  const labels=Object.fromEntries(Object.entries(coordinates).map(([k,p])=>[k,element(k,p[0],p[1]+3)]));
+  const field={querySelector(selector){const position=selector.match(/data-position="([^"]+)"/)?.[1];return selector.startsWith('circle')?circles[position]:labels[position]}};
+  const ball=element('ball',200,203);
+  const context={
+   animationToken:1,playTimers:[],animationHoldUntil:0,Date,Math,console,
+   performance:{now:()=>now},clamp:(v,min,max)=>Math.max(min,Math.min(max,v)),
+   runnerFirstMs:()=>1550,throwFlightMs:()=>340,
+   $:id=>id==='fielders'?field:id==='ball'?ball:null,
+   requestAnimationFrame:cb=>{frames.push(cb)},
+   setTimeout:(cb,delay)=>{timers.push({at:now+delay,cb});return timers.length},
+   showPitchResult:()=>{},animateBatterRun:()=>{}
+  };
+  vm.createContext(context);
+  vm.runInContext(groundSource,context);
+  vm.runInContext('animateGround('+JSON.stringify(outcome)+','+JSON.stringify({defender:position,point:position==='1B'?[290,182]:[158,156],label:'grounder'})+',55,55,{pickup:650,runnerMs:1550})',context);
+  const advance=target=>{
+   while(now<target){
+    now=Math.min(now+20,target);
+    const due=timers.filter(x=>x.at<=now);timers=timers.filter(x=>x.at>now);
+    for(const task of due)task.cb();
+    const callbacks=frames;frames=[];for(const callback of callbacks)callback(now);
+   }
+  };
+  const where=()=>[Number(circles['1B'].getAttribute('cx')),Number(circles['1B'].getAttribute('cy'))];
+  advance(1100);const onBag=where();
+  advance(1750);const held=where();
+  advance(2500);const restored=where();
+  return {onBag,held,restored};
+ }
+ for(const [position,outcome] of [['SS','out'],['3B','safe'],['2B','double'],['SS','force'],['1B','out']]){
+  const frames=exerciseGroundCover(position,outcome);
+  assert.ok(Math.hypot(frames.onBag[0]-323,frames.onBag[1]-169)<1,position+'/'+outcome+': cover first by throw');
+  assert.ok(Math.hypot(frames.held[0]-323,frames.held[1]-169)<1,position+'/'+outcome+': stay on the bag through verdict');
+  assert.ok(Math.hypot(frames.restored[0]-286,frames.restored[1]-189)<1,position+'/'+outcome+': return to fielding position');
+ }
+ console.log('FIRST-BASE COVER ANIMATION FRAMES CHECKS PASS');
+}
