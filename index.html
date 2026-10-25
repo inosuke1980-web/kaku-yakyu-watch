@@ -211,7 +211,7 @@ function outfieldHitPlan(bases,style='normal'){
   fielder:current().def.players[zone.playerIndex],flightMs:flight==='groundThrough'?620:flight==='gapLiner'?850:1230};
 }
 function outfieldHitDescription(info){
- return info.flight==='groundThrough'?'外野へゴロが抜けた！':info.flight==='overHead'?'外野手の頭を越えた！':'外野手の間を抜くライナー！';
+ return info.flight==='homeRun'?'フェンスを越える大飛球！':info.flight==='groundThrough'?'外野へゴロが抜けた！':info.flight==='overHead'?'外野手の頭を越えた！':'外野手の間を抜くライナー！';
 }
 function hit(p,bases,style='normal',targetInfo=null){
  if(!targetInfo&&bases===4){
