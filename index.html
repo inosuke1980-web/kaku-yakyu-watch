@@ -98,7 +98,7 @@ function hit(p,bases,style='normal',targetInfo=null){
    dest=decision.target;
   }else if(bases===1&&i===0){
    // The lead runner can stop at third; avoid overtaking him.
-   const thirdBlocked=!!neu[2];
+   const thirdBlocked=!!neu[2]||scored.length>0;
    const decision=decideSingleAdvance(r,0,landing,fieldArm,thirdBlocked);
    dest=decision.target;
    if(decision.thirdOut){
