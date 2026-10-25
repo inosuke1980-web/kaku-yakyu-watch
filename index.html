@@ -1,6 +1,6 @@
 <!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>架空野球観戦 — 高校野球版</title><style>
 :root{font-family:system-ui,-apple-system,'Hiragino Kaku Gothic ProN',sans-serif;color:#e9f0eb;background:#0d1715}*{box-sizing:border-box}body{margin:0}main{max-width:1100px;margin:auto;padding:20px}header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}h1{font-size:23px;margin:0}h2{font-size:17px;margin:0 0 12px}button,select{background:#285c49;border:1px solid #56826d;color:white;border-radius:8px;padding:10px 14px;font:inherit;cursor:pointer}button:disabled{opacity:.4;cursor:not-allowed}button.secondary{background:#24312d}button:hover:not(:disabled){filter:brightness(1.16)}.muted{color:#a9bdb2;font-size:13px}.card{background:#172622;border:1px solid #2e493e;border-radius:12px;padding:16px;margin-top:14px}.flex{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.between{justify-content:space-between}.score{font-size:30px;font-weight:800;text-align:center}.score small{display:block;font-size:13px;font-weight:400;color:#abc0b5}.teams{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center}.team{text-align:center;font-weight:700}.tag{border-radius:12px;background:#294739;padding:3px 8px;font-size:12px}.layout{display:grid;grid-template-columns:1.2fr 1fr;gap:14px}.field{width:100%;max-height:400px;background:#113a2b;border-radius:10px}.log{height:225px;overflow:auto;background:#101d19;padding:12px;border-radius:8px;font-size:13px;line-height:1.7}.log div{border-bottom:1px solid #24362d;padding:3px 0}.tablewrap{overflow:auto}table{border-collapse:collapse;width:100%;font-size:12px;white-space:nowrap}th,td{padding:7px;border-bottom:1px solid #33483e;text-align:right}th:first-child,td:first-child{text-align:left}.tabs{display:flex;gap:8px;margin-top:16px}.hidden{display:none!important}.player{cursor:pointer}.player:hover{background:#2c483a}dialog{border:1px solid #5a7d6b;background:#172622;color:#e9f0eb;border-radius:12px;max-width:min(94vw,560px);width:100%}dialog::backdrop{background:#000a}.pill{display:inline-block;background:#274438;padding:2px 8px;border-radius:8px;margin:3px}.small{font-size:12px}.controls{display:flex;gap:8px;flex-wrap:wrap}#status{font-weight:700;color:#c6e5c8}.pitch-result{margin:10px 0 2px;min-height:46px;display:flex;align-items:center;justify-content:center;border:1px solid #557261;border-radius:9px;background:#10241d;font-size:24px;font-weight:900;letter-spacing:.08em;color:#e6f1e9}.pitch-result.ball{color:#7bdb9e}.pitch-result.strike{color:#f7d76d}.pitch-result.foul{color:#b2d7ff}.pitch-result.play{color:#fff2b8}.pitch-result small{font-size:13px;font-weight:500;letter-spacing:0;margin-left:8px;color:#c9d4ce}.pitch-result.homerun{color:#ffe183;border-color:#efb54d;background:#56321b;font-size:29px;letter-spacing:.13em;text-shadow:0 1px 7px #8b4800}.count-panel{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;padding:9px 0}.count-dots{display:flex;align-items:center;gap:5px;font-weight:800;font-size:12px}.count-dots span.dot{width:13px;height:13px;border-radius:50%;display:inline-block;border:1px solid #60796b;background:#203329}.count-dots span.dot.on.ball{background:#67d58b;border-color:#67d58b}.count-dots span.dot.on.strike{background:#ead46a;border-color:#ead46a}.count-dots span.dot.on.out{background:#e37a73;border-color:#e37a73}.count-dots .count-number{margin-left:3px;margin-right:8px;color:#d6e4da;font-variant-numeric:tabular-nums} @media(max-width:750px){.layout{grid-template-columns:1fr}main{padding:10px}.card{padding:12px}.score{font-size:23px}h1{font-size:20px}}
-</style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.1.7.1 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
+</style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.1.8 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
 <section class="card"><h2>試合生成の条件</h2><div class="flex" style="gap:12px">
 <label>カテゴリー <select id="category"><option value="random">ランダム（現在は高校のみ）</option><option value="high">高校野球</option><option value="university" disabled>大学野球（今後追加）</option><option value="corporate" disabled>社会人野球（今後追加）</option><option value="pro" disabled>プロ野球（今後追加）</option></select></label>
 <label>試合種別 <select id="matchType"><option value="random">ランダム</option><option value="official">公式戦</option><option value="practice">練習試合</option></select></label>
@@ -48,7 +48,7 @@ function scoreHit(p,type){p.ab++;p.h++;if(type==='本塁打')p.hr++;current().ba
 function outBatter(p,strikeout=false){p.ab++;if(strikeout){p.k++;pitcher().kP++}game.outs++;pitcher().outsPitched++}
 function creditRuns(scored,p,rbi=true){if(!scored.length)return;addRuns(scored.length,scored);if(rbi)p.rbi+=scored.length}
 function walk(p){p.bb++;pitcher().bbAllowed++;const b=game.bases,scored=[];if(b[0]){if(b[1]){if(b[2])scored.push(b[2]);b[2]=b[1]}b[1]=b[0]}b[0]=p;creditRuns(scored,p);log(`${p.name} 四球。${scored.length?' 押し出し！':''}`)}
-function hit(p,bases,style='normal'){const defender=current().def.players[14+(game.totalPitches%6)],fieldArm=defender.arm,fieldSkill=defender.field;scoreHit(p,bases===4?'本塁打':'安打');const old=game.bases.slice(),neu=[null,null,null],scored=[];
+function hit(p,bases,style='normal',targetInfo=null){const defender=current().def.players[14+(game.totalPitches%6)],fieldArm=defender.arm,fieldSkill=defender.field;scoreHit(p,bases===4?'本塁打':'安打');const old=game.bases.slice(),neu=[null,null,null],scored=[];
 for(let i=2;i>=0;i--){const r=old[i];if(!r)continue;let dest;
 if(bases===4)dest=3;
 else if(bases===1)dest=i+(i===2?1:i===1?(chance(.62)?2:1):(chance(.32)?2:1));
@@ -87,7 +87,7 @@ if(homePlay&&homePlay.wild){
 game.bases=neu;creditRuns(scored,p);
 if(bases===4)showPitchResult('HOMERUN!','homerun');
 if(homePlay)log(homePlay.wild?'外野からの返球が逸れた！ 失策を記録。'+(homePlay.extraAdvance?' 走者が追加進塁。':''):homePlay.safe?'本塁クロスプレー、セーフ！':'本塁クロスプレー、タッチアウト！');
-log(`${p.name} ${style==='liner'?'鋭いライナーが間を抜けた！ ':''}${bases===4?'ホームラン！':bases===3?'三塁打！':bases===2?'二塁打！':'ヒット！'}${scored.length?' '+scored.length+'点追加。':''}`);animate(style==='liner'?(bases===2?'linerHit2':'linerHit'):bases===4?'home':bases===1?'single':'double',null,p.speed);if(bases!==4)animateOutfieldReturn(bases===1?'single':bases===2?'double':'triple',scored.length>0,fieldArm,homePlay)}
+log(`${p.name} ${style==='liner'?'鋭いライナーが間を抜けた！ ':''}${bases===4?'ホームラン！':bases===3?'三塁打！':bases===2?'二塁打！':'ヒット！'}${scored.length?' '+scored.length+'点追加。':''}`);animate(style==='liner'?(bases===2?'linerHit2':'linerHit'):bases===4?'home':bases===1?'single':'double',targetInfo,p.speed);if(bases!==4)animateOutfieldReturn(bases===1?'single':bases===2?'double':'triple',scored.length>0,fieldArm,homePlay,targetInfo)}
 // 内野ゴロ：二塁封殺／併殺／一塁アウトのいずれかを状況から決定する。
 // A single resolved ground-ball play controls the statistics and the animation.
 // Fielding/arm determine handling and throw times; speed determines the race to first.
@@ -153,13 +153,70 @@ function groundBall(p){
  log(`${p.name} ${direction.label}、一塁アウト。${scored.length?' 三塁走者が生還。':''}`);
  animateGround('out',direction,p.speed,fielder.arm,timing);
 }
-function lineBall(p){p.ab++;game.outs++;pitcher().outsPitched++;const target=choose(LINER_DIRECTIONS);log(`${p.name} 鋭い${target.label}！ ${target.defender}が捕球。`);showPitchResult('ライナーアウト！','strike');animate('linerOut',target)}
-function flyBall(p){const b=game.bases,pi=pitcher(),isSac=game.outs<2&&!!b[2]&&chance(clamp(.35+(p.power-50)*.002,.15,.55));
-if(!isSac)p.ab++;else p.sf=(p.sf||0)+1;
-game.outs++;pi.outsPitched++;
-const scored=[];if(isSac){scored.push(b[2]);b[2]=null;p.rbi++}else if(game.outs<3&&b[1]&&!b[2]&&chance(.12)){b[2]=b[1];b[1]=null}
-if(scored.length)addRuns(1,scored);
-log(`${p.name} 外野フライ、捕球。${isSac?' タッチアップで三塁走者が生還、犠牲フライ！':''}`);animate('fly',null,p.speed);if(isSac)animateOutfieldReturn('fly',true,pi.arm)}
+// An outfielder's actual attributes determine whether the batted ball is caught.
+// A difficult ball falling untouched is a hit; a routine dropped catch is an error.
+const OUTFIELD_ZONES=[
+ {defender:'LF',playerIndex:14,origin:[99,-5],point:[92,-40],label:'左翼'},
+ {defender:'CF',playerIndex:15,origin:[200,-75],point:[200,-106],label:'中堅'},
+ {defender:'RF',playerIndex:16,origin:[301,-5],point:[307,-40],label:'右翼'}
+];
+function outfieldContact(type){
+ const zone=choose(OUTFIELD_ZONES),fielder=current().def.players[zone.playerIndex],wide=rnd(-37,37),deep=rnd(-29,18);
+ const point=[clamp(zone.point[0]+wide,32,368),clamp(zone.point[1]+deep,-135,10)];
+ const distance=Math.hypot(point[0]-zone.origin[0],point[1]-zone.origin[1]);
+ const reach=type==='fly'?78:55;
+ const skill=(fielder.field-50)*.0038+(fielder.speed-50)*.0034;
+ const catchProb=clamp((type==='fly'?.90:.69)+skill-Math.max(0,distance-reach)*.008,type==='fly'?.24:.10,.985);
+ const caught=chance(catchProb),ordinary=distance<reach*.72;
+ const dropped=!caught&&ordinary&&chance(clamp(.035+(55-fielder.field)*.0012,.008,.10));
+ return {defender:zone.defender,label:zone.label,point,fielder,caught,dropped,type,catchProb,distance};
+}
+function outfieldMisplay(p,contact){
+ p.ab++;current().def.errors++;
+ const bases=game.bases,scored=[];
+ for(let i=2;i>=0;i--){
+  if(!bases[i])continue;
+  if(i===2){scored.push(bases[i]);bases[i]=null}
+  else {bases[i+1]=bases[i];bases[i]=null}
+ }
+ bases[0]=p;creditRuns(scored,p,false);
+ log(`${p.name} の${contact.type==='fly'?'フライ':'ライナー'}を${contact.fielder.name}が落球！ 失策。${scored.length?' '+scored.length+'点追加。':''}`);
+ showPitchResult('落球！ エラー','ball');
+ animate('outfieldError',contact,p.speed);
+}
+function lineBall(p){
+ const contact=outfieldContact('liner');
+ if(contact.caught){
+  p.ab++;game.outs++;pitcher().outsPitched++;
+  log(`${p.name} 鋭いライナー！ ${contact.fielder.name}が好捕。`);
+  showPitchResult('ライナーアウト！','strike');
+  animate('linerOut',contact,p.speed);
+ }else if(contact.dropped)outfieldMisplay(p,contact);
+ else{
+  log(`${contact.label}を襲うライナーが抜けた！`);
+  hit(p,contact.distance>65?2:1,'liner',contact);
+ }
+}
+function flyBall(p){
+ const contact=outfieldContact('fly');
+ if(!contact.caught){
+  if(contact.dropped)outfieldMisplay(p,contact);
+  else{
+   log(`${contact.label}の前にフライが落ちた！`);
+   hit(p,contact.distance>70?2:1,'normal',contact);
+  }
+  return;
+ }
+ const b=game.bases,pi=pitcher(),isSac=game.outs<2&&!!b[2]&&chance(clamp(.35+(p.power-50)*.002,.15,.55));
+ if(!isSac)p.ab++;else p.sf=(p.sf||0)+1;
+ game.outs++;pi.outsPitched++;
+ const scored=[];if(isSac){scored.push(b[2]);b[2]=null;p.rbi++}
+ else if(game.outs<3&&b[1]&&!b[2]&&chance(.12)){b[2]=b[1];b[1]=null}
+ if(scored.length)addRuns(1,scored);
+ log(`${p.name} 外野フライ、${contact.fielder.name}が捕球。${isSac?' タッチアップで三塁走者が生還、犠牲フライ！':''}`);
+ animate('fly',contact,p.speed);
+ if(isSac)animateOutfieldReturn('fly',true,contact.fielder.arm,null,contact);
+}
 function fieldingError(p){const {def}=current(),b=game.bases,scored=[];p.ab++;def.errors++;const throwing=game.totalPitches%2===0;
 for(let i=2;i>=0;i--){if(!b[i])continue;if(i===2){scored.push(b[i]);b[i]=null}else{b[i+1]=b[i];b[i]=null}}b[0]=p;creditRuns(scored,p,false);
 log(`${p.name} のゴロを${throwing?'野手が一塁へ悪送球！':'野手が後逸！'} 失策で出塁。${scored.length?' '+scored.length+'点追加。':''}`);animateFieldingError(throwing,p.speed)}
@@ -417,19 +474,19 @@ function animateGround(outcome,direction,batterSpeed=55,arm=55,timing=null){
  });
 }
 function animate(kind,targetInfo=null,runnerSpeed=55){
- const runnerType=kind==='linerHit'?'hit1':kind==='linerHit2'?'hit2':kind==='single'?'hit1':kind==='double'?'hit2':kind==='home'?'homeRun':kind==='fly'?'fly':null;
+ const runnerType=kind==='outfieldError'?'hit1':kind==='linerHit'?'hit1':kind==='linerHit2'?'hit2':kind==='single'?'hit1':kind==='double'?'hit2':kind==='home'?'homeRun':kind==='fly'?'fly':null;
  if(runnerType)animateBatterRun(runnerType,runnerSpeed);
  const ball=$('ball'),shadow=$('ballShadow'),field=$('fielders'),token=animationToken;
  const targets={out:[152,152],fly:[96,-36],home:[326,-117],single:[277,138],double:[311,-33],linerHit:[245,-104],linerHit2:[165,-112]};
  const target=targetInfo?targetInfo.point:targets[kind]||targets.single;
- const start=[200,283],duration=(kind==='linerHit'||kind==='linerHit2')?540:kind==='linerOut'?460:kind==='fly'?1150:kind==='home'?1250:830;
- const isFly=['fly','home','double'].includes(kind),isLiner=kind==='linerHit'||kind==='linerHit2'||kind==='linerOut';
+ const start=[200,283],duration=(kind==='linerHit'||kind==='linerHit2')?540:kind==='linerOut'?460:kind==='fly'||kind==='outfieldError'?1150:kind==='home'?1250:830;
+ const isFly=['fly','home','double','outfieldError'].includes(kind),isLiner=kind==='linerHit'||kind==='linerHit2'||kind==='linerOut';
  animationHoldUntil=Math.max(animationHoldUntil,Date.now()+duration+300);
  if(shadow){shadow.setAttribute('rx','0');shadow.setAttribute('ry','0')}
  ball.style.transition='none';ball.setAttribute('cx',start[0]);ball.setAttribute('cy',start[1]);ball.setAttribute('r','4');
  const defenders=field&&field.querySelectorAll?[...field.querySelectorAll('circle')]:[];
  let nearest=targetInfo?defenders.find(d=>d.getAttribute('data-position')===targetInfo.defender):null;
- if(!nearest&&['fly','single','double','linerHit','linerHit2'].includes(kind))nearest=defenders.reduce((best,d)=>{const dx=Number(d.getAttribute('cx'))-target[0],dy=Number(d.getAttribute('cy'))-target[1];return dx*dx+dy*dy<best.distance?{d,distance:dx*dx+dy*dy}:best},{d:null,distance:Infinity}).d;
+ if(!nearest&&['fly','single','double','linerHit','linerHit2','outfieldError'].includes(kind))nearest=defenders.reduce((best,d)=>{const dx=Number(d.getAttribute('cx'))-target[0],dy=Number(d.getAttribute('cy'))-target[1];return dx*dx+dy*dy<best.distance?{d,distance:dx*dx+dy*dy}:best},{d:null,distance:Infinity}).d;
  if(nearest){const x=nearest.getAttribute('cx'),y=nearest.getAttribute('cy'),label=field.querySelector('text[data-position="'+nearest.getAttribute('data-position')+'"]');
   const move=(a,b)=>{nearest.setAttribute('cx',a);nearest.setAttribute('cy',b);if(label){label.setAttribute('x',a);label.setAttribute('y',Number(b)+3)}};
   nearest.style.transition='cx '+duration+'ms ease,cy '+duration+'ms ease';
@@ -463,11 +520,11 @@ function animateFieldingError(throwing,speed){
  later(1050,()=>showPitchResult('エラー！','ball'));
  animationHoldUntil=Math.max(animationHoldUntil,Date.now()+1280);
 }
-function animateOutfieldReturn(kind,scoring=false,arm=55,homePlay=null){
+function animateOutfieldReturn(kind,scoring=false,arm=55,homePlay=null,targetInfo=null){
  const token=animationToken,ball=$('ball'),field=$('fielders');
  if(!ball||!field||typeof field.querySelectorAll!=='function')return;
  const targets={single:[277,138],double:[311,-33],triple:[311,-33],fly:[96,-36]};
- const landed=targets[kind]||targets.single,cutoff=[200,116],goal=(scoring||homePlay)?[200,293]:kind==='double'||kind==='triple'?[200,47]:[323,169];
+ const landed=targetInfo?targetInfo.point:(targets[kind]||targets.single),cutoff=[200,116],goal=(scoring||homePlay)?[200,293]:kind==='double'||kind==='triple'?[200,47]:[323,169];
  const outfielders=[...field.querySelectorAll('circle')].filter(el=>['LF','CF','RF'].includes(el.getAttribute('data-position')));
  if(!outfielders.length)return;
  const chosen=outfielders.reduce((best,el)=>{
