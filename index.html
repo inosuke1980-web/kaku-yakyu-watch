@@ -33,7 +33,7 @@
 .scoreboard-scroll td.attack-team{background:#1f382f}
 .scoreboard-hint{font-size:11px;color:#a7c6b5;margin:5px 0 0}
 @media(max-width:750px){.scoreboard-scroll th:first-child,.scoreboard-scroll td:first-child{min-width:102px;width:112px;max-width:112px}.scoreboard-scroll th,.scoreboard-scroll td{padding:6px 4px}}
-.current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.4.5 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
+.current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.4.6 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
 <section class="card"><h2>試合生成の条件</h2><div class="flex" style="gap:12px">
 <label>カテゴリー <select id="category"><option value="random">ランダム（現在は高校のみ）</option><option value="high">高校野球</option><option value="university" disabled>大学野球（今後追加）</option><option value="corporate" disabled>社会人野球（今後追加）</option><option value="pro" disabled>プロ野球（今後追加）</option></select></label>
 <label>試合種別 <select id="matchType"><option value="random">ランダム</option><option value="official">公式戦</option><option value="practice">練習試合</option></select></label>
@@ -327,19 +327,38 @@ function groundPlayTimes(p,direction,fielder){
  const risk=clamp(.025+(55-fielder.field)*.0012+(50-fielder.arm)*.0003,.008,.115);
  return {pickup,throwMs,runnerMs,arrive,risk,second};
 }
+// Separate a fielding mistake from a throwing mistake. All outcomes remain
+// official errors (not hits), with the normal forced one-base advance.
+function groundErrorType(fielder){
+ const throwWeight=clamp(.24+(55-fielder.arm)*.0025,.12,.37);
+ const roll=Math.random();
+ return roll<throwWeight?'wildThrow':roll<throwWeight+.34?'tunnel':'bobble';
+}
+function groundErrorPlan(direction,type){
+ const contact=direction.point,from=[200,283],dx=contact[0]-from[0],dy=contact[1]-from[1];
+ const len=Math.hypot(dx,dy)||1,unit=[dx/len,dy/len];
+ const target=type==='tunnel'
+  ?[clamp(contact[0]+unit[0]*66,15,385),clamp(contact[1]+unit[1]*66,70,287)]
+  :type==='bobble'
+   ?[clamp(contact[0]+(contact[0]<200?-24:24),15,385),clamp(contact[1]+11,75,287)]
+   :[347,209];
+ return {type,contact,target,contactMs:650,looseMs:type==='tunnel'?530:type==='bobble'?360:360,
+  retrieveMs:type==='tunnel'?490:type==='bobble'?330:0};
+}
 function groundBall(p){
  const b=game.bases,pi=pitcher(),direction=choose(GROUND_DIRECTIONS),fielder=groundDefender(direction),timing=groundPlayTimes(p,direction,fielder);
  p.ab++;
  const misplay=chance(timing.risk);
  if(misplay){
-  const throwing=chance(clamp(.37+(55-fielder.arm)*.003,.18,.65));
+  const errorType=groundErrorType(fielder),errorPlan=groundErrorPlan(direction,errorType);
   const def=current().def;def.errors++;
   const scored=[];
   // Existing occupied bases advance by one; batter is safe on first.
   for(let i=2;i>=0;i--){if(!b[i])continue;if(i===2){scored.push(b[i]);b[i]=null}else{b[i+1]=b[i];b[i]=null}}
   b[0]=p;creditRuns(scored,p,false);
-  log(`${p.name} ${direction.label}、${throwing?'一塁へ悪送球！':'捕球ミス！'} 失策で出塁。${scored.length?' '+scored.length+'点追加。':''}`);
-  animateFieldingError(throwing,p.speed);return;
+  const errorText=errorType==='tunnel'?'正面のゴロをトンネル！':errorType==='bobble'?'グラブに当てたが横にはじいた！':'一塁へ悪送球！';
+  log(`${p.name} ${direction.label}、${errorText} 失策で出塁。${scored.length?' '+scored.length+'点追加。':''}`);
+  animateFieldingError(errorType,p.speed,errorPlan,direction);return;
  }
  // A near-simultaneous throw and arrival is decided by the measured times.
  const batterSafe=timing.runnerMs+25<timing.arrive;
@@ -969,18 +988,32 @@ function animate(kind,targetInfo=null,runnerSpeed=55,hitBases=null){
 }
 // The hit outcome and earned runs remain owned by the simulator. This is a visual
 // outfielder -> relay -> home/base throw only (never an extra out or run).
-function animateFieldingError(throwing,speed){
- const ball=$('ball'),token=animationToken;
+function animateFieldingError(type,speed,plan=null,direction=null){
+ const ball=$('ball'),field=$('fielders'),token=animationToken;
  if(!ball)return;
+ const kind=typeof type==='boolean'?(type?'wildThrow':'tunnel'):type;
+ const error=plan||groundErrorPlan(direction||GROUND_DIRECTIONS[1],kind);
  animateBatterRun('hit1',speed);
  ball.style.transition='none';ball.setAttribute('cx','200');ball.setAttribute('cy','283');ball.setAttribute('r','4');
  const later=(ms,fn)=>playTimers.push(setTimeout(()=>{if(token===animationToken)fn()},ms));
- requestAnimationFrame(()=>{if(token!==animationToken)return;ball.style.transition='cx 470ms linear,cy 470ms linear';ball.setAttribute('cx',throwing?'251':'171');ball.setAttribute('cy',throwing?'168':'181')});
- if(throwing){
-  later(560,()=>{showPitchResult('一塁へ悪送球！','play');ball.style.transition='cx 330ms linear,cy 330ms linear';ball.setAttribute('cx','344');ball.setAttribute('cy','202')});
- }else later(530,()=>showPitchResult('ゴロを後逸！','play'));
- later(1050,()=>showPitchResult('エラー！','ball'));
- animationHoldUntil=Math.max(animationHoldUntil,Date.now()+1280);
+ const moveBall=(p,ms)=>{ball.style.transition='none';ball.getAttribute('cx');ball.style.transition='cx '+ms+'ms linear,cy '+ms+'ms linear';ball.setAttribute('cx',p[0]);ball.setAttribute('cy',p[1])};
+ const defender=field?.querySelector?.('circle[data-position="'+(direction?.defender||'SS')+'"]');
+ const label=field?.querySelector?.('text[data-position="'+(direction?.defender||'SS')+'"]');
+ const origin=defender?[Number(defender.getAttribute('cx')),Number(defender.getAttribute('cy'))]:null;
+ requestAnimationFrame(()=>{if(token===animationToken){moveBall(error.contact,error.contactMs);if(defender)moveGroundFielder(defender,label,error.contact,error.contactMs,token)}});
+ later(error.contactMs,()=>{
+  if(kind==='tunnel')showPitchResult('トンネル！','ball');
+  else if(kind==='bobble')showPitchResult('はじいた！','ball');
+  else showPitchResult('一塁へ悪送球！','ball');
+  moveBall(error.target,error.looseMs);
+ });
+ if(kind!=='wildThrow'&&defender&&origin){
+  later(error.contactMs+error.looseMs,()=>moveGroundFielder(defender,label,error.target,error.retrieveMs,token));
+  later(error.contactMs+error.looseMs+error.retrieveMs+220,()=>moveGroundFielder(defender,label,origin,330,token));
+ }
+ const finish=error.contactMs+error.looseMs+error.retrieveMs+550;
+ later(finish-110,()=>showPitchResult('失策で一塁セーフ','ball'));
+ animationHoldUntil=Math.max(animationHoldUntil,Date.now()+finish);
 }
 // Single clock shared by the throw and the advancing runner.
 // A dropped throw beats neither runner; an out always has the throw first.
