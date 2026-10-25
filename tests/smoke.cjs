@@ -702,3 +702,26 @@ assert.ok(infieldRangeAudit.disagreements>0,'attribute differences must affect o
 assert.match(html,/if\(!coverage\.reachable\)/,'ground balls beyond reach must be scored as hits rather than errors');
 assert.match(html,/animateInfieldRangeChase\(coverage,true\)/,'missed grounders should have a chase animation');
 console.log('INFIELD COVERAGE ATTRIBUTE CONTRAST CHECKS PASS',JSON.stringify({stronger:infieldRangeAudit.stronger,weaker:infieldRangeAudit.weaker}));
+
+const outfieldRangeAudit=vm.runInContext(`(()=>{
+ const base=Array.from({length:17},()=>({field:55,speed:55}));
+ const strong=base.map(p=>({...p})),weak=base.map(p=>({...p}));
+ strong[15]={field:95,speed:95};weak[15]={field:15,speed:15};
+ const sample=[155,-83],elite=outfieldCoverage('fly',sample,strong),poor=outfieldCoverage('fly',sample,weak);
+ const gap=[153,-85],centerPlus=base.map(p=>({...p}));centerPlus[15]={field:99,speed:99};
+ const picked=outfieldCoverage('fly',gap,centerPlus);
+ let strongCovers=0,weakCovers=0;
+ for(let x=105;x<=205;x+=5)for(let y=-110;y<=-30;y+=10){
+  const a=outfieldCoverage('fly',[x,y],strong),b=outfieldCoverage('fly',[x,y],weak);
+  if(a.distance<=a.reach)strongCovers++;
+  if(b.distance<=b.reach)weakCovers++;
+ }
+ return {eliteReach:elite.reach,poorReach:poor.reach,strongCovers,weakCovers,picked:picked.defender};
+})()`,ctx);
+assert.ok(outfieldRangeAudit.eliteReach>outfieldRangeAudit.poorReach,'elite centerfielder must have more range');
+assert.ok(outfieldRangeAudit.strongCovers>outfieldRangeAudit.weakCovers,'fast skilled centerfielder should cover more gap balls');
+assert.equal(outfieldRangeAudit.picked,'CF','fast centerfielder should take a gap ball');
+assert.match(html,/const cover=outfieldCoverage\(type,point,current\(\)\.def\.players\)/,'outfield catches must select real covering defender');
+assert.match(html,/hit\(p,contact\.gapMiss\?2:1,'liner',contact\)/,'missed gap liners must produce extra-base opportunities');
+assert.match(html,/hit\(p,contact\.gapMiss\?2:1,'normal',contact\)/,'missed fly balls must produce extra-base opportunities');
+console.log('OUTFIELD ATTRIBUTE / GAP COVERAGE TESTS PASS',JSON.stringify(outfieldRangeAudit));
