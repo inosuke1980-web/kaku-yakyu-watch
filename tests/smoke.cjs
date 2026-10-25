@@ -879,3 +879,16 @@ assert.match(html,/later\(finishFirst\+20,\(\)=>moveRunnerRoundBase\(runner,seco
 assert.match(html,/stageRunnerArrival\(player\.id,finalArrival,token\)/,'fixed base marker must wait for final arrival');
 assert.match(html,/if\(moving\?\.getAttribute\('data-runner-id'\)===String\(id\)\)moving\.setAttribute\('visibility','hidden'\)/,'sprite must disappear before stationary marker shows');
 console.log('BATTER FIRST BASE RUN-THROUGH VS ROUNDING CHECKS PASS');
+
+const cornerDepthAudit=vm.runInContext(`(()=>{
+ const first=INFIELD_RANGE_ORIGINS['1B'],third=INFIELD_RANGE_ORIGINS['3B'];
+ const nearFirst=groundRangePlan({defender:'1B',point:[282,154],strength:'normal'},{field:55,speed:55});
+ const nearThird=groundRangePlan({defender:'3B',point:[118,154],strength:'normal'},{field:55,speed:55});
+ return {first,third,nearFirst,nearThird};
+})()`,ctx);
+assert.deepEqual(Array.from(cornerDepthAudit.first),[282,149],'first baseman must play deeper than the bag');
+assert.deepEqual(Array.from(cornerDepthAudit.third),[118,149],'third baseman must play deeper than the bag');
+assert.ok(cornerDepthAudit.nearFirst.reachable&&cornerDepthAudit.nearThird.reachable,'corner fielders should cover balls near their normal depth');
+assert.match(html,/\['1B',282,149\].*\['3B',118,149\]/,'visual fielder origins must match standard depth');
+assert.match(html,/SS:\[150,121\],'2B':\[250,121\],'1B':\[282,149\],'3B':\[118,149\]/,'fielder reset must use the same coordinates');
+console.log('CORNER INFIELDERS STANDARD DEPTH PASS');
