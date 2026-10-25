@@ -395,7 +395,7 @@ function groundRangePlan(direction,fielder,offset=0){
  const pos=direction.defender,origin=INFIELD_RANGE_ORIGINS[pos]||direction.point;
  const point=[clamp(direction.point[0]+offset,56,344),direction.point[1]];
  const distance=Math.hypot(point[0]-origin[0],point[1]-origin[1]);
- const range=clamp(27+(fielder.field-50)*.34+(fielder.speed-50)*.24,13,65);
+ const range=clamp(27+(fielder.field-50)*.34+(fielder.speed-50)*.24,13,65)+(direction.strength==='soft'?58:0);
  const reachable=distance<=range;
  return {point,origin,distance,range,reachable,defender:pos};
 }
@@ -422,7 +422,7 @@ function groundBall(p){
  const normalPoint=[clamp(baseDirection.point[0]+offset,56,344),baseDirection.point[1]];
  const soft= strength==='soft';
  const point=soft?[200+(normalPoint[0]-200)*.78,283+(normalPoint[1]-283)*.64]:normalPoint;
- const coverage=groundRangePlan({...baseDirection,point},fielder,0);
+ const coverage=groundRangePlan({...baseDirection,point,strength},fielder,0);
  const direction={...baseDirection,point:coverage.point,strength},timing=groundPlayTimes(p,direction,fielder);
  if(!coverage.reachable){
   // A clean ball through the infield is a hit, not a fielding error.
