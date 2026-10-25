@@ -524,7 +524,7 @@ function animateFlyLeadAndReturn(beforeBases,halfAtStart,inningAtStart){
 // Presentation-only timing: no changes to the already-resolved base/out call.
 // Curve around the OUTSIDE of the diamond while arriving exactly on each bag.
 // Pure geometry shared by existing baserunners and the batter-runner.
-function roundedBasePath(from,to,t,bulge=13){
+function roundedBasePath(from,to,t,bulge=24){
  const clamped=clamp(t,0,1),u=1-clamped;
  const center=[200,170],mid=[(from[0]+to[0])/2,(from[1]+to[1])/2];
  const away=[mid[0]-center[0],mid[1]-center[1]];
