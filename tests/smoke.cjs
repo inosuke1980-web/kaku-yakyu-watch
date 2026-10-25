@@ -960,3 +960,34 @@ assert.deepEqual(Array.from(middleShiftAudit.twoOut.positions.SS),Array.from(mid
 assert.ok(middleShiftAudit.forceLeft.positions.SS[0]<200&&middleShiftAudit.forceLeft.positions['2B'][0]>200,'combined shift preserves correct sides');
 assert.match(html,/const hitter=lineup\?\.\[\[5,6,7,8,9,10,11,12,13\]\[\(attacking\.bat\|\|0\)%9\]\]/,'alignment must use the actual upcoming batter');
 console.log('MIDDLE INFIELD FORCE AND BATTER HANDEDNESS SHIFTS PASS');
+
+const alignmentMovementAudit=vm.runInContext(`(()=>{
+ const distances=[0,1,3,12,30,70],times=distances.map(alignmentMoveDuration);
+ const el=(x,y)=>({style:{},attrs:{cx:String(x),cy:String(y)},
+  getAttribute(k){return this.attrs[k]??null},setAttribute(k,v){this.attrs[k]=String(v)}});
+ const nodes={};
+ for(const name of ['1B','2B','SS','3B'])nodes[name]={circle:el(200,180),label:el(200,180)};
+ const originalDocumentGet=document.getElementById;
+ const originalGame=game;
+ // Return the mocked field only for the movement audit.
+ const layer={querySelector(selector){
+  const match=selector.match(/^(circle|text)\[data-position="([^"]+)"\]$/);
+  return match?nodes[match[2]]?.[match[1]==='circle'?'circle':'label']:null;
+ }};
+ document.getElementById=id=>id==='fielders'?layer:originalDocumentGet(id);
+ game={bases:[null,null,null],outs:1,inning:1,half:0,ended:false,teams:[{bat:0,runs:[0],players:Array.from({length:14},()=>({bats:'右打'}))},{runs:[0]}]};
+ const result=applyDefensiveAlignment(true);
+ document.getElementById=originalDocumentGet;
+ game=originalGame;
+ return {times,result,flags:Object.fromEntries(Object.entries(nodes).map(([name,el])=>[name,el.circle.attrs['data-aligning']]))};
+})()`,ctx);
+assert.equal(alignmentMovementAudit.times[0],0,'no movement needed at identical coordinates');
+assert.equal(alignmentMovementAudit.times[1],0,'subpixel or trivial shifts must not waste a pitch');
+assert.ok(alignmentMovementAudit.times[2]>=250,'moderate shift takes visible time');
+assert.ok(alignmentMovementAudit.times[5]<=650,'long shift must be bounded');
+assert.ok(alignmentMovementAudit.result>=250,'fielder movement should delay pitch release');
+assert.ok(Object.values(alignmentMovementAudit.flags).some(v=>v==='true'),'moved fielders should be tagged during repositioning');
+assert.match(html,/const moveMs=applyDefensiveAlignment\(true\)/,'pitch must request animated repositioning');
+assert.match(html,/if\(token!==animationToken\|\|!game\|\|game\.ended\)return;\s*startPitchMotion\(\)/,'pitch must start only after movement and token check');
+assert.match(html,/flightTimer=setTimeout\(\(\)=>\{\s*flightTimer=null;\s*if\(token!==animationToken/,'pending movement must occupy cancellable flight timer');
+console.log('PRE-PITCH INFIELD MOVEMENT AND TOKEN GUARDS PASS');
