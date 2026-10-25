@@ -750,3 +750,28 @@ assert.equal(rollingGroundAudit.issues,0,'grounders must travel smoothly from th
 assert.match(html,/groundRollPosition\(targetInfo\|\|\{point:target\},t\)/,'animation must sample grounder position on each frame');
 assert.match(html,/flightMs:1550,defender:wing/,'ground balls past infielders must also roll long enough');
 console.log('VISIBLE OUTFIELD GROUND ROLL CHECKS PASS',JSON.stringify(rollingGroundAudit));
+
+const noMagneticBall=vm.runInContext(`(()=>{
+ const scenarios=[];
+ for(let i=0;i<800;i++){
+  const plan=outfieldHitPlan(i%2+1,'normal');
+  if(plan.flight!=='groundThrough')continue;
+  const origin=[plan.defender==='LF'?99:plan.defender==='CF'?200:301,-5];
+  const pursuit=outfieldPursuitPlan('groundThrough',plan,origin,plan.flightMs);
+  const rollEnd=groundRollPosition(plan,1);
+  const timing=outfieldPickupTiming(plan,plan.fielder.field);
+  scenarios.push({endpoint:rollEnd,pickup:pursuit.pickup,finish:pursuit.destination,
+   rollMs:plan.flightMs,releaseMs:timing.release,atGrass:groundRollPosition(plan,.75)});
+ }
+ return scenarios;
+})()`,ctx);
+assert.ok(noMagneticBall.length>100,'ground ball cases must occur frequently');
+for(const play of noMagneticBall){
+ assert.deepEqual(Array.from(play.pickup),Array.from(play.endpoint),'fielder must meet the ball at its own roll endpoint');
+ assert.deepEqual(Array.from(play.finish),Array.from(play.endpoint),'the ball must never chase the outfielder');
+ assert.ok(play.releaseMs>play.rollMs,'ball must finish rolling before the throw begins');
+}
+assert.match(html,/groundRollPosition\(targetInfo,\.67\)/,'fielder should track the grounder across grass');
+assert.match(html,/const from=\[Number\(ball\.getAttribute\('cx'\)\),Number\(ball\.getAttribute\('cy'\)\)\]/,'return throw must begin at current ball position');
+assert.match(html,/requestAnimationFrame\(throwFrame\)/,'relay must animate frame by frame without SVG CSS snapping');
+console.log('NATURAL OUTFIELD PICKUP / NO MAGNETIC BALL CHECKS PASS');
