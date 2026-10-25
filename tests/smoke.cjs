@@ -428,3 +428,26 @@ assert.equal(outfieldHitVarieties.invalid,0,'ball landing and roll locations sho
 assert.equal(outfieldHitVarieties.liner,'gapLiner','liner hit should have a low trajectory');
 assert.match(html,/function outfieldHitDescription\(/,'trajectory-specific commentary should exist');
 console.log('OUTFIELD HIT VARIETIES CHECKS PASS',JSON.stringify(outfieldHitVarieties));
+
+const broadcastMini=vm.runInContext(`(()=>{
+ init();const g=game;
+ const names=g.teams.map(t=>miniTeamName(t.name));
+ const start=miniScoreMarkup();
+ g.teams[0].runs[0]=2;g.balls=2;g.strikes=1;g.outs=1;
+ renderMiniScore();const live=$('miniScore').innerHTML;
+ g.outs=3;endHalf();renderMiniScore();const other=$('miniScore').innerHTML;
+ g.ended=true;renderMiniScore();const final=$('miniScore').innerHTML;
+ return {names,start,live,other,final};
+})()`,ctx);
+assert.match(html,/id="miniScore" class="mini-score"/,'field mini scoreboard must exist');
+assert.match(html,/\.mini-score\{position:absolute;right:9px;bottom:9px/,'panel should be anchored to bottom right');
+assert.match(broadcastMini.start,/1回表/);
+assert.match(broadcastMini.live,/1回表/);
+assert.match(broadcastMini.live,/mini-points">2<\/span>/);
+assert.equal((broadcastMini.live.match(/mini-lamp active ball/g)||[]).length,2);
+assert.equal((broadcastMini.live.match(/mini-lamp active strike/g)||[]).length,1);
+assert.equal((broadcastMini.live.match(/mini-lamp active out/g)||[]).length,1);
+assert.match(broadcastMini.other,/1回裏/);
+assert.match(broadcastMini.final,/試合終了/);
+assert.ok(broadcastMini.names.every(n=>n.length<=4));
+console.log('BROADCAST MINI SCOREBOARD CHECKS PASS');
