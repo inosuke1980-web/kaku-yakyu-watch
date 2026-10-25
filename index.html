@@ -1,6 +1,6 @@
 <!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>架空野球観戦 — 高校野球版</title><style>
 :root{font-family:system-ui,-apple-system,'Hiragino Kaku Gothic ProN',sans-serif;color:#e9f0eb;background:#0d1715}*{box-sizing:border-box}body{margin:0}main{max-width:1100px;margin:auto;padding:20px}header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}h1{font-size:23px;margin:0}h2{font-size:17px;margin:0 0 12px}button,select{background:#285c49;border:1px solid #56826d;color:white;border-radius:8px;padding:10px 14px;font:inherit;cursor:pointer}button:disabled{opacity:.4;cursor:not-allowed}button.secondary{background:#24312d}button:hover:not(:disabled){filter:brightness(1.16)}.muted{color:#a9bdb2;font-size:13px}.card{background:#172622;border:1px solid #2e493e;border-radius:12px;padding:16px;margin-top:14px}.flex{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.between{justify-content:space-between}.score{font-size:30px;font-weight:800;text-align:center}.score small{display:block;font-size:13px;font-weight:400;color:#abc0b5}.teams{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center}.team{text-align:center;font-weight:700}.tag{border-radius:12px;background:#294739;padding:3px 8px;font-size:12px}.layout{display:grid;grid-template-columns:1.2fr 1fr;gap:14px}.field{width:100%;max-height:400px;background:#113a2b;border-radius:10px}.log{height:225px;overflow:auto;background:#101d19;padding:12px;border-radius:8px;font-size:13px;line-height:1.7}.log div{border-bottom:1px solid #24362d;padding:3px 0}.tablewrap{overflow:auto}table{border-collapse:collapse;width:100%;font-size:12px;white-space:nowrap}th,td{padding:7px;border-bottom:1px solid #33483e;text-align:right}th:first-child,td:first-child{text-align:left}.tabs{display:flex;gap:8px;margin-top:16px}.hidden{display:none!important}.player{cursor:pointer}.player:hover{background:#2c483a}dialog{border:1px solid #5a7d6b;background:#172622;color:#e9f0eb;border-radius:12px;max-width:min(94vw,560px);width:100%}dialog::backdrop{background:#000a}.pill{display:inline-block;background:#274438;padding:2px 8px;border-radius:8px;margin:3px}.small{font-size:12px}.controls{display:flex;gap:8px;flex-wrap:wrap}#status{font-weight:700;color:#c6e5c8}.pitch-result{margin:10px 0 2px;min-height:46px;display:flex;align-items:center;justify-content:center;border:1px solid #557261;border-radius:9px;background:#10241d;font-size:24px;font-weight:900;letter-spacing:.08em;color:#e6f1e9}.pitch-result.ball{color:#7bdb9e}.pitch-result.strike{color:#f7d76d}.pitch-result.foul{color:#b2d7ff}.pitch-result.play{color:#fff2b8}.pitch-result small{font-size:13px;font-weight:500;letter-spacing:0;margin-left:8px;color:#c9d4ce}.pitch-result.homerun{color:#ffe183;border-color:#efb54d;background:#56321b;font-size:29px;letter-spacing:.13em;text-shadow:0 1px 7px #8b4800}.count-panel{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;padding:9px 0}.count-dots{display:flex;align-items:center;gap:5px;font-weight:800;font-size:12px}.count-dots span.dot{width:13px;height:13px;border-radius:50%;display:inline-block;border:1px solid #60796b;background:#203329}.count-dots span.dot.on.ball{background:#67d58b;border-color:#67d58b}.count-dots span.dot.on.strike{background:#ead46a;border-color:#ead46a}.count-dots span.dot.on.out{background:#e37a73;border-color:#e37a73}.count-dots .count-number{margin-left:3px;margin-right:8px;color:#d6e4da;font-variant-numeric:tabular-nums} @media(max-width:750px){.layout{grid-template-columns:1fr}main{padding:10px}.card{padding:12px}.score{font-size:23px}h1{font-size:20px}}
- .current-inning{background:#345c46;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.2.1 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
+ .current-inning{background:#345c46;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.2.2 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
 <section class="card"><h2>試合生成の条件</h2><div class="flex" style="gap:12px">
 <label>カテゴリー <select id="category"><option value="random">ランダム（現在は高校のみ）</option><option value="high">高校野球</option><option value="university" disabled>大学野球（今後追加）</option><option value="corporate" disabled>社会人野球（今後追加）</option><option value="pro" disabled>プロ野球（今後追加）</option></select></label>
 <label>試合種別 <select id="matchType"><option value="random">ランダム</option><option value="official">公式戦</option><option value="practice">練習試合</option></select></label>
@@ -59,46 +59,98 @@ function scoreHit(p,type){p.ab++;p.h++;if(type==='本塁打')p.hr++;current().ba
 function outBatter(p,strikeout=false){p.ab++;if(strikeout){p.k++;pitcher().kP++}game.outs++;pitcher().outsPitched++}
 function creditRuns(scored,p,rbi=true){if(!scored.length)return;addRuns(scored.length,scored);if(rbi)p.rbi+=scored.length}
 function walk(p){p.bb++;pitcher().bbAllowed++;const b=game.bases,scored=[];if(b[0]){if(b[1]){if(b[2])scored.push(b[2]);b[2]=b[1]}b[1]=b[0]}b[0]=p;creditRuns(scored,p);log(`${p.name} 四球。${scored.length?' 押し出し！':''}`)}
-function hit(p,bases,style='normal',targetInfo=null){const defender=current().def.players[14+(game.totalPitches%6)],fieldArm=defender.arm,fieldSkill=defender.field;scoreHit(p,bases===4?'本塁打':'安打');const old=game.bases.slice(),neu=[null,null,null],scored=[];
-for(let i=2;i>=0;i--){const r=old[i];if(!r)continue;let dest;
-if(bases===4)dest=3;
-else if(bases===1)dest=i+(i===2?1:i===1?(chance(.62)?2:1):(chance(.32)?2:1));
-else dest=i+bases;
-if(dest>=3)scored.push(r);else {while(dest>i&&neu[dest])dest--;if(neu[dest])throw Error("進塁先が重複しました");neu[dest]=r;}
-}
-if(bases===4)scored.push(p);else neu[bases-1]=p;
-let homePlay=null;
-if(bases!==4&&scored.length&&game.outs<2){
- const options=scored.filter(r=>r!==p).map(r=>({runner:r,origin:old.findIndex(x=>x&&x.id===r.id)})).filter(x=>x.origin===0||x.origin===1);
- options.sort((a,b)=>a.origin-b.origin);
- if(options.length){
-  const pick=options[0],seg=Math.round(clamp(740-(pick.runner.speed-50)*3.2,570,900));
-  const kind=bases===1?'single':'double',landed=kind==='single'?[277,138]:[311,-33],cutoff=[200,116],plate=[200,293];
-  const runnerMs=70+(3-pick.origin)*seg;
-  const throwMs=830+(bases>=2?600:0)+190+throwFlightMs(fieldArm,landed,cutoff)+130+throwFlightMs(65,cutoff,plate);
-  const wild=chance(clamp(.10-(fieldSkill-50)*.0008,.035,.15));
-  const safe=wild||runnerMs+rnd(-100,100)<=throwMs+rnd(-125,125);
-  homePlay={id:pick.runner.id,origin:pick.origin,runnerMs,throwMs,wild,safe};
-  if(!safe){scored.splice(scored.findIndex(r=>r.id===pick.runner.id),1);game.outs++;pitcher().outsPitched++;}
+// Resolve extra-base decisions in front-to-back order. The lead runner owns
+// the next base; trailing runners may only advance into genuinely vacant bases.
+function runnerSegmentMs(speed){return Math.round(clamp(740-(speed-50)*3.2,570,900))}
+function decideSingleAdvance(runner,origin,point,arm,occupiedThird){
+ const deep=point[1]<-55?110:point[1]<-5?60:0;
+ const segment=runnerSegmentMs(runner.speed);
+ // These are gameplay estimates; animation follows the already-resolved result.
+ const thirdThrow=830+190+deep+throwFlightMs(arm,point,[77,169])+290;
+ const homeThrow=830+190+deep+throwFlightMs(arm,point,[200,116])+130+throwFlightMs(60,[200,116],[200,293]);
+ if(origin===1){
+  const arrival=70+2*segment;
+  const margin=homeThrow-arrival;
+  return {target:margin>40&&chance(clamp(.35+margin*.0014,.12,.86))?3:2,margin};
  }
+ if(origin===0&&!occupiedThird){
+  const arrival=70+2*segment;
+  const margin=thirdThrow-arrival;
+  const attempt=chance(clamp(.22+margin*.0012,.035,.67));
+  if(!attempt)return {target:1};
+  const safe=arrival+rnd(-90,90)<=thirdThrow+rnd(-115,115);
+  return {target:safe?2:-1,attempt:true,thirdOut:!safe,arrival,thirdThrow};
+ }
+ return {target:1};
 }
-game.homePlayOutId=homePlay&&!homePlay.safe?homePlay.id:null;
-if(homePlay&&homePlay.wild){
- // A wild throw at home is a charged fielding error, not an additional hit.
- current().def.errors++;
- // The batter can take the next unoccupied base while the catcher retrieves it.
- // Resolve from the lead end so bases are never overwritten.
- let advanced=false;
+function hit(p,bases,style='normal',targetInfo=null){
+ const defender=targetInfo?.fielder||current().def.players[14+(game.totalPitches%6)];
+ const fieldArm=defender.arm,fieldSkill=defender.field;
+ const landing=targetInfo?.point||(bases===1?[277,138]:[311,-33]);
+ scoreHit(p,bases===4?'本塁打':'安打');
+ const old=game.bases.slice(),neu=[null,null,null],scored=[];
+ game.thirdBasePlay=null;
  for(let i=2;i>=0;i--){
-  if(!neu[i]||i===2||neu[i+1])continue;
-  neu[i+1]=neu[i];neu[i]=null;advanced=true;break;
+  const r=old[i];if(!r)continue;
+  let dest=bases===4?3:bases===1?i+1:i+bases;
+  if(bases===1&&i===1){
+   const decision=decideSingleAdvance(r,1,landing,fieldArm,false);
+   dest=decision.target;
+  }else if(bases===1&&i===0){
+   // The lead runner can stop at third; avoid overtaking him.
+   const thirdBlocked=!!neu[2];
+   const decision=decideSingleAdvance(r,0,landing,fieldArm,thirdBlocked);
+   dest=decision.target;
+   if(decision.thirdOut){
+    game.thirdBasePlay={id:r.id,safe:false,arrival:decision.arrival,throwArrival:decision.thirdThrow};
+    game.outs++;pitcher().outsPitched++;
+    continue;
+   }
+   if(decision.attempt)game.thirdBasePlay={id:r.id,safe:true,arrival:decision.arrival,throwArrival:decision.thirdThrow};
+  }
+  if(dest>=3)scored.push(r);
+  else{
+   while(dest>i&&neu[dest])dest--;
+   if(neu[dest])throw Error('進塁先が重複しました');
+   neu[dest]=r;
+  }
  }
- homePlay.extraAdvance=advanced;
+ if(bases===4)scored.push(p);else neu[bases-1]=p;
+ let homePlay=null;
+ if(bases!==4&&scored.length&&game.outs<2){
+  const options=scored.filter(r=>r!==p).map(r=>({runner:r,origin:old.findIndex(x=>x&&x.id===r.id)})).filter(x=>x.origin===0||x.origin===1);
+  options.sort((a,b)=>a.origin-b.origin);
+  if(options.length){
+   const pick=options[0],seg=runnerSegmentMs(pick.runner.speed),cutoff=[200,116],plate=[200,293];
+   const runnerMs=70+(3-pick.origin)*seg;
+   const throwMs=830+(bases>=2?600:0)+190+throwFlightMs(fieldArm,landing,cutoff)+130+throwFlightMs(65,cutoff,plate);
+   const wild=chance(clamp(.10-(fieldSkill-50)*.0008,.035,.15));
+   const safe=wild||runnerMs+rnd(-100,100)<=throwMs+rnd(-125,125);
+   homePlay={id:pick.runner.id,origin:pick.origin,runnerMs,throwMs,wild,safe};
+   if(!safe){scored.splice(scored.findIndex(r=>r.id===pick.runner.id),1);game.outs++;pitcher().outsPitched++;}
+  }
+ }
+ game.homePlayOutId=homePlay&&!homePlay.safe?homePlay.id:null;
+ if(homePlay&&homePlay.wild){
+  current().def.errors++;
+  let advanced=false;
+  for(let i=2;i>=0;i--){
+   if(!neu[i]||i===2||neu[i+1])continue;
+   neu[i+1]=neu[i];neu[i]=null;advanced=true;break;
+  }
+  homePlay.extraAdvance=advanced;
+ }
+ game.bases=neu;
+ // No run can count on a third out before the batter reaches first, but
+ // an out trying for third after a hit does not cancel preceding runs.
+ creditRuns(scored,p);
+ if(bases===4)showPitchResult('HOMERUN!','homerun');
+ if(homePlay)log(homePlay.wild?'外野からの返球が逸れた！ 失策を記録。'+(homePlay.extraAdvance?' 走者が追加進塁。':''):homePlay.safe?'本塁クロスプレー、セーフ！':'本塁クロスプレー、タッチアウト！');
+ if(game.thirdBasePlay)log(game.thirdBasePlay.safe?'一塁走者が三塁を狙ってセーフ！':'一塁走者、三塁でタッチアウト！');
+ log(`${p.name} ${style==='liner'?'鋭いライナーが間を抜けた！ ':''}${bases===4?'ホームラン！':bases===3?'三塁打！':bases===2?'二塁打！':'ヒット！'}${scored.length?' '+scored.length+'点追加。':''}`);
+ animate(style==='liner'?(bases===2?'linerHit2':'linerHit'):bases===4?'home':bases===1?'single':'double',targetInfo,p.speed);
+ if(bases!==4)animateOutfieldReturn(bases===1?'single':bases===2?'double':'triple',scored.length>0,fieldArm,homePlay,targetInfo,game.thirdBasePlay);
 }
-game.bases=neu;creditRuns(scored,p);
-if(bases===4)showPitchResult('HOMERUN!','homerun');
-if(homePlay)log(homePlay.wild?'外野からの返球が逸れた！ 失策を記録。'+(homePlay.extraAdvance?' 走者が追加進塁。':''):homePlay.safe?'本塁クロスプレー、セーフ！':'本塁クロスプレー、タッチアウト！');
-log(`${p.name} ${style==='liner'?'鋭いライナーが間を抜けた！ ':''}${bases===4?'ホームラン！':bases===3?'三塁打！':bases===2?'二塁打！':'ヒット！'}${scored.length?' '+scored.length+'点追加。':''}`);animate(style==='liner'?(bases===2?'linerHit2':'linerHit'):bases===4?'home':bases===1?'single':'double',targetInfo,p.speed);if(bases!==4)animateOutfieldReturn(bases===1?'single':bases===2?'double':'triple',scored.length>0,fieldArm,homePlay,targetInfo)}
 // 内野ゴロ：二塁封殺／併殺／一塁アウトのいずれかを状況から決定する。
 // A single resolved ground-ball play controls the statistics and the animation.
 // Fielding/arm determine handling and throw times; speed determines the race to first.
@@ -319,9 +371,9 @@ function animateBaseRunners(beforeBases,beforeRuns,halfAtStart,inningAtStart){
  for(let i=0;i<3;i++){
   const person=beforeBases[i];if(!person)continue;
   const index=game.bases.findIndex(q=>q&&q.id===person.id);
-  const scored=person.r>(beforeRuns.get(person.id)||0),tagged=game.homePlayOutId===person.id;
-  if(index===i||index<0&&!scored&&!tagged)continue;
-  const target=scored||tagged?3:index;
+  const scored=person.r>(beforeRuns.get(person.id)||0),tagged=game.homePlayOutId===person.id,thirdOut=game.thirdBasePlay&&game.thirdBasePlay.id===person.id&&!game.thirdBasePlay.safe;
+  if(index===i||index<0&&!scored&&!tagged&&!thirdOut)continue;
+  const target=thirdOut?2:scored||tagged?3:index;
   if(target<i)continue;
   moves.push({person,from:i,to:target});
  }
@@ -361,7 +413,7 @@ function animateBaseRunners(beforeBases,beforeRuns,halfAtStart,inningAtStart){
  const later=playTimers.push(setTimeout(()=>{if(token===animationToken)layer.replaceChildren()},longest+145));
 }
 function resolvePitch(){if(!game||game.ended)return;
-game.homePlayOutId=null;game.flyReturn=false;
+game.homePlayOutId=null;game.thirdBasePlay=null;game.flyReturn=false;
 const beforeBases=game.bases.slice(),beforeRuns=new Map(beforeBases.filter(Boolean).map(p=>[p.id,p.r])),halfAtStart=game.half,inningAtStart=game.inning;
 if(tactics()){if(game.ended){render();return}
  if(game.outs>=3)endHalf();else maybeChangePitcher();
@@ -583,11 +635,11 @@ function animateFieldingError(throwing,speed){
  later(1050,()=>showPitchResult('エラー！','ball'));
  animationHoldUntil=Math.max(animationHoldUntil,Date.now()+1280);
 }
-function animateOutfieldReturn(kind,scoring=false,arm=55,homePlay=null,targetInfo=null){
+function animateOutfieldReturn(kind,scoring=false,arm=55,homePlay=null,targetInfo=null,thirdBasePlay=null){
  const token=animationToken,ball=$('ball'),field=$('fielders');
  if(!ball||!field||typeof field.querySelectorAll!=='function')return;
  const targets={single:[277,138],double:[311,-33],triple:[311,-33],fly:[96,-36]};
- const landed=targetInfo?targetInfo.point:(targets[kind]||targets.single),cutoff=[200,116],goal=(scoring||homePlay)?[200,293]:kind==='double'||kind==='triple'?[200,47]:[323,169];
+ const landed=targetInfo?targetInfo.point:(targets[kind]||targets.single),cutoff=[200,116],goal=(scoring||homePlay)?[200,293]:thirdBasePlay?[77,169]:kind==='double'||kind==='triple'?[200,47]:[323,169];
  const outfielders=[...field.querySelectorAll('circle')].filter(el=>['LF','CF','RF'].includes(el.getAttribute('data-position')));
  if(!outfielders.length)return;
  const chosen=outfielders.reduce((best,el)=>{
@@ -617,15 +669,16 @@ function animateOutfieldReturn(kind,scoring=false,arm=55,homePlay=null,targetInf
   ball.setAttribute('cx',target[0]);ball.setAttribute('cy',target[1]);ball.setAttribute('r','3.5');
  };
  later(release,()=>{
-  showPitchResult((scoring||homePlay)?'ホームへ返球！':fielder+' が中継へ返球','play');
+  showPitchResult((scoring||homePlay)?'ホームへ返球！':thirdBasePlay?'三塁へ返球！':fielder+' が中継へ返球','play');
   move(cutoff,relayMs);
  });
  later(atRelay+relayPause,()=>{
-  showPitchResult((scoring||homePlay)?'ホームで勝負！':'中継から送球！','play');
+  showPitchResult((scoring||homePlay)?'ホームで勝負！':thirdBasePlay?'三塁で勝負！':'中継から送球！','play');
   move(homePlay&&homePlay.wild?[goal[0]+25,goal[1]+16]:goal,finalMs);
  });
  later(atGoal+110,()=>{
   if(homePlay)showPitchResult(homePlay.wild?'悪送球！ セーフ！':homePlay.safe?'セーフ！':'タッチアウト！',homePlay.safe?'ball':'strike');
+  else if(thirdBasePlay)showPitchResult(thirdBasePlay.safe?'三塁セーフ！':'三塁タッチアウト！',thirdBasePlay.safe?'ball':'strike');
   else if(scoring)showPitchResult('ホームイン！','ball');
   else showPitchResult('返球完了','play');
  });
