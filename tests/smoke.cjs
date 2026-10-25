@@ -294,3 +294,18 @@ assert.ok(foulChecks.counts.every((x)=>x.unchanged&&x.after===Math.min(x.before+
 assert.equal(foulChecks.sides.left,5000);
 assert.equal(foulChecks.sides.right,5000);
 console.log('FOUL TRAJECTORY AND COUNT CHECKS PASS',JSON.stringify(foulChecks));
+
+const firstBaseCover=vm.runInContext(`(()=>{
+ const outcomes=['out','safe','double','force'],positions=['1B','2B','SS','3B'];
+ const plans=[];
+ for(const position of positions)for(const outcome of outcomes){
+  const p=groundFirstCover(position,outcome);
+  plans.push({position,outcome,...p});
+ }
+ return plans;
+})()`,ctx);
+assert.equal(firstBaseCover.length,16);
+assert.ok(firstBaseCover.every(x=>x.cover==='1B'&&x.needed),'first baseman must cover first on ground balls');
+assert.ok(firstBaseCover.filter(x=>x.position==='1B').every(x=>x.backup==='2B'),'second baseman should be designated backup when first baseman fields ball');
+assert.match(html,/const base=\{LF:\[99,-5\],CF:\[200,-75\],RF:\[301,-5\],SS:\[150,121\],'2B':\[250,121\],'1B':\[286,189\]\}/,'first baseman must reset after cover');
+console.log('FIRST BASE COVER CHECKS PASS',JSON.stringify(firstBaseCover));
