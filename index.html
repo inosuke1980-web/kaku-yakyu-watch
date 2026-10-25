@@ -1,6 +1,6 @@
 <!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>架空野球観戦 — 高校野球版</title><style>
 :root{font-family:system-ui,-apple-system,'Hiragino Kaku Gothic ProN',sans-serif;color:#e9f0eb;background:#0d1715}*{box-sizing:border-box}body{margin:0}main{max-width:1100px;margin:auto;padding:20px}header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}h1{font-size:23px;margin:0}h2{font-size:17px;margin:0 0 12px}button,select{background:#285c49;border:1px solid #56826d;color:white;border-radius:8px;padding:10px 14px;font:inherit;cursor:pointer}button:disabled{opacity:.4;cursor:not-allowed}button.secondary{background:#24312d}button:hover:not(:disabled){filter:brightness(1.16)}.muted{color:#a9bdb2;font-size:13px}.card{background:#172622;border:1px solid #2e493e;border-radius:12px;padding:16px;margin-top:14px}.flex{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.between{justify-content:space-between}.score{font-size:30px;font-weight:800;text-align:center}.score small{display:block;font-size:13px;font-weight:400;color:#abc0b5}.teams{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center}.team{text-align:center;font-weight:700}.tag{border-radius:12px;background:#294739;padding:3px 8px;font-size:12px}.layout{display:grid;grid-template-columns:1.2fr 1fr;gap:14px}.field{width:100%;max-height:400px;background:#113a2b;border-radius:10px}.log{height:225px;overflow:auto;background:#101d19;padding:12px;border-radius:8px;font-size:13px;line-height:1.7}.log div{border-bottom:1px solid #24362d;padding:3px 0}.tablewrap{overflow:auto}table{border-collapse:collapse;width:100%;font-size:12px;white-space:nowrap}th,td{padding:7px;border-bottom:1px solid #33483e;text-align:right}th:first-child,td:first-child{text-align:left}.tabs{display:flex;gap:8px;margin-top:16px}.hidden{display:none!important}.player{cursor:pointer}.player:hover{background:#2c483a}dialog{border:1px solid #5a7d6b;background:#172622;color:#e9f0eb;border-radius:12px;max-width:min(94vw,560px);width:100%}dialog::backdrop{background:#000a}.pill{display:inline-block;background:#274438;padding:2px 8px;border-radius:8px;margin:3px}.small{font-size:12px}.controls{display:flex;gap:8px;flex-wrap:wrap}#status{font-weight:700;color:#c6e5c8}.pitch-result{margin:10px 0 2px;min-height:46px;display:flex;align-items:center;justify-content:center;border:1px solid #557261;border-radius:9px;background:#10241d;font-size:24px;font-weight:900;letter-spacing:.08em;color:#e6f1e9}.pitch-result.ball{color:#7bdb9e}.pitch-result.strike{color:#f7d76d}.pitch-result.foul{color:#b2d7ff}.pitch-result.play{color:#fff2b8}.pitch-result small{font-size:13px;font-weight:500;letter-spacing:0;margin-left:8px;color:#c9d4ce}.count-panel{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;padding:9px 0}.count-dots{display:flex;align-items:center;gap:5px;font-weight:800;font-size:12px}.count-dots span.dot{width:13px;height:13px;border-radius:50%;display:inline-block;border:1px solid #60796b;background:#203329}.count-dots span.dot.on.ball{background:#67d58b;border-color:#67d58b}.count-dots span.dot.on.strike{background:#ead46a;border-color:#ead46a}.count-dots span.dot.on.out{background:#e37a73;border-color:#e37a73}.count-dots .count-number{margin-left:3px;margin-right:8px;color:#d6e4da;font-variant-numeric:tabular-nums} @media(max-width:750px){.layout{grid-template-columns:1fr}main{padding:10px}.card{padding:12px}.score{font-size:23px}h1{font-size:20px}}
-</style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.0.8 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
+</style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.0.9 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
 <section class="card"><h2>試合生成の条件</h2><div class="flex" style="gap:12px">
 <label>カテゴリー <select id="category"><option value="random">ランダム（現在は高校のみ）</option><option value="high">高校野球</option><option value="university" disabled>大学野球（今後追加）</option><option value="corporate" disabled>社会人野球（今後追加）</option><option value="pro" disabled>プロ野球（今後追加）</option></select></label>
 <label>試合種別 <select id="matchType"><option value="random">ランダム</option><option value="official">公式戦</option><option value="practice">練習試合</option></select></label>
@@ -20,7 +20,7 @@
 <path d="M200 293 L12 105 M200 293 L388 105" stroke="#fff6dd" stroke-width="2" fill="none"/>
 <circle cx="200" cy="203" r="19" fill="#ae855a"/><rect x="195" y="200" width="10" height="4" fill="#fff5dd"/>
 <g fill="white"><rect x="195" y="288" width="10" height="10" transform="rotate(45 200 293)"/><rect x="318" y="164" width="10" height="10" transform="rotate(45 323 169)"/><rect x="195" y="42" width="10" height="10" transform="rotate(45 200 47)"/><rect x="72" y="164" width="10" height="10" transform="rotate(45 77 169)"/></g>
-<g id="fielders" fill="#e4eef7" stroke="#1c3552" stroke-width="2"></g><g id="runners" fill="#f9c64c" stroke="white" stroke-width="2"></g>
+<g id="fielders" fill="#e4eef7" stroke="#1c3552" stroke-width="2"></g><g id="runners" fill="#f9c64c" stroke="white" stroke-width="2"></g><circle id="batterRunner" cx="200" cy="283" r="7" fill="#ffe29b" stroke="#765317" stroke-width="2" visibility="hidden"/>
 <circle id="ball" cx="200" cy="203" r="4" fill="white" stroke="#222" stroke-width="1"/>
 </svg><div class="count-panel"><div id="countDots" class="count-dots" aria-label="ボール0、ストライク0、アウト0"><span>B</span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="count-number">0</span><span>S</span><span class="dot"></span><span class="dot"></span><span class="count-number">0</span><span>O</span><span class="dot"></span><span class="dot"></span><span class="count-number">0</span></div><span id="pitchCount" class="muted">球数 0</span></div><div class="muted" id="count">B 0 / S 0 / O 0</div><div class="muted" id="matchup">投手 — / 打者 —</div><div id="pitchResult" class="pitch-result" role="status" aria-live="polite">投球待ち</div><div class="muted" id="pitchMotion" aria-live="off">球種・球速 —</div><div class="flex" style="margin-top:10px"><label for="speed" class="small">演出速度</label><select id="speed"><option value="1">標準（約10〜15分目標）</option><option value="2">2倍速</option><option value="4">4倍速</option></select></div></section><section class="card"><h2>実況ログ</h2><div class="log" id="log" aria-live="polite"></div><h2 style="margin-top:16px">両チームの選手</h2><div class="flex"><button id="rosterAway" class="secondary" disabled>先攻の選手</button><button id="rosterHome" class="secondary" disabled>後攻の選手</button></div><div id="roster" class="tablewrap" style="margin-top:10px"></div></section></div>
 <section class="card"><div class="flex between"><h2>試合結果・保存済み試合</h2><button id="clear" class="secondary">履歴を全削除</button></div><div class="muted">このブラウザ内に保存。別端末との同期はありません。試合終了時に自動保存します。</div><div id="history" style="margin-top:12px"></div></section><dialog id="detail"><div class="flex between"><h2 id="detailTitle">選手情報</h2><button id="closeDetail" class="secondary">閉じる</button></div><div id="detailBody"></div></dialog>
@@ -37,7 +37,7 @@ function player(pref,idx,tier){const grade=rnd(1,3),isP=idx<5,pos=isP?'投手':i
 function team(pref,level){return {name:school(pref),pref,level,players:Array.from({length:20},(_,i)=>player(pref,i,level)),runs:Array(9).fill(null),hits:0,errors:0,bat:0,pitcher:0,used:new Set()}}
 let game=null,timer=null,flightTimer=null,playing=false,frame=0,activeRoster=0,animationToken=0,playTimers=[],animationHoldUntil=0;
 function init(){stop();const category=$('category').value;if(!['random','high'].includes(category))throw Error('このカテゴリーはまだ実装されていません');const t=tournament(),levels=['新興・小規模','弱小','中堅','地方強豪','全国強豪'];const pick=()=>{let x=Math.random();return x<.1?0:x<.4?1:x<.8?2:x<.95?3:4};let a=pick(),b=pick();if(t.kind.includes('全国')){a=Math.max(a,2);b=Math.max(b,2)}const away=team(t.p,a),home=team(t.q,b);if(away.name===home.name)home.name+='第二';document.querySelector('.field').style.background=t.time==='ナイター'?'#061626':'#113a2b';game={t,teams:[away,home],inning:1,half:0,outs:0,balls:0,strikes:0,bases:[null,null,null],pitch:0,ended:false,events:[],totalPitches:0};activeRoster=0;$('rosterAway').disabled=$('rosterHome').disabled=false;$('pause').disabled=$('next').disabled=false;$('pause').textContent='一時停止';log('プレーボール！ '+away.name+' 対 '+home.name);log(t.kind==='練習試合'?'采配：練習試合（投手の早めの交代・積極的な試走を重視）':'采配：公式戦（局面に応じて犠打・スクイズ・勝負の継投を判断）');renderRoster(0);playing=true;render();schedule()}
-function stop(){playing=false;clearTimeout(timer);clearTimeout(flightTimer);for(const id of playTimers)clearTimeout(id);playTimers=[];timer=flightTimer=null;animationHoldUntil=0;animationToken++;}
+function stop(){playing=false;clearTimeout(timer);clearTimeout(flightTimer);for(const id of playTimers)clearTimeout(id);playTimers=[];timer=flightTimer=null;animationHoldUntil=0;animationToken++;const runner=$('batterRunner');if(runner){runner.style.transition='none';runner.setAttribute('visibility','hidden')}}
 function log(msg){if(!game)return;game.events.push(msg);if(game.events.length>250)game.events.shift();$('log').replaceChildren(...game.events.slice(-90).reverse().map(s=>{let d=document.createElement('div');d.textContent=s;return d}))}
 function current(){return {bat:game.teams[game.half],def:game.teams[1-game.half]}}
 function addRuns(n,runnerIds=[]){const {bat}=current();bat.runs[game.inning-1]=(bat.runs[game.inning-1]||0)+n;for(const p of runnerIds)p.r++;if(game.half===1&&game.inning>=9&&total(1)>total(0))finish('サヨナラ')}
@@ -196,6 +196,33 @@ function pitch(){
 
 // Ground-ball choreography is visual only: the simulation decides out/safe first.
 // Keeping the throw a separate leg will allow throwing errors to be modeled later.
+
+// A dedicated batter-runner sprite makes the break from home visible without
+// altering the already-computed baserunner/statistics state.
+function animateBatterRun(result){
+ const runner=$('batterRunner');if(!runner)return;
+ const token=animationToken;
+ const start=[200,283],first=[323,169],second=[200,47],third=[77,169];
+ const go=(x,y,duration)=>{runner.style.transition='none';void runner.getAttribute('cx');runner.style.transition='cx '+duration+'ms linear, cy '+duration+'ms linear';runner.setAttribute('cx',x);runner.setAttribute('cy',y)};
+ runner.style.transition='none';runner.setAttribute('cx',start[0]);runner.setAttribute('cy',start[1]);runner.setAttribute('visibility','visible');
+ // On a routine groundout the batter is still running when the throw arrives.
+ // A flyout only has the first steps; no unrealistic full run to first base.
+ const firstDuration=result==='fly'?390:result==='groundOut'?1130:result==='doublePlay'?1320:result==='forceSafe'?910:800;
+ requestAnimationFrame(()=>{if(token!==animationToken)return;
+  if(result==='fly')go(229,257,firstDuration);
+  else if(result==='groundOut'||result==='doublePlay')go(309,183,firstDuration);
+  else go(first[0],first[1],firstDuration);
+ });
+ const later=(delay,callback)=>playTimers.push(setTimeout(()=>{if(token===animationToken)callback()},delay));
+ if(result==='hit2'||result==='hit3'||result==='homeRun'){
+  later(840,()=>go(second[0],second[1],530));
+  if(result==='hit3'||result==='homeRun')later(1400,()=>go(third[0],third[1],510));
+  if(result==='homeRun')later(1950,()=>go(200,293,600));
+ }
+ const finishAt=result==='homeRun'?2700:result==='hit3'?2080:result==='hit2'?1530:result==='doublePlay'?1530:result==='groundOut'?1370:result==='forceSafe'?1200:result==='fly'?800:1100;
+ animationHoldUntil=Math.max(animationHoldUntil,Date.now()+finishAt+120);
+ later(finishAt,()=>{runner.style.transition='none';runner.setAttribute('visibility','hidden')});
+}
 function animateGround(outcome){
  const field=$('fielders'),ball=$('ball');
  if(!field||typeof field.querySelector!=='function'||!ball)return;
@@ -214,6 +241,7 @@ function animateGround(outcome){
  const later=(delay,callback)=>{playTimers.push(setTimeout(()=>{if(token===animationToken)callback()},delay))};
  ball.style.transition='none';ball.setAttribute('cx',home[0]);ball.setAttribute('cy',home[1]);ball.setAttribute('r','4');
  showPitchResult('ゴロ！ '+fielderName+' が追う','play');
+ animateBatterRun(outcome==='double'?'doublePlay':outcome==='force'?'forceSafe':'groundOut');
  // Give the browser one paint for the ball's starting position.
  requestAnimationFrame(()=>{
   if(token!==animationToken)return;
@@ -222,7 +250,6 @@ function animateGround(outcome){
   moveBall(fielded[0],fielded[1],470);
  });
  later(540,()=>{
-  showPitchResult(fielderName+' 捕球！ 送球！','play');
   if(outcome==='double'||outcome==='force')moveBall(second[0],second[1],300);
   else moveBall(first[0],first[1],370);
  });
@@ -233,7 +260,7 @@ function animateGround(outcome){
   later(1010,()=>{showPitchResult(outcome==='force'?'二塁アウト！ 一塁セーフ':'一塁アウト！',outcome==='force'?'ball':'strike');reposition(origin[0],origin[1])});
  }
 }
-function animate(kind){const ball=$('ball'),f=$('fielders');const targets={out:[152,152],fly:[96,-36],home:[326,-117],single:[277,138],double:[311,-33]};const target=targets[kind]||targets.single;
+function animate(kind){if(kind==='single')animateBatterRun('hit1');else if(kind==='double')animateBatterRun('hit2');else if(kind==='home')animateBatterRun('homeRun');else if(kind==='fly')animateBatterRun('fly');const ball=$('ball'),f=$('fielders');const targets={out:[152,152],fly:[96,-36],home:[326,-117],single:[277,138],double:[311,-33]};const target=targets[kind]||targets.single;
 ball.style.transition='none';ball.setAttribute('cx','200');ball.setAttribute('cy','203');
 const defenders=[...f.querySelectorAll('circle')];defenders.forEach(d=>d.style.transition='cx .7s ease,cy .7s ease');
 const nearest=defenders.reduce((best,d)=>{const dx=Number(d.getAttribute('cx'))-target[0],dy=Number(d.getAttribute('cy'))-target[1],dist=dx*dx+dy*dy;return dist<best.dist?{d,dist}:best},{d:null,dist:Infinity}).d;
