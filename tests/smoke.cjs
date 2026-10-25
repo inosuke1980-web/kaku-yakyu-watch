@@ -90,3 +90,16 @@ const scoreboard=vm.runInContext(`(()=>{
 })()`,ctx);
 assert.ok(Object.values(scoreboard).every(Boolean),'inning display and score transitions must match');
 console.log('SCOREBOARD CHECKS PASS',JSON.stringify(scoreboard));
+
+const animationCases=vm.runInContext(`(()=>{
+ init();let dives=0,nearMisses=0;
+ for(let n=0;n<10000;n++){
+  const c=outfieldContact('fly');
+  if(c.diving) {if(!c.caught)throw Error('dive without catch');dives++}
+  if(c.nearMiss) {if(c.caught||c.dropped)throw Error('near miss incompatible with catch/error');nearMisses++}
+ }
+ return {dives,nearMisses};
+})()`,ctx);
+assert.ok(animationCases.dives>0,'some difficult catches should use dive animation');
+assert.ok(animationCases.nearMisses>0,'some missed flies should use near-miss animation');
+console.log('OUTFIELD ANIMATION CASES PASS',JSON.stringify(animationCases));
