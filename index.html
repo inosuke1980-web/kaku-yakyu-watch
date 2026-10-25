@@ -10,7 +10,7 @@
 .scoreboard-scroll td.attack-team{background:#1f382f}
 .scoreboard-hint{font-size:11px;color:#a7c6b5;margin:5px 0 0}
 @media(max-width:750px){.scoreboard-scroll th:first-child,.scoreboard-scroll td:first-child{min-width:102px;width:112px;max-width:112px}.scoreboard-scroll th,.scoreboard-scroll td{padding:6px 4px}}
-.current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.3.2 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
+.current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.3.3 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
 <section class="card"><h2>試合生成の条件</h2><div class="flex" style="gap:12px">
 <label>カテゴリー <select id="category"><option value="random">ランダム（現在は高校のみ）</option><option value="high">高校野球</option><option value="university" disabled>大学野球（今後追加）</option><option value="corporate" disabled>社会人野球（今後追加）</option><option value="pro" disabled>プロ野球（今後追加）</option></select></label>
 <label>試合種別 <select id="matchType"><option value="random">ランダム</option><option value="official">公式戦</option><option value="practice">練習試合</option></select></label>
@@ -42,7 +42,7 @@
 </g>
 <circle cx="200" cy="203" r="19" fill="#ae855a"/><rect x="195" y="200" width="10" height="4" fill="#fff5dd"/>
 <g fill="white"><rect x="195" y="288" width="10" height="10" transform="rotate(45 200 293)"/><rect x="318" y="164" width="10" height="10" transform="rotate(45 323 169)"/><rect x="195" y="42" width="10" height="10" transform="rotate(45 200 47)"/><rect x="72" y="164" width="10" height="10" transform="rotate(45 77 169)"/></g>
-<g id="fielders" fill="#e4eef7" stroke="#1c3552" stroke-width="2"></g><g id="runners" fill="#f9c64c" stroke="white" stroke-width="2"></g><g id="movingRunners" fill="#ffcf57" stroke="white" stroke-width="2"></g><circle id="batterRunner" cx="200" cy="283" r="7" fill="#ffe29b" stroke="#765317" stroke-width="2" visibility="hidden"/>
+<g id="fielders" fill="#e4eef7" stroke="#1c3552" stroke-width="2"></g><g id="firstBaseCoverLayer" pointer-events="none"></g><g id="runners" fill="#f9c64c" stroke="white" stroke-width="2"></g><g id="movingRunners" fill="#ffcf57" stroke="white" stroke-width="2"></g><g id="firstBaseCoverForeground" pointer-events="none"></g><circle id="batterRunner" cx="200" cy="283" r="7" fill="#ffe29b" stroke="#765317" stroke-width="2" visibility="hidden"/>
 <ellipse id="ballShadow" cx="200" cy="203" rx="0" ry="0" fill="#08190f" opacity=".4"/><circle id="ball" cx="200" cy="203" r="4" fill="white" stroke="#222" stroke-width="1"/>
 </svg><div class="count-panel"><div id="countDots" class="count-dots" aria-label="ボール0、ストライク0、アウト0"><span>B</span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="count-number">0</span><span>S</span><span class="dot"></span><span class="dot"></span><span class="count-number">0</span><span>O</span><span class="dot"></span><span class="dot"></span><span class="count-number">0</span></div><span id="pitchCount" class="muted">球数 0</span></div><div class="muted" id="count">B 0 / S 0 / O 0</div><div class="muted" id="matchup">投手 — / 打者 —</div><div id="pitchResult" class="pitch-result" role="status" aria-live="polite">投球待ち</div><div class="muted" id="pitchMotion" aria-live="off">球種・球速 —</div><div class="flex" style="margin-top:10px"><label for="speed" class="small">演出速度</label><select id="speed"><option value="1">標準（約10〜15分目標）</option><option value="2">2倍速</option><option value="4">4倍速</option></select></div></section><section class="card"><h2>実況ログ</h2><div class="log" id="log" aria-live="polite"></div><h2 style="margin-top:16px">両チームの選手</h2><div class="flex"><button id="rosterAway" class="secondary" disabled>先攻の選手</button><button id="rosterHome" class="secondary" disabled>後攻の選手</button></div><div id="roster" class="tablewrap" style="margin-top:10px"></div></section></div>
 <section class="card"><div class="flex between"><h2>試合結果・保存済み試合</h2><button id="clear" class="secondary">履歴を全削除</button></div><div class="muted">このブラウザ内に保存。別端末との同期はありません。試合終了時に自動保存します。</div><div id="history" style="margin-top:12px"></div></section><dialog id="detail"><div class="flex between"><h2 id="detailTitle">選手情報</h2><button id="closeDetail" class="secondary">閉じる</button></div><div id="detailBody"></div></dialog>
@@ -83,7 +83,7 @@ function resetOutfieldPositions(){
   if(label){label.setAttribute('x',place[0]);label.setAttribute('y',place[1]+3)}
  }
 }
-function stop(){playing=false;clearTimeout(timer);clearTimeout(flightTimer);for(const id of playTimers)clearTimeout(id);playTimers=[];timer=flightTimer=null;animationHoldUntil=0;animationToken++;const moving=$('movingRunners');if(moving)moving.replaceChildren();const runner=$('batterRunner');if(runner){runner.style.transition='none';runner.setAttribute('visibility','hidden')}resetOutfieldPositions()}
+function stop(){const coverLayer=$('firstBaseCoverForeground');if(coverLayer)coverLayer.replaceChildren();playing=false;clearTimeout(timer);clearTimeout(flightTimer);for(const id of playTimers)clearTimeout(id);playTimers=[];timer=flightTimer=null;animationHoldUntil=0;animationToken++;const moving=$('movingRunners');if(moving)moving.replaceChildren();const runner=$('batterRunner');if(runner){runner.style.transition='none';runner.setAttribute('visibility','hidden')}resetOutfieldPositions()}
 function log(msg){if(!game)return;const prefix=game.inning+'回'+(game.half?'裏':'表');game.events.push('【'+prefix+'】 '+msg);if(game.events.length>250)game.events.shift();$('log').replaceChildren(...game.events.slice(-90).reverse().map(s=>{let d=document.createElement('div');d.textContent=s;return d}))}
 function current(){return {bat:game.teams[game.half],def:game.teams[1-game.half]}}
 function addRuns(n,runnerIds=[]){const {bat}=current();bat.runs[game.inning-1]=(bat.runs[game.inning-1]||0)+n;for(const p of runnerIds)p.r++;if(game.half===1&&game.inning>=9&&total(1)>total(0))finish('サヨナラ')}
@@ -656,6 +656,36 @@ function moveGroundFielder(circle,label,destination,duration,token){
 function groundFirstCover(defenderPosition,outcome){
  return {cover:'1B',backup:defenderPosition==='1B'?'2B':null,needed:true};
 }
+// An always-visible foreground sprite makes first-base coverage obvious even
+// when the runner/base circles overlap the normal (lower) fielder layer.
+function showFirstCoverSprite(firstBasePlayer,firstBaseLabel,token,fieldMs,player,decisionMs,holdUntil){
+ const layer=$('firstBaseCoverForeground');if(!layer||!firstBasePlayer)return;
+ layer.replaceChildren();
+ const ns='http://www.w3.org/2000/svg';
+ const start=[Number(firstBasePlayer.getAttribute('cx')),Number(firstBasePlayer.getAttribute('cy'))];
+ const sprite=document.createElementNS(ns,'circle'),letter=document.createElementNS(ns,'text');
+ sprite.setAttribute('cx',start[0]);sprite.setAttribute('cy',start[1]);sprite.setAttribute('r','11');
+ sprite.setAttribute('fill','#e4eef7');sprite.setAttribute('stroke','#204366');sprite.setAttribute('stroke-width','2.5');
+ sprite.setAttribute('data-cover','1B');
+ letter.setAttribute('x',start[0]);letter.setAttribute('y',start[1]+3);
+ letter.setAttribute('text-anchor','middle');letter.setAttribute('font-size','9');
+ letter.setAttribute('font-weight','800');letter.setAttribute('fill','#204366');
+ letter.textContent='1B';layer.append(sprite,letter);
+ firstBasePlayer.setAttribute('opacity','0');if(firstBaseLabel)firstBaseLabel.setAttribute('opacity','0');
+ const later=(ms,fn)=>playTimers.push(setTimeout(()=>{if(token===animationToken)fn()},ms));
+ const go=(xy,duration)=>moveGroundFielder(sprite,letter,xy,duration,token);
+ if(player==='1B')later(fieldMs+25,()=>go([323,169],225));
+ else go([323,169],Math.min(520,Math.max(260,decisionMs-250)));
+ // Highlight the fielder standing on the actual first-base bag during the call.
+ later(Math.max(fieldMs+225,decisionMs-80),()=>{sprite.setAttribute('stroke','#ffe77b');sprite.setAttribute('stroke-width','4')});
+ later(holdUntil,()=>{
+  go(start,350);
+  later(360,()=>{
+   layer.replaceChildren();firstBasePlayer.setAttribute('opacity','1');
+   if(firstBaseLabel)firstBaseLabel.setAttribute('opacity','1');
+  });
+ });
+}
 function animateGround(outcome,direction,batterSpeed=55,arm=55,timing=null){
  const field=$('fielders'),ball=$('ball');
  if(!field||typeof field.querySelector!=='function'||!ball)return;
@@ -683,6 +713,7 @@ function animateGround(outcome,direction,batterSpeed=55,arm=55,timing=null){
  ball.style.transition='none';ball.setAttribute('cx','200');ball.setAttribute('cy','283');ball.setAttribute('r','4');
  showPitchResult(direction.label,'play');
  animateBatterRun(outcome==='double'?'doublePlay':outcome==='force'||outcome==='safe'?'forceSafe':'groundOut',batterSpeed,{runnerMs,decisionMs});
+ showFirstCoverSprite(firstCover,firstLabel,token,fieldMs,player,decisionMs,holdUntil);
  // Fielder moves towards the ground ball.
  moveGroundFielder(defender,label,fielded,fieldMs,token);
  if(player==='1B'){
