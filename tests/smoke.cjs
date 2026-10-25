@@ -119,3 +119,26 @@ assert.equal(flyReturnCheck.caughtFlag,true,'caught fly should request retreat a
 assert.equal(flyReturnCheck.runnerRetained,true,'runners must not advance on routine caught fly');
 assert.equal(flyReturnCheck.outs,1,'caught fly adds exactly one out');
 console.log('FLY RETURN CHECKS PASS',JSON.stringify(flyReturnCheck));
+
+const extraBase=vm.runInContext(`(()=>{
+ const samples={fastWeak:0,slowStrong:0,fastWeakOut:0,slowStrongOut:0};
+ const point=[200,-72];
+ for(const profile of [
+  {key:'fastWeak',runnerSpeed:90,arm:20},
+  {key:'slowStrong',runnerSpeed:20,arm:90}
+ ]){
+  init();let g=game;
+  const batter=g.teams[0].players[5],first=g.teams[0].players[6],outfielder=g.teams[1].players[15];
+  first.speed=profile.runnerSpeed;outfielder.arm=profile.arm;
+  for(let i=0;i<5000;i++){
+   g.bases=[first,null,null];g.outs=0;g.homePlayOutId=null;g.thirdBasePlay=null;
+   hit(batter,1,'normal',{point,defender:'CF',fielder:outfielder});
+   if(g.bases[2]===first)samples[profile.key]++;
+   if(g.thirdBasePlay&&!g.thirdBasePlay.safe)samples[profile.key+'Out']++;
+  }
+ }
+ return samples;
+})()`,ctx);
+assert.ok(extraBase.fastWeak>extraBase.slowStrong,'faster runner against weak arm should take third more often');
+assert.ok(extraBase.fastWeak+extraBase.fastWeakOut>0,'first-to-third attempts should occur');
+console.log('EXTRA BASE CHECKS PASS',JSON.stringify(extraBase));
