@@ -33,7 +33,7 @@
 .scoreboard-scroll td.attack-team{background:#1f382f}
 .scoreboard-hint{font-size:11px;color:#a7c6b5;margin:5px 0 0}
 @media(max-width:750px){.scoreboard-scroll th:first-child,.scoreboard-scroll td:first-child{min-width:102px;width:112px;max-width:112px}.scoreboard-scroll th,.scoreboard-scroll td{padding:6px 4px}}
-.current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.6.0 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
+.current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.6.1 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
 <section class="card"><h2>試合生成の条件</h2><div class="flex" style="gap:12px">
 <label>カテゴリー <select id="category"><option value="random">ランダム（現在は高校のみ）</option><option value="high">高校野球</option><option value="university" disabled>大学野球（今後追加）</option><option value="corporate" disabled>社会人野球（今後追加）</option><option value="pro" disabled>プロ野球（今後追加）</option></select></label>
 <label>試合種別 <select id="matchType"><option value="random">ランダム</option><option value="official">公式戦</option><option value="practice">練習試合</option></select></label>
@@ -559,7 +559,8 @@ function groundBall(p){
   animateGround('safe',direction,p.speed,fielder.arm,timing);return;
  }
  const couldTurnTwo=!!b[0]&&game.outs<=1&&direction.defender!=='1B';
- const dpArrival=timing.pickup+timing.releaseMs+throwFlightMs(fielder.arm,direction.point,timing.second)+fielderReleaseMs(60,60,true)+throwFlightMs(60,timing.second,[323,169]);
+ const relay=direction.defender==='1B'?null:groundSecondRelayPlan(direction,fielder);
+ const dpArrival=relay?timing.pickup+timing.releaseMs+relay.pickupToSecond+relay.pivotRelease+relay.secondToFirst:Infinity;
  if(couldTurnTwo&&dpArrival+25<timing.runnerMs&&chance(clamp(.60+(fielder.field-55)*.004,.34,.83))){
   b[0]=null;game.outs+=2;pi.outsPitched+=2;
   log(`${p.name} ${direction.label}、二塁から一塁へ！ ダブルプレー！`);
@@ -1132,6 +1133,38 @@ function showFirstCoverSprite(firstBasePlayer,firstBaseLabel,token,fieldMs,playe
   });
  });
 }
+// An infielder other than the ground-ball fielder covers second on a force.
+// The covering player receives, plants and transfers the relay to first.
+function secondBaseCoverPlan(defender){
+ const cover=defender==='2B'?'SS':'2B';
+ const roster=current().def.players;
+ const index=cover==='SS'?9:8;
+ const fielder=roster[index];
+ return {cover,fielding:fielder?.field||55,arm:fielder?.arm||55,base:[200,47]};
+}
+function groundSecondRelayPlan(direction,thrower){
+ const pivot=secondBaseCoverPlan(direction.defender);
+ const pickupToSecond=throwFlightMs(thrower.arm,direction.point,pivot.base);
+ const pivotRelease=fielderReleaseMs(pivot.fielding,pivot.arm,true);
+ const secondToFirst=throwFlightMs(pivot.arm,pivot.base,[323,169]);
+ return {...pivot,pickupToSecond,pivotRelease,secondToFirst};
+}
+function animateSecondBaseCover(plan,arriveAt,holdUntil,token){
+ const layer=$('fielders');
+ const circle=layer?.querySelector?.('circle[data-position="'+plan.cover+'"]');
+ const label=layer?.querySelector?.('text[data-position="'+plan.cover+'"]');
+ if(!circle)return;
+ const origin=[Number(circle.getAttribute('cx')),Number(circle.getAttribute('cy'))];
+ const moveMs=Math.round(clamp(arriveAt-110,280,660));
+ circle.setAttribute('data-cover-base','second');
+ // Start at contact; be in position before receiving the throw.
+ moveGroundFielder(circle,label,plan.base,moveMs,token);
+ playTimers.push(setTimeout(()=>{
+  if(token!==animationToken)return;
+  moveGroundFielder(circle,label,origin,360,token);
+  circle.setAttribute('data-cover-base','');
+ },holdUntil));
+}
 function animateGround(outcome,direction,batterSpeed=55,arm=55,timing=null){
  const field=$('fielders'),ball=$('ball');
  if(!field||typeof field.querySelector!=='function'||!ball)return;
@@ -1147,10 +1180,12 @@ function animateGround(outcome,direction,batterSpeed=55,arm=55,timing=null){
  const later=(ms,fn)=>playTimers.push(setTimeout(()=>{if(token===animationToken)fn()},Math.max(0,ms)));
  const moveBall=(x,y,duration)=>{ball.style.transition='none';ball.getAttribute('cx');ball.style.transition='cx '+duration+'ms linear,cy '+duration+'ms linear';ball.setAttribute('cx',x);ball.setAttribute('cy',y)};
  const fieldMs=timing?timing.pickup:600,releaseMs=timing?timing.releaseMs:fielderReleaseMs();
- const firstLeg=player==='1B'?0:throwFlightMs(arm,fielded,(outcome==='out'||outcome==='safe')?first:second);
+ const atSecond=outcome==='double'||outcome==='force';
+ const relay=atSecond?groundSecondRelayPlan(direction,{arm}):null;
+ const firstLeg=player==='1B'?0:atSecond?relay.pickupToSecond:throwFlightMs(arm,fielded,first);
  const firstArrival=fieldMs+releaseMs+firstLeg;
- const transferMs=outcome==='double'?throwFlightMs(65,second,first):0;
- const secondThrowAt=firstArrival+fielderReleaseMs(65,65,true);
+ const transferMs=outcome==='double'?relay.secondToFirst:0;
+ const secondThrowAt=firstArrival+(relay?.pivotRelease||0);
  const arrival=outcome==='double'?secondThrowAt+transferMs:firstArrival;
  const runnerMs=timing?timing.runnerMs:runnerFirstMs(batterSpeed);
  const decisionMs=arrival+110;
@@ -1160,6 +1195,7 @@ function animateGround(outcome,direction,batterSpeed=55,arm=55,timing=null){
  showPitchResult(direction.label,'play');
  animateBatterRun(outcome==='double'?'doublePlay':outcome==='force'||outcome==='safe'?'forceSafe':'groundOut',batterSpeed,{runnerMs,decisionMs});
  showFirstCoverSprite(firstCover,firstLabel,token,fieldMs,player,decisionMs,holdUntil);
+ if(relay)animateSecondBaseCover(relay,firstArrival,holdUntil,token);
  // Fielder moves towards the ground ball.
  moveGroundFielder(defender,label,fielded,fieldMs,token);
  if(player==='1B'){
@@ -1172,7 +1208,7 @@ function animateGround(outcome,direction,batterSpeed=55,arm=55,timing=null){
  requestAnimationFrame(()=>{if(token===animationToken)moveBall(fielded[0],fielded[1],fieldMs)});
  later(fieldMs+releaseMs,()=>{
   if(player==='1B')moveBall(first[0],first[1],225);
-  else moveBall((outcome==='out'||outcome==='safe')?first[0]:second[0],(outcome==='out'||outcome==='safe')?first[1]:second[1],firstLeg);
+  else moveBall(atSecond?second[0]:first[0],atSecond?second[1]:first[1],firstLeg);
  });
  if(outcome==='double')later(secondThrowAt,()=>moveBall(first[0],first[1],transferMs));
  later(decisionMs,()=>showPitchResult(outcome==='double'?'ダブルプレー！':outcome==='force'?'二塁アウト・一塁セーフ':outcome==='safe'?'内野安打！':'一塁アウト！',(outcome==='force'||outcome==='safe')?'ball':'strike'));
