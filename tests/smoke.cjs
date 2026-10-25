@@ -229,3 +229,24 @@ assert.ok(seasons.spring>0&&seasons.autumn>0,'spring and autumn must both appear
 assert.equal(seasons.combined,0,'combined season label must not appear');
 assert.equal(seasons.crossPrefecture,0,'prefectural season tournaments must use schools from the same prefecture');
 console.log('SEASON TOURNAMENT CHECKS PASS',JSON.stringify(seasons));
+
+const ballparks=vm.runInContext(`(()=>{
+ const result={};
+ for(const style of ['grass','clayInfield','allDirt']){
+  applyParkStyle(style);
+  result[style]={
+   surface:document.getElementById('parkSurface').getAttribute('fill'),
+   infield:document.getElementById('infieldGrass').getAttribute('fill'),
+   mowing:document.getElementById('parkMowing').getAttribute('visibility')
+  };
+ }
+ return result;
+})()`,ctx);
+assert.notEqual(ballparks.grass.surface,ballparks.allDirt.surface,'dirt and grass surfaces must differ');
+assert.notEqual(ballparks.grass.infield,ballparks.clayInfield.infield,'mixed park must have a dirt infield');
+assert.equal(ballparks.allDirt.mowing,'hidden','dirt fields must not have mowing stripes');
+const geometry=html.match(/<path id="foulLines" d="([^"]+)"/)?.[1];
+assert.equal(geometry,'M200 293 L12 105 M200 293 L388 105','foul lines end at fence/pole coordinates');
+assert.match(html,/<line data-pole="left" x1="12" y1="105"/);
+assert.match(html,/<line data-pole="right" x1="388" y1="105"/);
+console.log('BALLPARK GEOMETRY AND SURFACE CHECKS PASS',JSON.stringify(ballparks));
