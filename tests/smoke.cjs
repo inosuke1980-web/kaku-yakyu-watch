@@ -163,3 +163,23 @@ assert.ok(gameContext.cautious<gameContext.early,'late close game with no outs s
 assert.ok(gameContext.twoOut>gameContext.early,'two outs should increase first-to-third attempts');
 assert.ok(gameContext.chase>gameContext.protect,'late trailing team with two outs should push harder than protecting a lead');
 console.log('GAME CONTEXT RUNNING CHECKS PASS',JSON.stringify(gameContext));
+
+const safeRunning=vm.runInContext(`(()=>{
+ const profiles=[['slowStrong',20,90],['average',55,55],['fastWeak',90,20]];
+ const data={};
+ for(const [name,speed,arm] of profiles){
+  init();game.half=0;game.inning=8;game.outs=2;game.teams[0].runs[0]=0;game.teams[1].runs[0]=1;
+  const runner=game.teams[0].players[6];runner.speed=speed;
+  let attempts=0,retired=0;
+  for(let i=0;i<5000;i++){
+   const d=decideSingleAdvance(runner,0,[200,-40],arm,false);
+   attempts+=Number(!!d.attempt);retired+=Number(!!d.thirdOut);
+  }
+  data[name]={attempts,retired};
+ }
+ return data;
+})()`,ctx);
+assert.equal(safeRunning.slowStrong.attempts,0,'hopeless first-to-third attempts must be suppressed');
+assert.ok(safeRunning.fastWeak.attempts>safeRunning.average.attempts,'fast runners versus weaker arms should advance more');
+assert.ok(safeRunning.fastWeak.retired<=safeRunning.fastWeak.attempts,'outs cannot exceed attempts');
+console.log('SAFE RUNNING CHECKS PASS',JSON.stringify(safeRunning));
