@@ -271,3 +271,26 @@ assert.ok(Object.values(mobileScoreboard).every(Boolean),'mobile scoreboard must
 assert.match(html,/class="scoreboard-scroll" id="lines"/,'scoreboard should use a horizontal scroll container');
 assert.match(html,/\.scoreboard-scroll \.stat-r\{right:60px\}/,'R column must remain sticky');
 console.log('MOBILE SCOREBOARD CHECKS PASS',JSON.stringify(mobileScoreboard));
+
+const foulChecks=vm.runInContext(`(()=>{
+ init();const g=game,p=batter(),counts=[],sides={left:0,right:0},types={ground:0,fly:0};let badZones=0;
+ for(const side of ['left','right'])for(const kind of ['ground','fly']){
+  for(let i=0;i<2500;i++){
+   const {point}=foulDestination(side,kind),[x,y]=point;
+   const line=200+(side==='left'?-1:1)*(293-y);
+   if(x<0||x>400||y<0||y>330||(side==='left'?x>=line:x<=line))badZones++;
+   sides[side]++;types[kind]++;
+  }
+ }
+ for(let strikes=0;strikes<=2;strikes++){
+  g.strikes=strikes;const before={outs:g.outs,bats:g.teams[0].bat,atBats:p.ab,runs:g.teams[0].runs.slice(),bases:g.bases.slice()};
+  foulBall(p);
+  counts.push({before:strikes,after:g.strikes,unchanged:g.outs===before.outs&&g.teams[0].bat===before.bats&&p.ab===before.atBats&&g.teams[0].runs.every((v,i)=>v===before.runs[i])&&g.bases.every((v,i)=>v===before.bases[i])});
+ }
+ return {counts,sides,types,badZones};
+})()`,ctx);
+assert.equal(foulChecks.badZones,0,'every foul trajectory must land outside the field lines');
+assert.ok(foulChecks.counts.every((x)=>x.unchanged&&x.after===Math.min(x.before+1,2)),'fouls must retain the at-bat and cap strikes at two');
+assert.equal(foulChecks.sides.left,5000);
+assert.equal(foulChecks.sides.right,5000);
+console.log('FOUL TRAJECTORY AND COUNT CHECKS PASS',JSON.stringify(foulChecks));
