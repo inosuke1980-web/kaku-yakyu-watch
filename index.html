@@ -91,6 +91,8 @@ function stageRunnerArrival(id,arrivalMs,token){
   pendingRunnerArrivals.delete(id);
   const layer=$('runners');
   const marker=layer?.querySelector?.('circle[data-runner="'+id+'"]');
+  const moving=$('batterRunner');
+  if(moving?.getAttribute('data-runner-id')===String(id))moving.setAttribute('visibility','hidden');
   if(marker)marker.setAttribute('opacity','1');
   renderMiniScore();
  },Math.max(1,arrivalMs)));
@@ -943,6 +945,8 @@ function animateBatterRun(result,speed=55,groundPlan=null){
  const token=animationToken,home=[200,283],first=[323,169],second=[200,47],third=[77,169];
  const later=(delay,callback)=>playTimers.push(setTimeout(()=>{if(token===animationToken)callback()},delay));
  runner.style.transition='none';runner.setAttribute('cx',home[0]);runner.setAttribute('cy',home[1]);runner.setAttribute('visibility','visible');
+ const visiblePlayer=batter();
+ runner.setAttribute('data-runner-id',visiblePlayer?.id||'');
  const normal=runnerFirstMs(speed);
  const finishFirst=groundPlan?.runnerMs||normal;
  const extra=['hit2','hit3','homeRun'].includes(result);
