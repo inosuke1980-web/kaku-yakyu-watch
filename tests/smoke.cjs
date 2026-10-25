@@ -307,7 +307,7 @@ const firstBaseCover=vm.runInContext(`(()=>{
 assert.equal(firstBaseCover.length,16);
 assert.ok(firstBaseCover.every(x=>x.cover==='1B'&&x.needed),'first baseman must cover first on ground balls');
 assert.ok(firstBaseCover.filter(x=>x.position==='1B').every(x=>x.backup==='2B'),'second baseman should be designated backup when first baseman fields ball');
-assert.match(html,/const base=\{LF:\[99,-5\],CF:\[200,-75\],RF:\[301,-5\],SS:\[150,121\],'2B':\[250,121\],'1B':\[286,189\]\}/,'first baseman must reset after cover');
+assert.match(html,/const base=\{LF:\[99,-5\],CF:\[200,-75\],RF:\[301,-5\],\.\.\.defensiveAlignment\(\)\.positions\}/,'first baseman must reset to active alignment');
 console.log('FIRST BASE COVER CHECKS PASS',JSON.stringify(firstBaseCover));
 
 {
@@ -889,8 +889,8 @@ const cornerDepthAudit=vm.runInContext(`(()=>{
 assert.deepEqual(Array.from(cornerDepthAudit.first),[282,149],'first baseman must play deeper than the bag');
 assert.deepEqual(Array.from(cornerDepthAudit.third),[118,149],'third baseman must play deeper than the bag');
 assert.ok(cornerDepthAudit.nearFirst.reachable&&cornerDepthAudit.nearThird.reachable,'corner fielders should cover balls near their normal depth');
-assert.match(html,/\['1B',282,149\].*\['3B',118,149\]/,'visual fielder origins must match standard depth');
-assert.match(html,/SS:\[150,121\],'2B':\[250,121\],'1B':\[282,149\],'3B':\[118,149\]/,'fielder reset must use the same coordinates');
+assert.match(html,/\.\.\.\['1B','2B','SS','3B'\]\.map\(name=>\[name,\.\.\.defensiveAlignment\(\)\.positions\[name\]\]\)/,'initial infield rendering must use active alignment');
+assert.match(html,/const base=\{LF:\[99,-5\],CF:\[200,-75\],RF:\[301,-5\],\.\.\.defensiveAlignment\(\)\.positions\}/,'fielder reset must use active alignment');
 console.log('CORNER INFIELDERS STANDARD DEPTH PASS');
 
 const situationalInfieldAudit=vm.runInContext(`(()=>{
@@ -918,3 +918,23 @@ assert.match(html,/applyDefensiveAlignment\(\);\s*showPitchResult\('投球中/,'
 assert.match(html,/const origin=infieldOrigin\(direction\.defender\)\|\|point/,'fielding clock must use shifted origin');
 assert.match(html,/const pos=direction\.defender,origin=infieldOrigin\(pos\)\|\|direction\.point/,'coverage must use shifted origin');
 console.log('SITUATIONAL DEFENSIVE ALIGNMENTS PASS');
+
+const middleInfieldPositions=vm.runInContext(`(()=>{
+ const mk=(bases,outs,inning=4,lead=0)=>({bases,outs,inning,half:0,ended:false,teams:[{runs:[0]},{runs:[lead]}]});
+ const regular=defensiveAlignment(mk([null,null,null],1));
+ const infieldIn=defensiveAlignment(mk([null,null,{id:'third'}],1));
+ const bunt=defensiveAlignment(mk([{id:'first'},null,null],0));
+ const deep=defensiveAlignment(mk([null,null,null],1,8,5));
+ const SS=INFIELD_RANGE_ORIGINS.SS,second=INFIELD_RANGE_ORIGINS['2B'];
+ const coverage=groundRangePlan({defender:'SS',point:[144,109],strength:'normal'},{field:55,speed:55});
+ return {regular,infieldIn,bunt,deep,SS,second,coverage};
+})()`,ctx);
+assert.deepEqual(Array.from(middleInfieldPositions.SS),[143,107],'shortstop should be deeper and third-base side');
+assert.deepEqual(Array.from(middleInfieldPositions.second),[257,132],'second baseman should be shallower and first-base side');
+for(const alignment of [middleInfieldPositions.regular,middleInfieldPositions.infieldIn,middleInfieldPositions.bunt,middleInfieldPositions.deep]){
+ assert.ok(alignment.positions.SS[0]<200&&alignment.positions['2B'][0]>200,'middle infielders must be on correct sides of second base');
+ assert.ok(alignment.positions.SS[1]<alignment.positions['2B'][1],'shortstop should play deeper than second baseman');
+}
+assert.deepEqual(Array.from(middleInfieldPositions.coverage.origin),[143,107],'range origin must follow actual shortstop alignment');
+assert.match(html,/\['P',200,203\],\['C',200,315\],\.\.\.\['1B','2B','SS','3B'\]\.map/,'initial visual positions must share alignment state');
+console.log('MIDDLE INFIELD DEPTH AND ALIGNMENT CONSISTENCY PASS');
