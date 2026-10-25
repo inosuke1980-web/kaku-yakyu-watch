@@ -33,7 +33,7 @@
 .scoreboard-scroll td.attack-team{background:#1f382f}
 .scoreboard-hint{font-size:11px;color:#a7c6b5;margin:5px 0 0}
 @media(max-width:750px){.scoreboard-scroll th:first-child,.scoreboard-scroll td:first-child{min-width:102px;width:112px;max-width:112px}.scoreboard-scroll th,.scoreboard-scroll td{padding:6px 4px}}
-.current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.5.1 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
+.current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.5.2 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
 <section class="card"><h2>試合生成の条件</h2><div class="flex" style="gap:12px">
 <label>カテゴリー <select id="category"><option value="random">ランダム（現在は高校のみ）</option><option value="high">高校野球</option><option value="university" disabled>大学野球（今後追加）</option><option value="corporate" disabled>社会人野球（今後追加）</option><option value="pro" disabled>プロ野球（今後追加）</option></select></label>
 <label>試合種別 <select id="matchType"><option value="random">ランダム</option><option value="official">公式戦</option><option value="practice">練習試合</option></select></label>
@@ -205,6 +205,20 @@ function safeOutfieldPoint(point,margin=12){
 function outfieldHomerTarget(x){
  return [x,outfieldFenceY(x)-29];
 }
+// The contact strength owns the grounder's roll distance and animation time.
+// Each trajectory remains independent of the fielder who will retrieve it.
+function grounderStrengthPlan(strength='normal'){
+ const preset={
+  hard:{flightMs:1240,rollMin:92,rollMax:128,caption:'痛烈なゴロ'},
+  normal:{flightMs:1550,rollMin:55,rollMax:90,caption:'鋭いゴロ'},
+  soft:{flightMs:2110,rollMin:24,rollMax:47,caption:'緩いゴロ'}
+ };
+ return preset[strength]||preset.normal;
+}
+function chooseGrounderStrength(){
+ const r=Math.random();
+ return r<.30?'hard':r<.75?'normal':'soft';
+}
 function outfieldHitPlan(bases,style='normal'){
  const zones=[
   {defender:'LF',label:'左翼',playerIndex:14,x:90},
@@ -225,13 +239,16 @@ function outfieldHitPlan(bases,style='normal'){
    fielder:current().def.players[zone.playerIndex],flightMs:1500,wallAt:.68};
  }
  const safePoint=safeOutfieldPoint(point);
- const rawRoll=flight==='groundThrough'?[clamp(point[0]+rnd(-15,15),30,370),point[1]-rnd(55,100)]:null;
+ const strength=flight==='groundThrough'?chooseGrounderStrength():null;
+ const motion=grounderStrengthPlan(strength);
+ const rawRoll=flight==='groundThrough'
+  ?[clamp(point[0]+rnd(-12,12),30,370),point[1]-rnd(motion.rollMin,motion.rollMax)]:null;
  const rollEnd=rawRoll?safeOutfieldPoint(rawRoll):null;
- return {flight,point:safePoint,rollEnd,defender:zone.defender,label:zone.label,
-  fielder:current().def.players[zone.playerIndex],flightMs:flight==='groundThrough'?1530:flight==='gapLiner'?850:1230};
+ return {flight,point:safePoint,rollEnd,strength,defender:zone.defender,label:zone.label,
+  fielder:current().def.players[zone.playerIndex],flightMs:flight==='groundThrough'?motion.flightMs:flight==='gapLiner'?850:1230};
 }
 function outfieldHitDescription(info){
- return info.flight==='homeRun'?'フェンスを越える大飛球！':info.flight==='fenceDouble'?'フェンス直撃！ 跳ね返って二塁打！':info.flight==='groundThrough'?'外野へゴロが抜けた！':info.flight==='overHead'?'外野手の頭を越えた！':'外野手の間を抜くライナー！';
+ return info.flight==='homeRun'?'フェンスを越える大飛球！':info.flight==='fenceDouble'?'フェンス直撃！ 跳ね返って二塁打！':info.flight==='groundThrough'?(info.strength==='hard'?'痛烈なゴロが外野へ抜けた！':info.strength==='soft'?'緩いゴロが内野を抜けた！':'外野へゴロが抜けた！'):info.flight==='overHead'?'外野手の頭を越えた！':'外野手の間を抜くライナー！';
 }
 function hit(p,bases,style='normal',targetInfo=null){
  if(!targetInfo&&bases===4){
@@ -397,8 +414,10 @@ function groundBall(p){
   const wing=direction.point[0]<200?'LF':'RF';
   const pickupX=clamp(200+(direction.point[0]-200)*1.65,45,355);
   const deep=[pickupX,Math.max(outfieldFenceY(pickupX)+15,38)];
-  const targetInfo={flight:'groundThrough',point:deep,rollEnd:safeOutfieldPoint([pickupX,deep[1]-50]),
-   flightMs:1550,defender:wing,fielder:current().def.players[wing==='LF'?14:16]};
+  const strength=chooseGrounderStrength(),motion=grounderStrengthPlan(strength);
+  const targetInfo={flight:'groundThrough',point:deep,
+   rollEnd:safeOutfieldPoint([pickupX,deep[1]-motion.rollMin]),strength,
+   flightMs:motion.flightMs,defender:wing,fielder:current().def.players[wing==='LF'?14:16]};
   hit(p,1,'normal',targetInfo);
   animateInfieldRangeChase(coverage,true);
   log('内野手が追ったが届かず、打球は外野へ抜けた！');
@@ -1006,7 +1025,8 @@ function outfieldPursuitPlan(kind,info,origin,duration){
   origin[1]+dy*(flight==='fenceDouble'?.82:flight==='overHead'?.62:.88)
  ];
  const chaseMs=Math.round(duration*(flight==='groundThrough'?.94:flight==='fenceDouble'?.88:flight==='overHead'?.86:.84));
- return {destination,pickup,dist,type,chaseMs,caught,latePickup:!caught&&(flight==='overHead'||flight==='fenceDouble')};
+ return {destination,pickup,dist,type,chaseMs,caught,latePickup:!caught&&(flight==='overHead'||flight==='fenceDouble'),
+  groundStrength:info?.strength||'normal'};
 }
 function animate(kind,targetInfo=null,runnerSpeed=55,hitBases=null){
  const runnerType=targetInfo?.flight?(hitBases===1?'hit1':hitBases===2?'hit2':hitBases===3?'hit3':'homeRun'):kind==='outfieldError'?'hit1':kind==='linerHit'?'hit1':kind==='linerHit2'?'hit2':kind==='single'?'hit1':kind==='double'?'hit2':kind==='home'?'homeRun':kind==='fly'?'fly':null;
@@ -1037,6 +1057,10 @@ function animate(kind,targetInfo=null,runnerSpeed=55,hitBases=null){
     // Remain slightly behind until the ball has nearly stopped.
     const halfway=groundRollPosition(targetInfo,.67);
     const chaseStart=Math.round(duration*.72);
+    // Soft grounders invite a forward charge; hard rollers force pursuit deeper.
+    const chaseMode=pursuit.type;
+    nearest.setAttribute('data-chase-direction',chaseMode);
+    nearest.setAttribute('data-ground-strength',targetInfo.strength||'normal');
     move(halfway,chaseStart);
     at(chaseStart,()=>move(pursuit.destination,Math.round(duration*.30)));
    }else{
