@@ -39,7 +39,7 @@ let game=null,timer=null,flightTimer=null,playing=false,frame=0,activeRoster=0,a
 function init(){stop();const category=$('category').value;if(!['random','high'].includes(category))throw Error('このカテゴリーはまだ実装されていません');const t=tournament(),levels=['新興・小規模','弱小','中堅','地方強豪','全国強豪'];const pick=()=>{let x=Math.random();return x<.1?0:x<.4?1:x<.8?2:x<.95?3:4};let a=pick(),b=pick();if(t.kind.includes('全国')){a=Math.max(a,2);b=Math.max(b,2)}const away=team(t.p,a),home=team(t.q,b);if(away.name===home.name)home.name+='第二';document.querySelector('.field').style.background=t.time==='ナイター'?'#061626':'#113a2b';game={t,teams:[away,home],inning:1,half:0,outs:0,balls:0,strikes:0,bases:[null,null,null],pitch:0,ended:false,events:[],totalPitches:0};activeRoster=0;$('rosterAway').disabled=$('rosterHome').disabled=false;$('pause').disabled=$('next').disabled=false;$('pause').textContent='一時停止';log('プレーボール！ '+away.name+' 対 '+home.name);log(t.kind==='練習試合'?'采配：練習試合（投手の早めの交代・積極的な試走を重視）':'采配：公式戦（局面に応じて犠打・スクイズ・勝負の継投を判断）');renderRoster(0);playing=true;render();schedule()}
 function resetOutfieldPositions(){
  const f=$('fielders');if(!f||!f.querySelectorAll)return;
- const base={LF:[99,-5],CF:[200,-75],RF:[301,-5]};
+ const base={LF:[99,-5],CF:[200,-75],RF:[301,-5],SS:[150,121],'2B':[250,121]};
  for(const circle of f.querySelectorAll('circle')){
   const place=base[circle.getAttribute('data-position')];if(!place)continue;
   circle.style.transition='none';circle.setAttribute('r','10');
@@ -298,7 +298,7 @@ function animateFlyLeadAndReturn(beforeBases,halfAtStart,inningAtStart){
  for(let i=0;i<3;i++){
   const p=beforeBases[i];
   if(!p||!game.bases[i]||game.bases[i].id!==p.id)continue;
-  const [x,y]=positions[i],next=positions[(i+1)%3],dx=(next[0]-x)*.18,dy=(next[1]-y)*.18;
+  const [x,y]=positions[i],next=i===2?[200,293]:positions[i+1],dx=(next[0]-x)*.18,dy=(next[1]-y)*.18;
   const marker=baseLayer.querySelector&&baseLayer.querySelector('circle[data-runner="'+p.id+'"]');
   if(marker)marker.setAttribute('opacity','0');
   const circle=document.createElementNS('http://www.w3.org/2000/svg','circle');
@@ -601,8 +601,8 @@ function animateOutfieldReturn(kind,scoring=false,arm=55,homePlay=null,targetInf
  const atRelay=release+relayMs,atGoal=atRelay+relayPause+finalMs;
  // The middle infielder runs out to receive the relay and returns after the play.
  const relayPosition=(fielder==='LF'?'SS':'2B');
- const relayFielder=field.querySelector('circle[data-position="'+relayPosition+'"]');
- const relayLabel=field.querySelector('text[data-position="'+relayPosition+'"]');
+ const relayFielder=field.querySelector&&field.querySelector('circle[data-position="'+relayPosition+'"]');
+ const relayLabel=field.querySelector&&field.querySelector('text[data-position="'+relayPosition+'"]');
  if(relayFielder){
   const ox=Number(relayFielder.getAttribute('cx')),oy=Number(relayFielder.getAttribute('cy'));
   const moveRelay=(x,y)=>{relayFielder.setAttribute('cx',x);relayFielder.setAttribute('cy',y);if(relayLabel){relayLabel.setAttribute('x',x);relayLabel.setAttribute('y',y+3)}};
