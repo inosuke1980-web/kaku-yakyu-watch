@@ -857,3 +857,25 @@ assert.match(html,/if\(!runnerMarkerVisible\(game\.bases\[i\],i,beforeBases\)\)c
 assert.match(html,/const occupied=\(game\?\.bases\|\|\[\]\)\.map\(p=>p&&!pendingRunnerArrivals\.has\(p\.id\)\?p:null\)/,'mini diamond should hide incoming batter');
 assert.match(html,/stageRunnerArrival\(player\.id,arrival,token\)/,'batter animation must register arrival clock');
 console.log('RUNNER MARKERS WAIT FOR BASE ARRIVAL PASS');
+
+const batterFirstBaseRouteAudit=vm.runInContext(`(()=>{
+ const first=[323,169],home=[200,283];
+ const singleTouch=batterFirstRoute('through',.76);
+ const singleOverrun=batterFirstRoute('through',1);
+ const doubleTouch=batterFirstRoute('round',1);
+ const approach=batterFirstRoute('round',.75);
+ const straight=batterFirstRoute('straight',1);
+ const start=batterFirstRoute('through',0);
+ return {first,home,start,singleTouch,singleOverrun,doubleTouch,approach,straight};
+})()`,ctx);
+assert.deepEqual(Array.from(batterFirstBaseRouteAudit.start),batterFirstBaseRouteAudit.home,'all first-base routes start at home');
+assert.deepEqual(Array.from(batterFirstBaseRouteAudit.singleTouch),batterFirstBaseRouteAudit.first,'single touches first before overrunning');
+assert.ok(batterFirstBaseRouteAudit.singleOverrun[0]>323&&batterFirstBaseRouteAudit.singleOverrun[1]<169,'single must sprint through first into foul territory');
+assert.deepEqual(Array.from(batterFirstBaseRouteAudit.doubleTouch),batterFirstBaseRouteAudit.first,'double must touch first without overrunning');
+assert.deepEqual(Array.from(batterFirstBaseRouteAudit.straight),batterFirstBaseRouteAudit.first,'regular first-base approach should reach bag');
+assert.ok(batterFirstBaseRouteAudit.approach[0]>200&&batterFirstBaseRouteAudit.approach[1]<283,'extra-base hit must take a curved approach');
+assert.match(html,/later\(finishFirst\+overrunHold,\(\)=>moveRunnerRoundBase\(runner,first,returnMs,'stop',token\)\)/,'single returns to first after an overrun');
+assert.match(html,/later\(finishFirst\+20,\(\)=>moveRunnerRoundBase\(runner,second,560,'run',token\)\)/,'extra-base hit must continue from first toward second');
+assert.match(html,/stageRunnerArrival\(player\.id,finalArrival,token\)/,'fixed base marker must wait for final arrival');
+assert.match(html,/if\(moving\?\.getAttribute\('data-runner-id'\)===String\(id\)\)moving\.setAttribute\('visibility','hidden'\)/,'sprite must disappear before stationary marker shows');
+console.log('BATTER FIRST BASE RUN-THROUGH VS ROUNDING CHECKS PASS');
