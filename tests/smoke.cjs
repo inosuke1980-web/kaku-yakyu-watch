@@ -413,11 +413,10 @@ const outfieldHitVarieties=vm.runInContext(`(()=>{
   const plan=outfieldHitPlan(i%2?1:2,'normal');
   totals[plan.flight]++;
   if(plan.flight==='groundThrough'){
-   if(!plan.rollEnd||plan.rollEnd[1]>=plan.point[1])invalid++;
+   if(!plan.rollEnd||plan.rollEnd[1]>plan.point[1])invalid++;
    rolling++;
   }
-  if(plan.flight==='overHead'&&plan.point[1]>-80)invalid++;
-  if(plan.flight==='gapLiner'&&(plan.point[1]<-80||plan.point[1]>0))invalid++;
+  if([plan.point,plan.rollEnd].filter(Boolean).some(point=>point[1]<outfieldFenceY(point[0])+11.9))invalid++;
   if(!plan.fielder||!['LF','CF','RF'].includes(plan.defender))invalid++;
  }
  const liner=outfieldHitPlan(2,'liner');
@@ -494,3 +493,26 @@ assert.equal(outfieldPursuit.shortFly.caught,true);
 assert.equal(outfieldPursuit.sideways.type,'lateral');
 assert.match(html,/moveGroundFielder\(nearest,label,point,ms,token\)/,'outfield chases should use frame-based movement');
 console.log('OUTFIELD PURSUIT DIRECTION AND PICKUP CHECKS PASS');
+
+const fenceIntegrity=vm.runInContext(`(()=>{
+ init();
+ let violations=0,closest=999,homerCount=0;
+ for(let i=0;i<10000;i++){
+  const plan=outfieldHitPlan(i%3+1);
+  const contact=outfieldContact(i%2?'fly':'liner');
+  for(const point of [plan.point,plan.rollEnd,contact.point].filter(Boolean)){
+   const margin=point[1]-outfieldFenceY(point[0]);
+   closest=Math.min(closest,margin);
+   if(margin<11.9)violations++;
+  }
+  const home=outfieldHomerTarget(40+i%320);
+  if(home[1]>=outfieldFenceY(home[0]))violations++;
+  else homerCount++;
+ }
+ return {violations,closest,homerCount};
+})()`,ctx);
+assert.equal(fenceIntegrity.violations,0,'only home runs should land beyond the curved outfield fence');
+assert.ok(fenceIntegrity.closest>=11.9,'fair hits must retain a visible gap before the wall');
+assert.equal(fenceIntegrity.homerCount,10000);
+assert.match(html,/M12 171 L12 82 Q25 -80 200 -122 Q375 -80 388 82/,'stadium and fence calculation should have corresponding control points');
+console.log('CURVED FENCE HIT / HOME RUN SEPARATION CHECKS PASS',JSON.stringify(fenceIntegrity));
