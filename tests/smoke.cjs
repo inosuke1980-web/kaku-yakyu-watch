@@ -212,3 +212,20 @@ const gestureContract=vm.runInContext(`(()=>{
 })()`,ctx);
 assert.ok(Object.values(gestureContract).every(Boolean),'sliding/tag rendering must respect calls without mutating scores or outs');
 console.log('SLIDING AND TAG CHECKS PASS',JSON.stringify(gestureContract));
+
+const seasons=vm.runInContext(`(()=>{
+ const results={spring:0,autumn:0,combined:0,crossPrefecture:0};
+ document.getElementById('matchType').value='official';
+ for(let i=0;i<3000;i++){
+  const t=tournament();
+  if(t.kind==='春季大会')results.spring++;
+  if(t.kind==='秋季大会')results.autumn++;
+  if(t.kind.includes('春季・秋季'))results.combined++;
+  if((t.kind==='春季大会'||t.kind==='秋季大会')&&t.p!==t.q)results.crossPrefecture++;
+ }
+ return results;
+})()`,ctx);
+assert.ok(seasons.spring>0&&seasons.autumn>0,'spring and autumn must both appear');
+assert.equal(seasons.combined,0,'combined season label must not appear');
+assert.equal(seasons.crossPrefecture,0,'prefectural season tournaments must use schools from the same prefecture');
+console.log('SEASON TOURNAMENT CHECKS PASS',JSON.stringify(seasons));
