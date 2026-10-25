@@ -681,3 +681,24 @@ assert.ok(extraOnErrors.gotHome&&extraOnErrors.scoredCount===1&&extraOnErrors.th
 assert.match(html,/creditRuns\(scored,p,false\)/,'error-assisted runs must not credit RBI');
 assert.match(html,/走者が追加進塁！/,'error extra advancement should appear in match commentary');
 console.log('GROUND ERROR EXTRA ADVANCEMENT TESTS PASS',JSON.stringify(extraOnErrors.attempts));
+
+const infieldRangeAudit=vm.runInContext(`(()=>{
+ const direction={defender:'SS',point:[158,156]},strong={field:95,speed:95},weak={field:25,speed:25};
+ const strongPlan=groundRangePlan(direction,strong,27),weakPlan=groundRangePlan(direction,weak,27);
+ let stronger=0,weaker=0,disagreements=0;
+ for(let off=-40;off<=40;off++){
+  const a=groundRangePlan(direction,strong,off),b=groundRangePlan(direction,weak,off);
+  if(a.reachable)stronger++;
+  if(b.reachable)weaker++;
+  if(a.reachable&&!b.reachable)disagreements++;
+  if(b.reachable&&!a.reachable)throw Error('weak fielder covered more ground');
+ }
+ return {strongPlan,weakPlan,stronger,weaker,disagreements};
+})()`,ctx);
+assert.equal(infieldRangeAudit.strongPlan.reachable,true,'elite shortstop should reach difficult grounders');
+assert.equal(infieldRangeAudit.weakPlan.reachable,false,'weak shortstop must miss the same grounder');
+assert.ok(infieldRangeAudit.stronger>infieldRangeAudit.weaker,'better defense must cover more balls');
+assert.ok(infieldRangeAudit.disagreements>0,'attribute differences must affect outcomes');
+assert.match(html,/if\(!coverage\.reachable\)/,'ground balls beyond reach must be scored as hits rather than errors');
+assert.match(html,/animateInfieldRangeChase\(coverage,true\)/,'missed grounders should have a chase animation');
+console.log('INFIELD COVERAGE ATTRIBUTE CONTRAST CHECKS PASS',JSON.stringify({stronger:infieldRangeAudit.stronger,weaker:infieldRangeAudit.weaker}));
