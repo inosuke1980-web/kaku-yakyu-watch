@@ -565,3 +565,21 @@ assert.deepEqual(Array.from(relayChoices.sacrifice.goal),[200,293]);
 assert.match(html,/if\(relay\.throwAgain\)later\(atRelay\+relayPause/,'second throw must only be scheduled for a live play');
 assert.match(html,/中継でボールを保持/,'routine relay must visibly end at cutoff');
 console.log('OUTFIELD RELAY DECISION CHECKS PASS');
+
+const linkedRelay=vm.runInContext(`(()=>{
+ const point=[200,10],target=[200,293];
+ const slow=extraBaseThrowTiming({flight:'fenceDouble',flightMs:1500},30,50,point,target);
+ const fast=extraBaseThrowTiming({flight:'fenceDouble',flightMs:1500},90,50,point,target);
+ const weak=extraBaseThrowTiming({flight:'groundThrough',flightMs:620},55,25,point,target);
+ const strong=extraBaseThrowTiming({flight:'groundThrough',flightMs:620},55,95,point,target);
+ const shallow=extraBaseThrowTiming({flight:'gapLiner',flightMs:850},55,60,point,target);
+ const deep=extraBaseThrowTiming({flight:'overHead',flightMs:1230},55,60,point,target);
+ return {slow,fast,weak,strong,shallow,deep};
+})()`,ctx);
+assert.ok(linkedRelay.slow.arrival>linkedRelay.fast.arrival,'slow fielder pickup should give runners longer');
+assert.ok(linkedRelay.weak.arrival>linkedRelay.strong.arrival,'strong arm should deter extra bases');
+assert.ok(linkedRelay.deep.arrival>linkedRelay.shallow.arrival,'deep ball should take longer to return');
+assert.equal(linkedRelay.slow.pickup.release,linkedRelay.slow.pickup.flightMs+linkedRelay.slow.pickup.gather);
+assert.match(html,/const pickup=outfieldPickupTiming\(targetInfo,targetInfo\?\.fielder\?\.field\?\?55\),release=pickup\.release/,'animation must share the timing model');
+assert.match(html,/decideSingleAdvance\(r,0,landing,fieldArm,thirdBlocked,targetInfo,fieldSkill\)/,'runner choices must use fielding capability');
+console.log('EXTRA-BASE / OUTFIELD RETURN LINKAGE CHECKS PASS');
