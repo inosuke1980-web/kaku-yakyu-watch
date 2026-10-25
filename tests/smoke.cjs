@@ -55,3 +55,22 @@ assert.ok(ability.poor.errors>ability.great.errors,'poor fielding should produce
 assert.ok(ability.weakArm.hits>ability.strongArm.hits,'weak throws should permit more hits');
 assert.ok(ability.fast.hits<1750,'fast runner infield hit rate should remain below 35%');
 console.log('ABILITY CHECKS PASS',JSON.stringify(ability));
+
+const outfield=vm.runInContext(`(()=>{
+ const cases=[['weak',20,20],['average',55,55],['elite',90,90]],result={};
+ for(const [name,speed,field] of cases){
+  init();const players=game.teams[1].players;
+  for(const i of [14,15,16]){players[i].speed=speed;players[i].field=field;}
+  for(const kind of ['fly','liner']){
+   let catches=0,drops=0;
+   for(let j=0;j<5000;j++){const a=outfieldContact(kind);catches+=Number(a.caught);drops+=Number(a.dropped)}
+   result[name+'_'+kind]={catches,drops};
+  }
+ }
+ return result;
+})()`,ctx);
+assert.ok(outfield.elite_fly.catches>outfield.average_fly.catches,'elite outfielders should catch more flies');
+assert.ok(outfield.average_fly.catches>outfield.weak_fly.catches,'weak outfielders should catch fewer flies');
+assert.ok(outfield.elite_liner.catches>outfield.average_liner.catches,'elite outfielders should catch more liners');
+assert.ok(outfield.average_liner.catches>outfield.weak_liner.catches,'weak outfielders should catch fewer liners');
+console.log('OUTFIELD CHECKS PASS',JSON.stringify(outfield));
