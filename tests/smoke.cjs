@@ -253,3 +253,21 @@ assert.equal(geometry,'M200 293 L12 105 M200 293 L388 105','foul lines end at fe
 assert.match(html,/<line data-pole="left" x1="12" y1="105"/);
 assert.match(html,/<line data-pole="right" x1="388" y1="105"/);
 console.log('BALLPARK GEOMETRY AND SURFACE CHECKS PASS',JSON.stringify(ballparks));
+
+const mobileScoreboard=vm.runInContext(`(()=>{
+ init();const g=game;
+ g.inning=11;
+ for(const team of g.teams){while(team.runs.length<11)team.runs.push(null)}
+ render();
+ const markup=$('lines').innerHTML;
+ return {
+  extendedInnings:markup.includes('>10</th>')&&markup.includes('>11</th>'),
+  fixedStats:markup.includes('sticky-stat stat-r')&&markup.includes('sticky-stat stat-h')&&markup.includes('sticky-stat stat-e'),
+  blankCurrent:markup.includes('class="live-score"></td>'),
+  battingTeam:markup.includes('class="attack-team"')
+ };
+})()`,ctx);
+assert.ok(Object.values(mobileScoreboard).every(Boolean),'mobile scoreboard must support extension and sticky RHE');
+assert.match(html,/class="scoreboard-scroll" id="lines"/,'scoreboard should use a horizontal scroll container');
+assert.match(html,/\.scoreboard-scroll \.stat-r\{right:60px\}/,'R column must remain sticky');
+console.log('MOBILE SCOREBOARD CHECKS PASS',JSON.stringify(mobileScoreboard));
