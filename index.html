@@ -33,7 +33,7 @@
 .scoreboard-scroll td.attack-team{background:#1f382f}
 .scoreboard-hint{font-size:11px;color:#a7c6b5;margin:5px 0 0}
 @media(max-width:750px){.scoreboard-scroll th:first-child,.scoreboard-scroll td:first-child{min-width:102px;width:112px;max-width:112px}.scoreboard-scroll th,.scoreboard-scroll td{padding:6px 4px}}
-.current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.4.2 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
+.current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.4.3 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
 <section class="card"><h2>試合生成の条件</h2><div class="flex" style="gap:12px">
 <label>カテゴリー <select id="category"><option value="random">ランダム（現在は高校のみ）</option><option value="high">高校野球</option><option value="university" disabled>大学野球（今後追加）</option><option value="corporate" disabled>社会人野球（今後追加）</option><option value="pro" disabled>プロ野球（今後追加）</option></select></label>
 <label>試合種別 <select id="matchType"><option value="random">ランダム</option><option value="official">公式戦</option><option value="practice">練習試合</option></select></label>
@@ -146,11 +146,25 @@ function advanceRiskThreshold(situation){
  if(situation.late&&situation.diff>0)return .82;
  return .73;
 }
-function decideSingleAdvance(runner,origin,point,arm,occupiedThird){
- const deep=point[1]<-55?110:point[1]<-5?60:0;
+// Share the fielder's pickup/throw model with the on-screen relay timing.
+// Deep hits, wall rebounds and slow fielders give baserunners extra time.
+function outfieldPickupTiming(info,fielding=55){
+ const flight=info?.flight||'';
+ const flightMs=info?.flightMs??830;
+ const extra=flight==='fenceDouble'?360:flight==='overHead'?230:flight==='groundThrough'?145:flight==='gapLiner'?75:0;
+ const gather=Math.round(clamp(190+(55-fielding)*2.0+extra,140,780));
+ return {flightMs,gather,release:flightMs+gather};
+}
+function extraBaseThrowTiming(info,fielding,arm,point,destination){
+ const pickup=outfieldPickupTiming(info,fielding);
+ const cutoff=[200,116],relay=throwFlightMs(arm,point,cutoff);
+ const second=throwFlightMs(65,cutoff,destination);
+ return {arrival:pickup.release+relay+130+second,pickup,relay,second};
+}
+function decideSingleAdvance(runner,origin,point,arm,occupiedThird,info=null,fielding=55){
  const segment=runnerSegmentMs(runner.speed),situation=advancementContext();
- const thirdThrow=830+190+deep+throwFlightMs(arm,point,[77,169])+290;
- const homeThrow=830+190+deep+throwFlightMs(arm,point,[200,116])+130+throwFlightMs(60,[200,116],[200,293]);
+ const thirdThrow=extraBaseThrowTiming(info,fielding,arm,point,[77,169]).arrival;
+ const homeThrow=extraBaseThrowTiming(info,fielding,arm,point,[200,293]).arrival;
  const threshold=advanceRiskThreshold(situation);
  if(origin===1){
   const arrival=70+2*segment,margin=homeThrow-arrival;
@@ -226,7 +240,8 @@ function hit(p,bases,style='normal',targetInfo=null){
  }else if(!targetInfo)targetInfo=outfieldHitPlan(bases,style);
  const defender=targetInfo?.fielder||current().def.players[14+(game.totalPitches%6)];
  const fieldArm=defender.arm,fieldSkill=defender.field;
- const landing=targetInfo?.rebound||targetInfo?.point||(bases===1?[277,138]:[311,-33]);
+ const landing=targetInfo?.rebound||targetInfo?.rollEnd||targetInfo?.point||(bases===1?[277,138]:[311,-33]);
+ const pickup=outfieldPickupTiming(targetInfo,fieldSkill);
  scoreHit(p,bases===4?'本塁打':'安打');
  const old=game.bases.slice(),neu=[null,null,null],scored=[];
  game.thirdBasePlay=null;
@@ -234,13 +249,16 @@ function hit(p,bases,style='normal',targetInfo=null){
   const r=old[i];if(!r)continue;
   let dest=bases===4?3:bases===1?i+1:i+bases;
   if(bases===1&&i===1){
-   const decision=decideSingleAdvance(r,1,landing,fieldArm,false);
+   const decision=decideSingleAdvance(r,1,landing,fieldArm,false,targetInfo,fieldSkill);
    dest=decision.target;
+   if(dest===2)log('外野からの返球を警戒して二塁走者は三塁でストップ。');
+   else log('外野からの返球より先に本塁を狙う！');
   }else if(bases===1&&i===0){
    // The lead runner can stop at third; avoid overtaking him.
    const thirdBlocked=!!neu[2]||scored.length>0;
-   const decision=decideSingleAdvance(r,0,landing,fieldArm,thirdBlocked);
+   const decision=decideSingleAdvance(r,0,landing,fieldArm,thirdBlocked,targetInfo,fieldSkill);
    dest=decision.target;
+   if(!decision.attempt&&dest===1&&!thirdBlocked)log('外野手の返球を見て一塁走者は二塁でストップ。');
    if(decision.thirdOut){
     game.thirdBasePlay={id:r.id,safe:false,arrival:decision.arrival,throwArrival:decision.thirdThrow};
     game.outs++;pitcher().outsPitched++;
@@ -263,7 +281,7 @@ function hit(p,bases,style='normal',targetInfo=null){
   if(options.length){
    const pick=options[0],seg=runnerSegmentMs(pick.runner.speed),cutoff=[200,116],plate=[200,293];
    const runnerMs=70+(3-pick.origin)*seg;
-   const throwMs=830+(bases>=2?600:0)+190+throwFlightMs(fieldArm,landing,cutoff)+130+throwFlightMs(65,cutoff,plate);
+   const throwMs=pickup.release+throwFlightMs(fieldArm,landing,cutoff)+130+throwFlightMs(65,cutoff,plate);
    const wild=chance(clamp(.10-(fieldSkill-50)*.0008,.035,.15));
    const safe=wild||runnerMs+rnd(-100,100)<=throwMs+rnd(-125,125);
    homePlay={id:pick.runner.id,origin:pick.origin,runnerMs,throwMs,wild,safe};
@@ -991,8 +1009,9 @@ function animateOutfieldReturn(kind,scoring=false,arm=55,homePlay=null,targetInf
  },{el:null,dist:Infinity}).el;
  const fielder=targetInfo?.defender||chosen?.getAttribute('data-position')||'CF';
  const flightMs=targetInfo?.flightMs??(kind==='fly'?1150:kind==='single'?830:kind==='triple'||kind==='double'?1430:540);
- const gatherMs=targetInfo?.flight==='fenceDouble'?400:190,release=flightMs+gatherMs;
+ const pickup=outfieldPickupTiming(targetInfo,targetInfo?.fielder?.field??55),release=pickup.release;
  const relayMs=throwFlightMs(arm,landed,cutoff),relayPause=130,finalMs=relay.throwAgain?throwFlightMs(65,cutoff,goal):0;
+ // The release and onward throw use the same estimates as baserunner decisions.
  const atRelay=release+relayMs,atGoal=relay.throwAgain?atRelay+relayPause+finalMs:atRelay;
  const closePlay=homePlay?{...homePlay,base:'home'}:thirdBasePlay?{...thirdBasePlay,base:'third'}:null;
  if(closePlay)game.crossPlayVisual=crossPlayClock(closePlay,atGoal);
