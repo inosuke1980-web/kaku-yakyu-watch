@@ -1,0 +1,19 @@
+name: Baseball simulation smoke tests
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check HTML script syntax
+        run: node -e "const fs=require('fs'),vm=require('vm');let s=fs.readFileSync('index.html','utf8').match(/<script>([\\s\\S]*?)<\\/script>/)[1];new vm.Script(s);"
+      - name: Simulate 1,000 games
+        run: node tests/smoke.cjs
