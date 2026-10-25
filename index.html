@@ -33,7 +33,7 @@
 .scoreboard-scroll td.attack-team{background:#1f382f}
 .scoreboard-hint{font-size:11px;color:#a7c6b5;margin:5px 0 0}
 @media(max-width:750px){.scoreboard-scroll th:first-child,.scoreboard-scroll td:first-child{min-width:102px;width:112px;max-width:112px}.scoreboard-scroll th,.scoreboard-scroll td{padding:6px 4px}}
-.current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.4.8 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
+.current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.4.9 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
 <section class="card"><h2>試合生成の条件</h2><div class="flex" style="gap:12px">
 <label>カテゴリー <select id="category"><option value="random">ランダム（現在は高校のみ）</option><option value="high">高校野球</option><option value="university" disabled>大学野球（今後追加）</option><option value="corporate" disabled>社会人野球（今後追加）</option><option value="pro" disabled>プロ野球（今後追加）</option></select></label>
 <label>試合種別 <select id="matchType"><option value="random">ランダム</option><option value="official">公式戦</option><option value="practice">練習試合</option></select></label>
@@ -459,16 +459,36 @@ const OUTFIELD_ZONES=[
  {defender:'CF',playerIndex:15,origin:[200,-75],point:[200,-106],label:'中堅'},
  {defender:'RF',playerIndex:16,origin:[301,-5],point:[307,-40],label:'右翼'}
 ];
+// Compare each outfielder's actual position, foot speed and glove range.
+// The best-positioned player takes the ball, including a CF crossing into the gaps.
+function outfieldCoverage(type,point,players){
+ const candidates=OUTFIELD_ZONES.map(zone=>{
+  const fielder=players[zone.playerIndex];
+  const distance=Math.hypot(point[0]-zone.origin[0],point[1]-zone.origin[1]);
+  const reach=clamp((type==='fly'?67:46)+(fielder.speed-50)*.43+(fielder.field-50)*.25,
+   type==='fly'?36:23,type==='fly'?101:75);
+  const timeRatio=distance/reach;
+  return {...zone,fielder,distance,reach,timeRatio};
+ });
+ candidates.sort((a,b)=>a.timeRatio-b.timeRatio);
+ return candidates[0];
+}
 function outfieldContact(type){
- const zone=choose(OUTFIELD_ZONES),fielder=current().def.players[zone.playerIndex],wide=rnd(-37,37),deep=rnd(-29,18);
+ const zone=choose(OUTFIELD_ZONES),wide=rnd(-70,70),deep=rnd(-38,20);
  const point=safeOutfieldPoint([clamp(zone.point[0]+wide,32,368),clamp(zone.point[1]+deep,-135,10)]);
- const distance=Math.hypot(point[0]-zone.origin[0],point[1]-zone.origin[1]);
- const reach=type==='fly'?78:55;
- const skill=(fielder.field-50)*.0038+(fielder.speed-50)*.0034;
- const catchProb=clamp((type==='fly'?.90:.69)+skill-Math.max(0,distance-reach)*.008,type==='fly'?.24:.10,.985);
- const caught=chance(catchProb),ordinary=distance<reach*.72;
+ const cover=outfieldCoverage(type,point,current().def.players);
+ const {fielder,distance,reach}=cover;
+ // Beyond reach is an untouched hit. A reachable ball can still be dropped.
+ const excess=Math.max(0,distance-reach);
+ const catchProb=excess>0?0:clamp((type==='fly'?.91:.77)+(fielder.field-50)*.0028
+  -(distance/reach)*.075,type==='fly'?.40:.28,.985);
+ const caught=chance(catchProb);
+ const ordinary=distance<reach*.72;
  const dropped=!caught&&ordinary&&chance(clamp(.035+(55-fielder.field)*.0012,.008,.10));
- return {defender:zone.defender,label:zone.label,point,fielder,caught,dropped,type,catchProb,distance,diving:caught&&distance>reach*.73,nearMiss:!caught&&!dropped&&distance>reach*.65,atFence:point[1]<-110};
+ const gapMiss=!caught&&!dropped&&excess>8;
+ return {defender:cover.defender,label:cover.label,point,fielder,caught,dropped,type,
+  catchProb,distance,reach,excess,gapMiss,diving:caught&&distance>reach*.73,
+  nearMiss:!caught&&!dropped&&distance>reach*.7,atFence:point[1]<-110};
 }
 function outfieldMisplay(p,contact){
  p.ab++;current().def.errors++;
@@ -492,8 +512,8 @@ function lineBall(p){
   animate('linerOut',contact,p.speed);
  }else if(contact.dropped)outfieldMisplay(p,contact);
  else{
-  log(`${contact.label}を襲うライナーが抜けた！`);
-  hit(p,contact.distance>65?2:1,'liner',contact);
+  log(`${contact.label}を襲うライナーが抜けた！${contact.gapMiss?' 外野の間を破って長打！':''}`);
+  hit(p,contact.gapMiss?2:1,'liner',contact);
  }
 }
 function flyBall(p){
@@ -501,8 +521,8 @@ function flyBall(p){
  if(!contact.caught){
   if(contact.dropped)outfieldMisplay(p,contact);
   else{
-   log(`${contact.label}の前にフライが落ちた！`);
-   hit(p,contact.distance>70?2:1,'normal',contact);
+   log(`${contact.label}の前にフライが落ちた！${contact.gapMiss?' 守備範囲の外へ抜けて長打！':''}`);
+   hit(p,contact.gapMiss?2:1,'normal',contact);
   }
   return;
  }
