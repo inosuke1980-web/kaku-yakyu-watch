@@ -603,5 +603,32 @@ assert.equal(runnerChoreographyCases.chargeThird.arrival,1650);
 assert.equal(runnerChoreographyCases.chargeHome.arrival,1770);
 assert.equal(runnerChoreographyCases.chargeHome.segments.at(-1).mode,'charge');
 assert.match(html,/data-run-state/,'moving runner should expose chase/stop/charge state');
-assert.match(html,/ease-out.*ease-in/,'stop and charge should have distinct easing');
+assert.match(html,/mode==='stop'\?1-\(1-t\)\*\(1-t\):mode==='charge'\?t\*t:t/,'stop and charge should have distinct frame-based easing');
 console.log('RUNNER STOP AND CHARGE CHOREOGRAPHY CHECKS PASS');
+
+const baseRounding=vm.runInContext(`(()=>{
+ const bases=[[323,169],[200,47],[77,169],[200,293]],results=[];
+ for(let i=0;i<3;i++){
+  const start=bases[i],end=bases[i+1];
+  const atStart=roundedBasePath(start,end,0);
+  const atEnd=roundedBasePath(start,end,1);
+  const mid=roundedBasePath(start,end,.5);
+  const straight=[(start[0]+end[0])/2,(start[1]+end[1])/2];
+  const deviation=Math.hypot(mid[0]-straight[0],mid[1]-straight[1]);
+  const distBefore=Math.hypot(straight[0]-200,straight[1]-170);
+  const distAfter=Math.hypot(mid[0]-200,mid[1]-170);
+  results.push({atStart,atEnd,start,end,deviation,outside:distAfter>distBefore});
+ }
+ return results;
+})()`,ctx);
+for(const leg of baseRounding){
+ assert.deepEqual(Array.from(leg.atStart),Array.from(leg.start),'rounded path starts on the bag');
+ assert.deepEqual(Array.from(leg.atEnd),Array.from(leg.end),'rounded path ends on the next bag');
+ assert.ok(leg.deviation>=11,'curve should be clearly visible on small screens');
+ assert.ok(leg.outside,'runner should bend outward away from diamond interior');
+}
+assert.match(html,/moveRunnerRoundBase\(circle,destination,leg\.duration,leg\.mode,token\)/,'existing runners must use curved path');
+assert.match(html,/moveRunnerRoundBase\(runner,second,560,'run',token\)/,'batter must round first on extra-base hits');
+assert.match(html,/moveRunnerRoundBase\(runner,third,560,'run',token\)/,'batter must round second on triples');
+assert.match(html,/if\(token!==animationToken\)return/,'curved movement must be cancellable');
+console.log('ROUNDING BASEPATH GEOMETRY AND BATTER RUNNER CHECKS PASS');
