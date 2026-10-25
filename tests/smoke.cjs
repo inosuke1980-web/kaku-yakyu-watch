@@ -7,7 +7,7 @@ const document={getElementById(id){if(!ids.has(id))ids.set(id,mock());return ids
 document.getElementById('category').value='high';
 const ctx={document,Math,Date,console,performance:{now:()=>0},localStorage:{getItem:()=>null,setItem:()=>{},removeItem:()=>{}},setTimeout:()=>1,clearTimeout:()=>{},requestAnimationFrame:()=>{},confirm:()=>true};
 vm.createContext(ctx);vm.runInContext(src,ctx);
-vm.runInContext('render=()=>{};renderRoster=()=>{};animate=()=>{};animateGround=()=>{};animateFieldingError=()=>{};animateOutfieldReturn=()=>{};animateBaseRunners=()=>{};log=()=>{};historyRender=()=>{};saveGame=()=>{};',ctx);
+vm.runInContext('render=()=>{};renderRoster=()=>{};animate=()=>{};animateGround=()=>{};animateFieldingError=()=>{};animateOutfieldReturn=()=>{};animateBaseRunners=()=>{};animateFlyLeadAndReturn=()=>{};log=()=>{};historyRender=()=>{};saveGame=()=>{};',ctx);
 const results={games:0,extraInnings:0,maxInning:0,violations:[],scores:0,tactics:{}};
 for(let n=0;n<1000;n++){
  vm.runInContext('init()',ctx);let steps=0;
@@ -103,3 +103,19 @@ const animationCases=vm.runInContext(`(()=>{
 assert.ok(animationCases.dives>0,'some difficult catches should use dive animation');
 assert.ok(animationCases.nearMisses>0,'some missed flies should use near-miss animation');
 console.log('OUTFIELD ANIMATION CASES PASS',JSON.stringify(animationCases));
+
+const flyReturnCheck=vm.runInContext(`(()=>{
+ init();const g=game;
+ const batterNow=batter();
+ const baseRunner=g.teams[0].players[6];g.bases=[baseRunner,null,null];g.outs=0;
+ const sample={defender:'CF',label:'中堅',point:[200,-90],fielder:g.teams[1].players[15],caught:true,dropped:false,diving:false,atFence:false};
+ const original=outfieldContact;
+ outfieldContact=()=>sample;
+ flyBall(batterNow);
+ outfieldContact=original;
+ return {caughtFlag:g.flyReturn===true,runnerRetained:g.bases[0]===baseRunner,outs:g.outs};
+})()`,ctx);
+assert.equal(flyReturnCheck.caughtFlag,true,'caught fly should request retreat animation');
+assert.equal(flyReturnCheck.runnerRetained,true,'runners must not advance on routine caught fly');
+assert.equal(flyReturnCheck.outs,1,'caught fly adds exactly one out');
+console.log('FLY RETURN CHECKS PASS',JSON.stringify(flyReturnCheck));
