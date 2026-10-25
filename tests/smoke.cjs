@@ -748,7 +748,7 @@ assert.ok(rollingGroundAudit.kinds.groundThrough>400,'routine ground-ball hits m
 assert.ok(rollingGroundAudit.minRollingMs>=1200,'grass roll should remain visible');
 assert.equal(rollingGroundAudit.issues,0,'grounders must travel smoothly from the plate through grass');
 assert.match(html,/groundRollPosition\(targetInfo\|\|\{point:target\},t\)/,'animation must sample grounder position on each frame');
-assert.match(html,/flightMs:1550,defender:wing/,'ground balls past infielders must also roll long enough');
+assert.match(html,/flightMs:motion\.flightMs,defender:wing/,'ground balls past infielders must use strength-based rolling time');
 console.log('VISIBLE OUTFIELD GROUND ROLL CHECKS PASS',JSON.stringify(rollingGroundAudit));
 
 const noMagneticBall=vm.runInContext(`(()=>{
@@ -775,3 +775,30 @@ assert.match(html,/groundRollPosition\(targetInfo,\.67\)/,'fielder should track 
 assert.match(html,/const from=\[Number\(ball\.getAttribute\('cx'\)\),Number\(ball\.getAttribute\('cy'\)\)\]/,'return throw must begin at current ball position');
 assert.match(html,/requestAnimationFrame\(throwFrame\)/,'relay must animate frame by frame without SVG CSS snapping');
 console.log('NATURAL OUTFIELD PICKUP / NO MAGNETIC BALL CHECKS PASS');
+
+const grounderStrengthAudit=vm.runInContext(`(()=>{
+ const strengths={hard:[],normal:[],soft:[]},counts={hard:0,normal:0,soft:0};
+ const speeds=Object.fromEntries(Object.keys(strengths).map(k=>[k,grounderStrengthPlan(k).flightMs]));
+ init();
+ for(let i=0;i<6500;i++){
+  const p=outfieldHitPlan(1,'normal');
+  if(p.flight!=='groundThrough')continue;
+  counts[p.strength]++;
+  const roll=Math.hypot(p.rollEnd[0]-p.point[0],p.rollEnd[1]-p.point[1]);
+  strengths[p.strength].push(roll);
+  const origin=p.defender==='CF'?[200,-75]:p.defender==='LF'?[99,-5]:[301,-5];
+  const pursuit=outfieldPursuitPlan('groundThrough',p,origin,p.flightMs);
+  const end=groundRollPosition(p,1);
+  if(Math.hypot(end[0]-pursuit.destination[0],end[1]-pursuit.destination[1])>.01)throw Error('pickup/roll mismatch');
+ }
+ const mean=a=>a.reduce((x,v)=>x+v,0)/a.length;
+ return {counts,speeds,meanRoll:Object.fromEntries(Object.entries(strengths).map(([k,v])=>[k,mean(v)]))};
+})()`,ctx);
+assert.ok(Object.values(grounderStrengthAudit.counts).every(n=>150),'all grounder strengths must occur');
+assert.ok(grounderStrengthAudit.speeds.hard<grounderStrengthAudit.speeds.normal);
+assert.ok(grounderStrengthAudit.speeds.normal<grounderStrengthAudit.speeds.soft);
+assert.ok(grounderStrengthAudit.meanRoll.hard>grounderStrengthAudit.meanRoll.normal);
+assert.ok(grounderStrengthAudit.meanRoll.normal>grounderStrengthAudit.meanRoll.soft);
+assert.match(html,/data-chase-direction/,'outfielders should distinguish forward vs back pursuit');
+assert.match(html,/groundRollPosition\(targetInfo,\.67\)/,'fielder must move to a point on actual ball path');
+console.log('GROUNDER SPEED AND OUTFIELD PURSUIT CONTRAST PASS',JSON.stringify(grounderStrengthAudit));
