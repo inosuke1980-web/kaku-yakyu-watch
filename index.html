@@ -57,7 +57,7 @@ if(dest>=3)scored.push(r);else {while(dest>i&&neu[dest])dest--;if(neu[dest])thro
 }
 if(bases===4)scored.push(p);else neu[bases-1]=p;
 game.bases=neu;creditRuns(scored,p);
-log(`${p.name} ${style==='liner'?'鋭いライナーが間を抜けた！ ':''}${bases===4?'ホームラン！':bases===3?'三塁打！':bases===2?'二塁打！':'ヒット！'}${scored.length?' '+scored.length+'点追加。':''}`);animate(style==='liner'?'linerHit':bases===4?'home':bases===1?'single':'double')}
+log(`${p.name} ${style==='liner'?'鋭いライナーが間を抜けた！ ':''}${bases===4?'ホームラン！':bases===3?'三塁打！':bases===2?'二塁打！':'ヒット！'}${scored.length?' '+scored.length+'点追加。':''}`);animate(style==='liner'?(bases===2?'linerHit2':'linerHit'):bases===4?'home':bases===1?'single':'double')}
 // 内野ゴロ：二塁封殺／併殺／一塁アウトのいずれかを状況から決定する。
 function groundBall(p){const b=game.bases,pi=pitcher();p.ab++;const direction=choose(GROUND_DIRECTIONS);
 if(b[0]&&game.outs<=1&&chance(clamp(.12+(pi.field-p.speed)*.0015,.05,.24))){
@@ -272,13 +272,13 @@ function animateGround(outcome,direction){
  }
 }
 function animate(kind,targetInfo=null){
- const runnerType=kind==='linerHit'?'hit1':kind==='single'?'hit1':kind==='double'?'hit2':kind==='home'?'homeRun':kind==='fly'?'fly':null;
+ const runnerType=kind==='linerHit'?'hit1':kind==='linerHit2'?'hit2':kind==='single'?'hit1':kind==='double'?'hit2':kind==='home'?'homeRun':kind==='fly'?'fly':null;
  if(runnerType)animateBatterRun(runnerType);
  const ball=$('ball'),shadow=$('ballShadow'),field=$('fielders'),token=animationToken;
- const targets={out:[152,152],fly:[96,-36],home:[326,-117],single:[277,138],double:[311,-33],linerHit:[245,-104]};
+ const targets={out:[152,152],fly:[96,-36],home:[326,-117],single:[277,138],double:[311,-33],linerHit:[245,-104],linerHit2:[165,-112]};
  const target=targetInfo?targetInfo.point:targets[kind]||targets.single;
- const start=[200,283],duration=kind==='linerHit'?540:kind==='linerOut'?460:kind==='fly'?1150:kind==='home'?1250:830;
- const isFly=['fly','home','double'].includes(kind),isLiner=kind==='linerHit'||kind==='linerOut';
+ const start=[200,283],duration=(kind==='linerHit'||kind==='linerHit2')?540:kind==='linerOut'?460:kind==='fly'?1150:kind==='home'?1250:830;
+ const isFly=['fly','home','double'].includes(kind),isLiner=kind==='linerHit'||kind==='linerHit2'||kind==='linerOut';
  animationHoldUntil=Math.max(animationHoldUntil,Date.now()+duration+300);
  if(shadow){shadow.setAttribute('rx','0');shadow.setAttribute('ry','0')}
  ball.style.transition='none';ball.setAttribute('cx',start[0]);ball.setAttribute('cy',start[1]);ball.setAttribute('r','4');
