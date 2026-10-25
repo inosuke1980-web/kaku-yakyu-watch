@@ -33,7 +33,7 @@
 .scoreboard-scroll td.attack-team{background:#1f382f}
 .scoreboard-hint{font-size:11px;color:#a7c6b5;margin:5px 0 0}
 @media(max-width:750px){.scoreboard-scroll th:first-child,.scoreboard-scroll td:first-child{min-width:102px;width:112px;max-width:112px}.scoreboard-scroll th,.scoreboard-scroll td{padding:6px 4px}}
-.current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.5.4 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
+.current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.5.5 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
 <section class="card"><h2>試合生成の条件</h2><div class="flex" style="gap:12px">
 <label>カテゴリー <select id="category"><option value="random">ランダム（現在は高校のみ）</option><option value="high">高校野球</option><option value="university" disabled>大学野球（今後追加）</option><option value="corporate" disabled>社会人野球（今後追加）</option><option value="pro" disabled>プロ野球（今後追加）</option></select></label>
 <label>試合種別 <select id="matchType"><option value="random">ランダム</option><option value="official">公式戦</option><option value="practice">練習試合</option></select></label>
@@ -907,35 +907,85 @@ function throwFlightMs(arm=55,from=[200,160],to=[323,169]){
  const distance=Math.hypot(to[0]-from[0],to[1]-from[1]);
  return Math.round(clamp(285+distance*.82-(clamp(arm,5,99)-50)*1.85,260,590));
 }
+// Single: sprint past first on the foul-territory side and return to the bag.
+// Extra-base hit: touch first and round it without any overrun/retrace.
+function batterFirstRoute(kind,progress){
+ const home=[200,283],first=[323,169],t=clamp(progress,0,1);
+ if(kind==='through'){
+  const passed=[341,152];
+  if(t<=.76){const u=t/.76;return [home[0]+(first[0]-home[0])*u,home[1]+(first[1]-home[1])*u]}
+  const u=(t-.76)/.24;
+  return [first[0]+(passed[0]-first[0])*u,first[1]+(passed[1]-first[1])*u];
+ }
+ if(kind==='round'){
+  // Approach first from outside the diamond to carry momentum toward second.
+  const control=[337,192],u=1-t;
+  return [u*u*home[0]+2*u*t*control[0]+t*t*first[0],
+   u*u*home[1]+2*u*t*control[1]+t*t*first[1]];
+ }
+ return [home[0]+(first[0]-home[0])*t,home[1]+(first[1]-home[1])*t];
+}
+function animateBatterFirstLeg(runner,kind,duration,token){
+ const begun=performance.now();
+ runner.style.transition='none';
+ function frame(now){
+  if(token!==animationToken)return;
+  const t=clamp((now-begun)/Math.max(1,duration),0,1);
+  const at=batterFirstRoute(kind,t);
+  runner.setAttribute('cx',at[0].toFixed(2));
+  runner.setAttribute('cy',at[1].toFixed(2));
+  if(t<1)requestAnimationFrame(frame);
+ }
+ requestAnimationFrame(frame);
+}
 function animateBatterRun(result,speed=55,groundPlan=null){
  const runner=$('batterRunner');if(!runner)return;
  const token=animationToken,home=[200,283],first=[323,169],second=[200,47],third=[77,169];
  const later=(delay,callback)=>playTimers.push(setTimeout(()=>{if(token===animationToken)callback()},delay));
- const go=(x,y,duration)=>{runner.style.transition='none';runner.getAttribute('cx');runner.style.transition='cx '+duration+'ms linear,cy '+duration+'ms linear';runner.setAttribute('cx',x);runner.setAttribute('cy',y)};
  runner.style.transition='none';runner.setAttribute('cx',home[0]);runner.setAttribute('cy',home[1]);runner.setAttribute('visibility','visible');
  const normal=runnerFirstMs(speed);
- const finishFirst=groundPlan&&groundPlan.runnerMs?groundPlan.runnerMs:normal;
+ const finishFirst=groundPlan?.runnerMs||normal;
+ const extra=['hit2','hit3','homeRun'].includes(result);
+ const single=result==='hit1';
+ const route=single?'through':extra?'round':'straight';
  const firstDuration=result==='fly'?440:finishFirst;
- requestAnimationFrame(()=>{if(token!==animationToken)return;
-   if(result==='fly')go(229,257,firstDuration);
-   else if(result==='groundOut'||result==='doublePlay')go(309,183,firstDuration);
-   else go(first[0],first[1],firstDuration);
- });
- if(result==='hit2'||result==='hit3'||result==='homeRun'){
-   later(finishFirst+80,()=>moveRunnerRoundBase(runner,second,560,'run',token));
-   if(result==='hit3'||result==='homeRun')later(finishFirst+690,()=>moveRunnerRoundBase(runner,third,560,'run',token));
-   if(result==='homeRun')later(finishFirst+1310,()=>moveRunnerRoundBase(runner,[200,293],650,'run',token));
+ if(result==='fly'){
+  later(0,()=>animateBatterFirstLeg(runner,'straight',firstDuration,token));
+ }else if(result==='groundOut'||result==='doublePlay'){
+  later(0,()=>{const begun=performance.now();runner.style.transition='none';
+   function frame(now){if(token!==animationToken)return;const t=clamp((now-begun)/firstDuration,0,1);
+    runner.setAttribute('cx',(home[0]+(309-home[0])*t).toFixed(2));
+    runner.setAttribute('cy',(home[1]+(183-home[1])*t).toFixed(2));
+    if(t<1)requestAnimationFrame(frame)}
+   requestAnimationFrame(frame)});
+ }else{
+  later(0,()=>animateBatterFirstLeg(runner,route,firstDuration,token));
  }
- // The player is already on game.bases logically; the stationary SVG marker
- // must wait for the animated runner to reach his final base.
+ // A hit at first is a touch point, not a stop, when advancing to second.
+ if(extra){
+  later(finishFirst+20,()=>moveRunnerRoundBase(runner,second,560,'run',token));
+  if(result==='hit3'||result==='homeRun')later(finishFirst+600,()=>moveRunnerRoundBase(runner,third,560,'run',token));
+  if(result==='homeRun')later(finishFirst+1180,()=>moveRunnerRoundBase(runner,[200,293],650,'run',token));
+ }
+ // After running through first, turn back toward the bag before the fixed
+ // base marker is shown. Never draw the sprite and the marker together.
+ const returnMs=360,overrunHold=100;
+ if(single){
+  later(finishFirst+overrunHold,()=>moveRunnerRoundBase(runner,first,returnMs,'stop',token));
+ }
+ const finalArrival=result==='hit3'?finishFirst+1160:
+  result==='hit2'?finishFirst+580:single?finishFirst+overrunHold+returnMs:finishFirst;
+ const finishAt=result==='homeRun'?finishFirst+1930:
+  extra?finalArrival+65:
+  result==='fly'?700:
+  Math.max(finalArrival+65,groundPlan?.decisionMs||0);
+ // Use the player which is actually on a base, never the next batter.
  if(['hit1','hit2','hit3','forceSafe'].includes(result)){
   const player=batter();
   if(player&&game.bases.some(p=>p&&p.id===player.id)){
-   const arrival=result==='hit3'?finishFirst+1250:result==='hit2'?finishFirst+640:finishFirst;
-   stageRunnerArrival(player.id,arrival,token);
+   stageRunnerArrival(player.id,finalArrival,token);
   }
  }
- const finishAt=result==='homeRun'?finishFirst+2100:result==='hit3'?finishFirst+1370:result==='hit2'?finishFirst+710:result==='fly'?700:Math.max(finishFirst+190,groundPlan?.decisionMs||0);
  animationHoldUntil=Math.max(animationHoldUntil,Date.now()+finishAt+140);
  later(finishAt,()=>{runner.style.transition='none';runner.setAttribute('visibility','hidden')});
 }
