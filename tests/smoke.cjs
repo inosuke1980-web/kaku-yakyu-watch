@@ -991,3 +991,28 @@ assert.match(html,/const moveMs=applyDefensiveAlignment\(true\)/,'pitch must req
 assert.match(html,/if\(token!==animationToken\|\|!game\|\|game\.ended\)return;\s*startPitchMotion\(\)/,'pitch must start only after movement and token check');
 assert.match(html,/flightTimer=setTimeout\(\(\)=>\{\s*flightTimer=null;\s*if\(token!==animationToken/,'pending movement must occupy cancellable flight timer');
 console.log('PRE-PITCH INFIELD MOVEMENT AND TOKEN GUARDS PASS');
+
+const secondCoverAudit=vm.runInContext(`(()=>{
+ const oldGame=game;
+ const roster=Array.from({length:20},()=>({field:55,arm:55}));
+ roster[8]={field:87,arm:72};roster[9]={field:65,arm:81};
+ game={half:0,teams:[{players:roster},{players:roster}]};
+ const ss=secondBaseCoverPlan('SS');
+ const second=secondBaseCoverPlan('2B');
+ const third=secondBaseCoverPlan('3B');
+ const ssRelay=groundSecondRelayPlan({defender:'SS',point:[158,156]},{arm:62});
+ const secondRelay=groundSecondRelayPlan({defender:'2B',point:[242,155]},{arm:62});
+ game=oldGame;
+ return {ss,second,third,ssRelay,secondRelay};
+})()`,ctx);
+assert.equal(secondCoverAudit.ss.cover,'2B','SS grounder covered by second baseman');
+assert.equal(secondCoverAudit.second.cover,'SS','2B grounder covered by shortstop');
+assert.equal(secondCoverAudit.third.cover,'2B','3B grounder covered by second baseman');
+assert.equal(secondCoverAudit.ss.fielding,87,'pivot fielder fielding should come from roster');
+assert.equal(secondCoverAudit.second.arm,81,'pivot arm should come from roster');
+assert.ok(secondCoverAudit.ssRelay.pickupToSecond>0&&secondCoverAudit.ssRelay.pivotRelease>0&&secondCoverAudit.ssRelay.secondToFirst>0,'realistic throw and transfer clocks');
+assert.notEqual(secondCoverAudit.ssRelay.secondToFirst,secondCoverAudit.secondRelay.secondToFirst,'pivot throwing strength changes relay speed');
+assert.match(html,/if\(relay\)animateSecondBaseCover\(relay,firstArrival,holdUntil,token\)/,'animation uses second base pivot');
+assert.match(html,/const dpArrival=relay\?timing\.pickup\+timing\.releaseMs\+relay\.pickupToSecond\+relay\.pivotRelease\+relay\.secondToFirst:Infinity/,'double play verdict uses same pivot timing');
+assert.match(html,/if\(outcome!=='force'\)showFirstCoverSprite/,'force play must not unnecessarily cover first');
+console.log('SECOND BASE PIVOT AND DOUBLE PLAY RELAY PASS');
