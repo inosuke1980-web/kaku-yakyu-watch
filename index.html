@@ -560,11 +560,15 @@ function groundBall(p){
  }
  const couldTurnTwo=!!b[0]&&game.outs<=1&&direction.defender!=='1B';
  const relay=direction.defender==='1B'?null:groundSecondRelayPlan(direction,fielder);
- const dpArrival=relay?timing.pickup+timing.releaseMs+relay.pickupToSecond+relay.pivotRelease+relay.secondToFirst:Infinity;
+ // A possible two-out turn uses the quick field-and-release technique.
+ // This faster clock is also passed to the animation when DP is awarded.
+ const quickTiming=relay?{...timing,pickup:Math.max(430,timing.pickup-145),
+  releaseMs:fielderReleaseMs(fielder.field,fielder.arm,true)}:null;
+ const dpArrival=relay?quickTiming.pickup+quickTiming.releaseMs+relay.pickupToSecond+relay.pivotRelease+relay.secondToFirst:Infinity;
  if(couldTurnTwo&&dpArrival+25<timing.runnerMs&&chance(clamp(.60+(fielder.field-55)*.004,.34,.83))){
   b[0]=null;game.outs+=2;pi.outsPitched+=2;
   log(`${p.name} ${direction.label}、二塁から一塁へ！ ダブルプレー！`);
-  animateGround('double',direction,p.speed,fielder.arm,timing);return;
+  animateGround('double',direction,p.speed,fielder.arm,quickTiming);return;
  }
  if(b[0]&&chance(clamp(.16+(fielder.field-50)*.002,.08,.29))){
   b[0]=p;game.outs++;pi.outsPitched++;
