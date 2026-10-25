@@ -475,3 +475,22 @@ for(const b of miniBases){
 }
 assert.match(html,/class="mini-diamond"/,'mini diamond must be styled');
 console.log('MINI BASE DIAMOND ALL EIGHT SITUATIONS PASS');
+
+const outfieldPursuit=vm.runInContext(`(()=>{
+ const origin=[99,-5];
+ return {
+  deep:outfieldPursuitPlan('overHead',{flight:'overHead',point:[95,-108]},origin,1230),
+  roller:outfieldPursuitPlan('groundThrough',{flight:'groundThrough',point:[102,18],rollEnd:[111,-55]},origin,620),
+  shortFly:outfieldPursuitPlan('fly',{point:[100,28],caught:true},origin,1150),
+  sideways:outfieldPursuitPlan('linerOut',{point:[162,-5],caught:false},origin,550)
+ };
+})()`,ctx);
+assert.equal(outfieldPursuit.deep.type,'back');
+assert.equal(outfieldPursuit.deep.latePickup,true);
+assert.ok(outfieldPursuit.deep.pickup[1]>outfieldPursuit.deep.destination[1],'outfielder should trail a ball over his head');
+assert.deepEqual(Array.from(outfieldPursuit.roller.destination),[111,-55],'outfielder must chase rolling ball rather than stop at first bounce');
+assert.equal(outfieldPursuit.shortFly.type,'forward');
+assert.equal(outfieldPursuit.shortFly.caught,true);
+assert.equal(outfieldPursuit.sideways.type,'lateral');
+assert.match(html,/moveGroundFielder\(nearest,label,point,ms,token\)/,'outfield chases should use frame-based movement');
+console.log('OUTFIELD PURSUIT DIRECTION AND PICKUP CHECKS PASS');
