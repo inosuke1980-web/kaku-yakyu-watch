@@ -183,3 +183,19 @@ assert.equal(safeRunning.slowStrong.attempts,0,'hopeless first-to-third attempts
 assert.ok(safeRunning.fastWeak.attempts>safeRunning.average.attempts,'fast runners versus weaker arms should advance more');
 assert.ok(safeRunning.fastWeak.retired<=safeRunning.fastWeak.attempts,'outs cannot exceed attempts');
 console.log('SAFE RUNNING CHECKS PASS',JSON.stringify(safeRunning));
+
+const closePlayTimes=vm.runInContext(`(()=>{
+ const cases=[
+  crossPlayClock({id:'A',base:'third',safe:true},1900),
+  crossPlayClock({id:'B',base:'third',safe:false},1900),
+  crossPlayClock({id:'C',base:'home',safe:true,wild:true},2200),
+  crossPlayClock({id:'D',base:'home',safe:false},2200)
+ ];
+ return cases.map(x=>({safe:x.safe,wild:x.wild,base:x.base,runnerFirst:x.runnerArrival<x.throwArrival,throwFirst:x.throwArrival<x.runnerArrival}));
+})()`,ctx);
+assert.equal(closePlayTimes.length,4);
+for(const x of closePlayTimes){
+ assert.equal(x.runnerFirst,x.safe,'safe play should show runner reaching base ahead of throw');
+ assert.equal(x.throwFirst,!x.safe,'out play should show throw arriving before runner');
+}
+console.log('CLOSE PLAY TIMING CHECKS PASS',JSON.stringify(closePlayTimes));
