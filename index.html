@@ -33,7 +33,7 @@
 .scoreboard-scroll td.attack-team{background:#1f382f}
 .scoreboard-hint{font-size:11px;color:#a7c6b5;margin:5px 0 0}
 @media(max-width:750px){.scoreboard-scroll th:first-child,.scoreboard-scroll td:first-child{min-width:102px;width:112px;max-width:112px}.scoreboard-scroll th,.scoreboard-scroll td{padding:6px 4px}}
-.current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.3.8 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
+.current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.3.9 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
 <section class="card"><h2>試合生成の条件</h2><div class="flex" style="gap:12px">
 <label>カテゴリー <select id="category"><option value="random">ランダム（現在は高校のみ）</option><option value="high">高校野球</option><option value="university" disabled>大学野球（今後追加）</option><option value="corporate" disabled>社会人野球（今後追加）</option><option value="pro" disabled>プロ野球（今後追加）</option></select></label>
 <label>試合種別 <select id="matchType"><option value="random">ランダム</option><option value="official">公式戦</option><option value="practice">練習試合</option></select></label>
@@ -782,6 +782,22 @@ function animateGround(outcome,direction,batterSpeed=55,arm=55,timing=null){
   if(player!=='1B')moveGroundFielder(defender,label,origin,350,token);
  });
 }
+// Plan a visual pursuit using the ball's true destination, not only its
+// landing point. The simulation's catch/out/hit verdict is never changed.
+function outfieldPursuitPlan(kind,info,origin,duration){
+ const flight=info?.flight||'';
+ const destination=flight==='groundThrough'&&info.rollEnd?info.rollEnd:info?.point;
+ if(!destination)return null;
+ const dx=destination[0]-origin[0],dy=destination[1]-origin[1];
+ const dist=Math.hypot(dx,dy),type=dy<-16?'back':dy>16?'forward':'lateral';
+ const caught=!!info.caught;
+ // A ball over the outfielder's head must travel beyond the fielder
+ // before he turns and pursues it. Grounders continue past the grass edge.
+ const approach=flight==='overHead'?.62:flight==='groundThrough'?.83:caught?1:.88;
+ const pickup=[origin[0]+dx*approach,origin[1]+dy*approach];
+ const chaseMs=Math.round(duration*(flight==='overHead'?.86:flight==='groundThrough'?.90:.84));
+ return {destination,pickup,dist,type,chaseMs,caught,latePickup:!caught&&flight==='overHead'};
+}
 function animate(kind,targetInfo=null,runnerSpeed=55,hitBases=null){
  const runnerType=targetInfo?.flight?(hitBases===1?'hit1':hitBases===2?'hit2':hitBases===3?'hit3':'homeRun'):kind==='outfieldError'?'hit1':kind==='linerHit'?'hit1':kind==='linerHit2'?'hit2':kind==='single'?'hit1':kind==='double'?'hit2':kind==='home'?'homeRun':kind==='fly'?'fly':null;
  if(runnerType)animateBatterRun(runnerType,runnerSpeed);
@@ -800,34 +816,34 @@ function animate(kind,targetInfo=null,runnerSpeed=55,hitBases=null){
  if(nearest){
   const x=Number(nearest.getAttribute('cx')),y=Number(nearest.getAttribute('cy'));
   const label=field.querySelector('text[data-position="'+nearest.getAttribute('data-position')+'"]');
-  const move=(a,b)=>{nearest.setAttribute('cx',a);nearest.setAttribute('cy',b);if(label){label.setAttribute('x',a);label.setAttribute('y',Number(b)+3)}};
-  const diving=!!(targetInfo&&targetInfo.caught&&targetInfo.diving);
-  const missed=!!(targetInfo&&targetInfo.nearMiss);
-  const approachDuration=Math.round(duration*(diving?.74:.90));
-  const halfway=targetInfo?.flight==='overHead'?[x+(target[0]-x)*.72,y+(target[1]-y)*.52]:targetInfo?.flight==='groundThrough'?[x+(target[0]-x)*.82,y+(target[1]-y)*.84]:diving?[x+(target[0]-x)*.72,y+(target[1]-y)*.72]:missed?[x+(target[0]-x)*.80,y+(target[1]-y)*.80]:target;
-  nearest.style.transition='cx '+approachDuration+'ms ease-out,cy '+approachDuration+'ms ease-out';
-  requestAnimationFrame(()=>{if(token===animationToken)move(halfway[0],halfway[1])});
-  if(diving){
-   playTimers.push(setTimeout(()=>{
-    if(token!==animationToken)return;
-    nearest.style.transition='cx '+Math.round(duration*.23)+'ms ease-out,cy '+Math.round(duration*.23)+'ms ease-out';
-    nearest.setAttribute('r','13');
-    move(target[0],target[1]);
-   },approachDuration));
+  const pursuit=outfieldPursuitPlan(kind,targetInfo,[x,y],duration);
+  const move=(point,ms)=>moveGroundFielder(nearest,label,point,ms,token);
+  const at=(ms,callback)=>playTimers.push(setTimeout(()=>{if(token===animationToken)callback()},ms));
+  const diving=!!(targetInfo?.caught&&targetInfo.diving);
+  const missed=!!targetInfo?.nearMiss;
+  if(pursuit){
+   move(pursuit.pickup,pursuit.chaseMs);
+   // A missed, deep ball triggers a second chase after it lands;
+   // do not depict the outfielder as catching an uncaught fly.
+   if(pursuit.latePickup)at(duration+80,()=>move(pursuit.destination,310));
+   else if(targetInfo?.flight==='groundThrough')at(duration*.72,()=>move(pursuit.destination,290));
+  }else{
+   const point=diving?target:[x+(target[0]-x)*(missed?.80:1),y+(target[1]-y)*(missed?.80:1)];
+   move(point,Math.round(duration*.86));
   }
-  playTimers.push(setTimeout(()=>{
-   if(token!==animationToken)return;
+  if(diving)at(Math.round(duration*.75),()=>nearest.setAttribute('r','13'));
+  at(duration+60,()=>{
    if(diving)showPitchResult('ダイビングキャッチ！','strike');
-   else if(targetInfo&&targetInfo.caught&&targetInfo.atFence)showPitchResult('フェンス際でキャッチ！','strike');
+   else if(targetInfo?.caught&&targetInfo.atFence)showPitchResult('フェンス際でキャッチ！','strike');
    else if(missed)showPitchResult('あと一歩、届かない！','play');
    else if(kind==='outfieldError')showPitchResult('落球！ エラー','ball');
-  },duration+50));
-  playTimers.push(setTimeout(()=>{
-   if(token!==animationToken)return;
-   nearest.style.transition='none';
+  });
+  const resetAt=pursuit?.latePickup?duration+600:duration+430;
+  at(resetAt,()=>{
    nearest.setAttribute('r','10');
-   move(x,y);
-  },duration+240));
+   move([x,y],350);
+  });
+  animationHoldUntil=Math.max(animationHoldUntil,Date.now()+resetAt+370);
  }
  const begun=performance.now();
  function step(now){
