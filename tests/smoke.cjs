@@ -583,3 +583,25 @@ assert.equal(linkedRelay.slow.pickup.release,linkedRelay.slow.pickup.flightMs+li
 assert.match(html,/const pickup=outfieldPickupTiming\(targetInfo,targetInfo\?\.fielder\?\.field\?\?55\),release=pickup\.release/,'animation must share the timing model');
 assert.match(html,/decideSingleAdvance\(r,0,landing,fieldArm,thirdBlocked,targetInfo,fieldSkill\)/,'runner choices must use fielding capability');
 console.log('EXTRA-BASE / OUTFIELD RETURN LINKAGE CHECKS PASS');
+
+const runnerChoreographyCases=vm.runInContext(`(()=>{
+ return {
+  holdSecond:runnerChoreography(0,1,55),
+  holdThird:runnerChoreography(1,2,55),
+  homeRun:runnerChoreography(1,3,55),
+  chargeThird:runnerChoreography(0,2,65,{runnerArrival:1650,safe:true,base:'third'}),
+  chargeHome:runnerChoreography(1,3,65,{runnerArrival:1770,safe:false,base:'home'})
+ };
+})()`,ctx);
+assert.equal(runnerChoreographyCases.holdSecond.mode,'stop');
+assert.equal(runnerChoreographyCases.holdThird.mode,'stop');
+assert.ok(runnerChoreographyCases.holdSecond.segments[0].duration>runnerSegmentMs(55));
+assert.equal(runnerChoreographyCases.homeRun.mode,'run');
+assert.equal(runnerChoreographyCases.chargeThird.mode,'charge');
+assert.equal(runnerChoreographyCases.chargeHome.mode,'charge');
+assert.equal(runnerChoreographyCases.chargeThird.arrival,1650);
+assert.equal(runnerChoreographyCases.chargeHome.arrival,1770);
+assert.equal(runnerChoreographyCases.chargeHome.segments.at(-1).mode,'charge');
+assert.match(html,/data-run-state/,'moving runner should expose chase/stop/charge state');
+assert.match(html,/ease-out.*ease-in/,'stop and charge should have distinct easing');
+console.log('RUNNER STOP AND CHARGE CHOREOGRAPHY CHECKS PASS');
