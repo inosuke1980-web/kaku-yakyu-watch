@@ -77,15 +77,16 @@ if(homePlay&&homePlay.wild){
  current().def.errors++;
  // The batter can take the next unoccupied base while the catcher retrieves it.
  // Resolve from the lead end so bases are never overwritten.
+ let advanced=false;
  for(let i=2;i>=0;i--){
   if(!neu[i]||i===2||neu[i+1])continue;
-  neu[i+1]=neu[i];neu[i]=null;break;
+  neu[i+1]=neu[i];neu[i]=null;advanced=true;break;
  }
- homePlay.extraAdvance=true;
+ homePlay.extraAdvance=advanced;
 }
 game.bases=neu;creditRuns(scored,p);
 if(bases===4)showPitchResult('HOMERUN!','homerun');
-if(homePlay)log(homePlay.wild?'外野からの返球が逸れた！ 失策を記録、走者が追加進塁。':homePlay.safe?'本塁クロスプレー、セーフ！':'本塁クロスプレー、タッチアウト！');
+if(homePlay)log(homePlay.wild?'外野からの返球が逸れた！ 失策を記録。'+(homePlay.extraAdvance?' 走者が追加進塁。':''):homePlay.safe?'本塁クロスプレー、セーフ！':'本塁クロスプレー、タッチアウト！');
 log(`${p.name} ${style==='liner'?'鋭いライナーが間を抜けた！ ':''}${bases===4?'ホームラン！':bases===3?'三塁打！':bases===2?'二塁打！':'ヒット！'}${scored.length?' '+scored.length+'点追加。':''}`);animate(style==='liner'?(bases===2?'linerHit2':'linerHit'):bases===4?'home':bases===1?'single':'double',null,p.speed);if(bases!==4)animateOutfieldReturn(bases===1?'single':bases===2?'double':'triple',scored.length>0,fieldArm,homePlay)}
 // 内野ゴロ：二塁封殺／併殺／一塁アウトのいずれかを状況から決定する。
 function groundBall(p){const b=game.bases,pi=pitcher();p.ab++;const direction=choose(GROUND_DIRECTIONS);
