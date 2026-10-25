@@ -147,7 +147,7 @@ const PITCH_TYPES=[
  {name:'チェンジアップ',speed:113,flight:590,side:3,drop:5}
 ];
 function drawPitch(type){
- const ball=$('ball'),startX=200,startY=203,endY=278,frames=17;
+ const ball=$('ball'),startX=200,startY=203,endY=278;
  const ballToken=++animationToken;
  ball.style.transition='none';
  ball.setAttribute('cx',startX);ball.setAttribute('cy',startY);
@@ -165,8 +165,6 @@ function drawPitch(type){
 }
 function pitch(){
  if(!game||game.ended||flightTimer!==null)return;
- // The tactic phase is still resolved as a game action without an ordinary pitch.
- if(game.balls===0&&game.strikes===0&&game.outs<2&&game.bases[2]&&false){}
  const type=choose(PITCH_TYPES);
  const token=animationToken+1;
  drawPitch(type);
