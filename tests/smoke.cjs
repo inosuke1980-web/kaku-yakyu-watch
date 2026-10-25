@@ -1012,7 +1012,7 @@ assert.equal(secondCoverAudit.ss.fielding,87,'pivot fielder fielding should come
 assert.equal(secondCoverAudit.second.arm,81,'pivot arm should come from roster');
 assert.ok(secondCoverAudit.ssRelay.pickupToSecond>0&&secondCoverAudit.ssRelay.pivotRelease>0&&secondCoverAudit.ssRelay.secondToFirst>0,'realistic throw and transfer clocks');
 assert.notEqual(secondCoverAudit.ssRelay.secondToFirst,secondCoverAudit.secondRelay.secondToFirst,'pivot throwing strength changes relay speed');
-assert.match(html,/if\(relay\)animateSecondBaseCover\(relay,firstArrival,holdUntil,token\)/,'animation uses second base pivot');
+assert.match(html,/animateSecondBaseCover\(relay,firstArrival,holdUntil,token,outcome==='double'\)/,'animation uses second base pivot');
 assert.match(html,/const dpArrival=relay\?quickTiming\.pickup\+quickTiming\.releaseMs\+relay\.pickupToSecond\+relay\.pivotRelease\+relay\.secondToFirst:Infinity/,'double play verdict uses quick fielding and actual pivot timing');
 assert.match(html,/if\(outcome!=='force'\)showFirstCoverSprite/,'force play must not unnecessarily cover first');
 console.log('SECOND BASE PIVOT AND DOUBLE PLAY RELAY PASS');
@@ -1020,3 +1020,24 @@ console.log('SECOND BASE PIVOT AND DOUBLE PLAY RELAY PASS');
 assert.match(html,/animateGround\('double',direction,p\.speed,fielder\.arm,quickTiming\)/,'double-play animation must use the same quick fielding clock as the call');
 assert.match(html,/releaseMs:fielderReleaseMs\(fielder\.field,fielder\.arm,true\)/,'double-play turn needs a quick first release');
 console.log('DOUBLE PLAY QUICK RELAY CLOCK PASS');
+
+const pivotFootworkAudit=vm.runInContext(`(()=>{
+ const plan={cover:'SS',base:[200,47],pivotRelease:220};
+ const steps=secondPivotFootwork(plan,1100,2050);
+ return {steps};
+})()`,ctx);
+assert.ok(pivotFootworkAudit.steps.approachEnd<pivotFootworkAudit.steps.receiveAt,'pivot must reach second before throw');
+assert.equal(pivotFootworkAudit.steps.releaseAt,1320,'pivot must release after transfer time');
+assert.deepEqual(Array.from(pivotFootworkAudit.steps.bag),[200,47],'pivot must step on second base');
+assert.notDeepEqual(Array.from(pivotFootworkAudit.steps.exit),[200,47],'pivot must step off the bag to relay');
+assert.match(html,/circle\.setAttribute\('data-pivot-phase','receive'\)/,'pivot visibly receives the ball');
+assert.match(html,/circle\.setAttribute\('data-pivot-phase','transfer'\)/,'pivot transfer footwork present');
+assert.match(html,/circle\.setAttribute\('data-pivot-phase','release'\)/,'pivot releases throw to first');
+assert.match(html,/game\.forceOutVisual=\{id:b\[0\]\.id,speed:b\[0\]\.speed,outcome:'double'\}/,'double play preserves forced runner for animation');
+assert.match(html,/animateForceAtSecond\(game\.forceOutVisual,firstArrival,holdUntil,token\)/,'forced runner visually runs toward second');
+assert.match(html,/circle\.setAttribute\('data-run-state','slide'\)/,'runner slides into second');
+assert.match(html,/sprite\.setAttribute\('data-first-phase','stretch'\)/,'first baseman stretches to receive');
+assert.match(html,/sprite\.setAttribute\('data-first-phase','catch'\)/,'first baseman catches before call');
+assert.match(html,/const moveBall=\(x,y,duration\)=>moveGroundFielder\(ball,null,\[x,y\],duration,token\)/,'infield throw uses animation frames instead of SVG CSS');
+assert.match(html,/if\(outcome!=='force'\)showFirstCoverSprite\(firstCover,firstLabel,token,fieldMs,player,decisionMs,holdUntil,arrival\)/,'first baseman catch synchronized to first arrival');
+console.log('PIVOT FOOTWORK, FORCE SLIDE, FIRST-BASE CATCH PASS');
