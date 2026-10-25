@@ -725,3 +725,28 @@ assert.match(html,/const cover=outfieldCoverage\(type,point,current\(\)\.def\.pl
 assert.match(html,/hit\(p,contact\.gapMiss\?2:1,'liner',contact\)/,'missed gap liners must produce extra-base opportunities');
 assert.match(html,/hit\(p,contact\.gapMiss\?2:1,'normal',contact\)/,'missed fly balls must produce extra-base opportunities');
 console.log('OUTFIELD ATTRIBUTE / GAP COVERAGE TESTS PASS',JSON.stringify(outfieldRangeAudit));
+
+const rollingGroundAudit=vm.runInContext(`(()=>{
+ init();
+ const kinds={groundThrough:0,gapLiner:0,overHead:0,fenceDouble:0};
+ let issues=0,minRollingMs=Infinity;
+ for(let i=0;i<5000;i++){
+  const plan=outfieldHitPlan(i%2+1,'normal');
+  kinds[plan.flight]++;
+  if(plan.flight!=='groundThrough')continue;
+  minRollingMs=Math.min(minRollingMs,plan.flightMs);
+  const points=[0,.15,.31,.50,.67,.82,1].map(t=>groundRollPosition(plan,t));
+  if(Math.abs(points[0][0]-200)>.01||Math.abs(points[0][1]-283)>.01)issues++;
+  const last=points[points.length-1];
+  if(Math.abs(last[0]-plan.rollEnd[0])>.01||Math.abs(last[1]-plan.rollEnd[1])>.01)issues++;
+  if(points.some(p=>!p.every(Number.isFinite)||p[1]<outfieldFenceY(p[0])+8))issues++;
+  if(points[3][1]>=points[2][1]||points[5][1]>=points[4][1])issues++;
+ }
+ return {kinds,minRollingMs,issues};
+})()`,ctx);
+assert.ok(rollingGroundAudit.kinds.groundThrough>400,'routine ground-ball hits must occur regularly');
+assert.ok(rollingGroundAudit.minRollingMs>=1200,'grass roll should remain visible');
+assert.equal(rollingGroundAudit.issues,0,'grounders must travel smoothly from the plate through grass');
+assert.match(html,/groundRollPosition\(targetInfo\|\|\{point:target\},t\)/,'animation must sample grounder position on each frame');
+assert.match(html,/flightMs:1550,defender:wing/,'ground balls past infielders must also roll long enough');
+console.log('VISIBLE OUTFIELD GROUND ROLL CHECKS PASS',JSON.stringify(rollingGroundAudit));
