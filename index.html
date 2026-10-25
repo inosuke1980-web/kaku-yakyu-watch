@@ -636,7 +636,7 @@ function animateBatterRun(result,speed=55,groundPlan=null){
 // Cover first ahead of a ground-ball throw. When the first baseman fields
 // the grounder himself, he runs to the bag; the 2B backs up the throw.
 function groundFirstCover(defenderPosition,outcome){
- return {cover:defenderPosition==='1B'?'1B':'1B',backup:defenderPosition==='1B'?'2B':null,needed:outcome!=='force'};
+ return {cover:'1B',backup:defenderPosition==='1B'?'2B':null,needed:true};
 }
 function animateGround(outcome,direction,batterSpeed=55,arm=55,timing=null){
  const field=$('fielders'),ball=$('ball');
