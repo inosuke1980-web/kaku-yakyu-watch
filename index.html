@@ -33,7 +33,7 @@
 .scoreboard-scroll td.attack-team{background:#1f382f}
 .scoreboard-hint{font-size:11px;color:#a7c6b5;margin:5px 0 0}
 @media(max-width:750px){.scoreboard-scroll th:first-child,.scoreboard-scroll td:first-child{min-width:102px;width:112px;max-width:112px}.scoreboard-scroll th,.scoreboard-scroll td{padding:6px 4px}}
-.current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.4.7 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
+.current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.4.8 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
 <section class="card"><h2>試合生成の条件</h2><div class="flex" style="gap:12px">
 <label>カテゴリー <select id="category"><option value="random">ランダム（現在は高校のみ）</option><option value="high">高校野球</option><option value="university" disabled>大学野球（今後追加）</option><option value="corporate" disabled>社会人野球（今後追加）</option><option value="pro" disabled>プロ野球（今後追加）</option></select></label>
 <label>試合種別 <select id="matchType"><option value="random">ランダム</option><option value="official">公式戦</option><option value="practice">練習試合</option></select></label>
@@ -361,8 +361,49 @@ function groundErrorExtraAdvance(bases,type,scored){
  }
  return advance;
 }
+// A single location and fielder-speed contract is used for the verdict
+// and for the shortstop/second baseman pursuit animation.
+const INFIELD_RANGE_ORIGINS={SS:[150,121],'2B':[250,121],'3B':[103,160],'1B':[286,189]};
+function groundRangePlan(direction,fielder,offset=0){
+ const pos=direction.defender,origin=INFIELD_RANGE_ORIGINS[pos]||direction.point;
+ const point=[clamp(direction.point[0]+offset,56,344),direction.point[1]];
+ const distance=Math.hypot(point[0]-origin[0],point[1]-origin[1]);
+ const range=clamp(27+(fielder.field-50)*.34+(fielder.speed-50)*.24,13,65);
+ const reachable=distance<=range;
+ return {point,origin,distance,range,reachable,defender:pos};
+}
+function animateInfieldRangeChase(plan,failed=false){
+ const layer=$('fielders'),token=animationToken;
+ if(!layer?.querySelector)return;
+ const el=layer.querySelector('circle[data-position="'+plan.defender+'"]');
+ const label=layer.querySelector('text[data-position="'+plan.defender+'"]');
+ if(!el)return;
+ const initial=[Number(el.getAttribute('cx')),Number(el.getAttribute('cy'))];
+ const target=failed?[
+  initial[0]+(plan.point[0]-initial[0])*.75,
+  initial[1]+(plan.point[1]-initial[1])*.75
+ ]:plan.point;
+ moveGroundFielder(el,label,target,Math.round(clamp(430+plan.distance*2-plan.range*1.3,310,690)),token);
+ playTimers.push(setTimeout(()=>{if(token===animationToken)moveGroundFielder(el,label,initial,330,token)},1150));
+}
 function groundBall(p){
- const b=game.bases,pi=pitcher(),direction=choose(GROUND_DIRECTIONS),fielder=groundDefender(direction),timing=groundPlayTimes(p,direction,fielder);
+ const b=game.bases,pi=pitcher(),baseDirection=choose(GROUND_DIRECTIONS),fielder=groundDefender(baseDirection);
+ // Most balls are near the fielder; some test the gap and reward quick gloves.
+ const offset=chance(.38)?rnd(-40,40):rnd(-9,9);
+ const coverage=groundRangePlan(baseDirection,fielder,offset);
+ const direction={...baseDirection,point:coverage.point},timing=groundPlayTimes(p,direction,fielder);
+ if(!coverage.reachable){
+  // A clean ball through the infield is a hit, not a fielding error.
+  const wing=direction.point[0]<200?'LF':'RF';
+  const pickupX=clamp(200+(direction.point[0]-200)*1.65,45,355);
+  const deep=[pickupX,Math.max(outfieldFenceY(pickupX)+15,38)];
+  const targetInfo={flight:'groundThrough',point:deep,rollEnd:safeOutfieldPoint([pickupX,deep[1]-50]),
+   flightMs:810,defender:wing,fielder:current().def.players[wing==='LF'?14:16]};
+  hit(p,1,'normal',targetInfo);
+  animateInfieldRangeChase(coverage,true);
+  log('内野手が追ったが届かず、打球は外野へ抜けた！');
+  return;
+ }
  p.ab++;
  const misplay=chance(timing.risk);
  if(misplay){
