@@ -440,9 +440,11 @@ const broadcastMini=vm.runInContext(`(()=>{
  return {names,start,live,other,final};
 })()`,ctx);
 assert.match(html,/id="miniScore" class="mini-score"/,'field mini scoreboard must exist');
-assert.match(html,/\.field-score-row\{display:flex;justify-content:flex-end/,'mini scoreboard must be right-aligned below field');
-assert.match(html,/<\/svg><\/div><div class="field-score-row"><div id="miniScore"/,'scoreboard must not overlap the SVG field');
-assert.doesNotMatch(html,/\.mini-score\{position:absolute/,'mini scoreboard must not cover first baseman');
+assert.match(html,/\.field-header\{display:flex;justify-content:space-between/,'score must have a separate field header');
+assert.match(html,/<div class="field-header"><h2>グラウンド<\/h2><div class="field-score-row"><div id="miniScore"/,'scoreboard belongs in the field header before the SVG');
+assert.match(html,/\.mini-score\{position:static/,'scoreboard must use normal layout rather than overlay');
+assert.doesNotMatch(html,/\.mini-score\{position:absolute/,'mini scoreboard must never cover the field');
+assert.equal((html.match(/id="miniScore"/g)||[]).length,1,'there should only be one mini-scoreboard');
 assert.match(broadcastMini.start,/1回表/);
 assert.match(broadcastMini.live,/1回表/);
 assert.match(broadcastMini.live,/mini-points">2<\/span>/);
