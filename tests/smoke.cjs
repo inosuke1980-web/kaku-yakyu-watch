@@ -802,3 +802,30 @@ assert.ok(grounderStrengthAudit.meanRoll.normal>grounderStrengthAudit.meanRoll.s
 assert.match(html,/data-chase-direction/,'outfielders should distinguish forward vs back pursuit');
 assert.match(html,/groundRollPosition\(targetInfo,\.67\)/,'fielder must move to a point on actual ball path');
 console.log('GROUNDER SPEED AND OUTFIELD PURSUIT CONTRAST PASS',JSON.stringify(grounderStrengthAudit));
+
+const softInfieldThrowAudit=vm.runInContext(`(()=>{
+ const defender={field:55,speed:55,arm:55},slow={field:20,speed:20,arm:20};
+ const direction={defender:'SS',point:[158,156]};
+ const ball=[170,199];
+ const softRange=groundRangePlan({...direction,point:ball,strength:'soft'},defender,0);
+ const hardRange=groundRangePlan({...direction,point:ball,strength:'hard'},defender,0);
+ const soft=groundPlayTimes({speed:55},{...direction,point:ball,strength:'soft'},defender);
+ const hard=groundPlayTimes({speed:55},{...direction,point:ball,strength:'hard'},defender);
+ const weak=groundPlayTimes({speed:55},{...direction,point:ball,strength:'soft'},slow);
+ const pickup=outfieldPickupTiming({flight:'groundThrough',flightMs:1530},55);
+ const relay=extraBaseThrowTiming({flight:'groundThrough',flightMs:1530},55,55,[140,-30],[200,293]);
+ return {softRange,hardRange,soft,hard,weak,pickup,relay,normalRelease:fielderReleaseMs(55,55),
+  weakRelease:fielderReleaseMs(20,20),quickRelease:fielderReleaseMs(65,65,true)};
+})()`,ctx);
+assert.ok(softInfieldThrowAudit.softRange.reachable,'ordinary infielder should charge a soft roller');
+assert.ok(!softInfieldThrowAudit.hardRange.reachable,'same distant hard ball can get through');
+assert.ok(softInfieldThrowAudit.soft.pickup>softInfieldThrowAudit.hard.pickup,'soft roller should take longer to field');
+assert.ok(softInfieldThrowAudit.soft.arrive===softInfieldThrowAudit.soft.pickup+softInfieldThrowAudit.soft.releaseMs+softInfieldThrowAudit.soft.throwMs,'the umpire clock must include the release');
+assert.ok(softInfieldThrowAudit.weakRelease>softInfieldThrowAudit.normalRelease,'weaker arms and gloves take longer to set and throw');
+assert.ok(softInfieldThrowAudit.quickRelease<softInfieldThrowAudit.normalRelease,'relay transfers are quicker than ordinary set throws');
+assert.ok(softInfieldThrowAudit.pickup.gather>=235,'outfielders must visibly gather before throwing');
+assert.equal(softInfieldThrowAudit.relay.arrival,softInfieldThrowAudit.relay.pickup.release+softInfieldThrowAudit.relay.relay+softInfieldThrowAudit.relay.transfer+softInfieldThrowAudit.relay.second);
+assert.match(html,/releaseMs=timing\?timing\.releaseMs:fielderReleaseMs\(\)/,'ground animation must use the same release clock as the decision');
+assert.match(html,/secondThrowAt=firstArrival\+fielderReleaseMs\(65,65,true\)/,'double play must wait for second pivot release');
+assert.match(html,/relayPause=fielderReleaseMs\(65,65,true\)/,'outfield relay animation must wait for transfer');
+console.log('SOFT INFIELD CHARGE AND SHARED THROW CLOCKS PASS');
