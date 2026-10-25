@@ -33,7 +33,7 @@
 .scoreboard-scroll td.attack-team{background:#1f382f}
 .scoreboard-hint{font-size:11px;color:#a7c6b5;margin:5px 0 0}
 @media(max-width:750px){.scoreboard-scroll th:first-child,.scoreboard-scroll td:first-child{min-width:102px;width:112px;max-width:112px}.scoreboard-scroll th,.scoreboard-scroll td{padding:6px 4px}}
-.current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.4.9 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
+.current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.5.0 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
 <section class="card"><h2>試合生成の条件</h2><div class="flex" style="gap:12px">
 <label>カテゴリー <select id="category"><option value="random">ランダム（現在は高校のみ）</option><option value="high">高校野球</option><option value="university" disabled>大学野球（今後追加）</option><option value="corporate" disabled>社会人野球（今後追加）</option><option value="pro" disabled>プロ野球（今後追加）</option></select></label>
 <label>試合種別 <select id="matchType"><option value="random">ランダム</option><option value="official">公式戦</option><option value="practice">練習試合</option></select></label>
@@ -228,7 +228,7 @@ function outfieldHitPlan(bases,style='normal'){
  const rawRoll=flight==='groundThrough'?[clamp(point[0]+rnd(-15,15),30,370),point[1]-rnd(55,100)]:null;
  const rollEnd=rawRoll?safeOutfieldPoint(rawRoll):null;
  return {flight,point:safePoint,rollEnd,defender:zone.defender,label:zone.label,
-  fielder:current().def.players[zone.playerIndex],flightMs:flight==='groundThrough'?620:flight==='gapLiner'?850:1230};
+  fielder:current().def.players[zone.playerIndex],flightMs:flight==='groundThrough'?1530:flight==='gapLiner'?850:1230};
 }
 function outfieldHitDescription(info){
  return info.flight==='homeRun'?'フェンスを越える大飛球！':info.flight==='fenceDouble'?'フェンス直撃！ 跳ね返って二塁打！':info.flight==='groundThrough'?'外野へゴロが抜けた！':info.flight==='overHead'?'外野手の頭を越えた！':'外野手の間を抜くライナー！';
@@ -398,7 +398,7 @@ function groundBall(p){
   const pickupX=clamp(200+(direction.point[0]-200)*1.65,45,355);
   const deep=[pickupX,Math.max(outfieldFenceY(pickupX)+15,38)];
   const targetInfo={flight:'groundThrough',point:deep,rollEnd:safeOutfieldPoint([pickupX,deep[1]-50]),
-   flightMs:810,defender:wing,fielder:current().def.players[wing==='LF'?14:16]};
+   flightMs:1550,defender:wing,fielder:current().def.players[wing==='LF'?14:16]};
   hit(p,1,'normal',targetInfo);
   animateInfieldRangeChase(coverage,true);
   log('内野手が追ったが届かず、打球は外野へ抜けた！');
@@ -979,6 +979,19 @@ function animateGround(outcome,direction,batterSpeed=55,arm=55,timing=null){
 }
 // Plan a visual pursuit using the ball's true destination, not only its
 // landing point. The simulation's catch/out/hit verdict is never changed.
+// A rolling hit has a visible infield exit, a trip across the grass and
+// a slow final roll. No loft, and each waypoint stays in fair territory.
+function groundRollPosition(info,t){
+ const start=[200,283],contact=info.point,finish=info.rollEnd||contact;
+ const progress=clamp(t,0,1);
+ // Keep the direction of the hit consistent when passing the infield dirt.
+ const seam=[start[0]+(contact[0]-start[0])*.60,139];
+ const lerp=(a,b,u)=>[a[0]+(b[0]-a[0])*u,a[1]+(b[1]-a[1])*u];
+ if(progress<=.31)return lerp(start,seam,progress/.31);
+ if(progress<=.67)return lerp(seam,contact,(progress-.31)/.36);
+ const u=(progress-.67)/.33;
+ return lerp(contact,finish,1-(1-u)*(1-u));
+}
 function outfieldPursuitPlan(kind,info,origin,duration){
  const flight=info?.flight||'';
  const destination=flight==='fenceDouble'&&info.rebound?info.rebound:flight==='groundThrough'&&info.rollEnd?info.rollEnd:info?.point;
@@ -1021,7 +1034,7 @@ function animate(kind,targetInfo=null,runnerSpeed=55,hitBases=null){
    // A missed, deep ball triggers a second chase after it lands;
    // do not depict the outfielder as catching an uncaught fly.
    if(pursuit.latePickup)at(duration+60,()=>move(pursuit.destination,280));
-   else if(targetInfo?.flight==='groundThrough')at(duration*.72,()=>move(pursuit.destination,290));
+   else if(targetInfo?.flight==='groundThrough')at(duration*.76,()=>move(pursuit.destination,Math.round(duration*.22)));
   }else{
    const point=diving?target:[x+(target[0]-x)*(missed?.80:1),y+(target[1]-y)*(missed?.80:1)];
    move(point,Math.round(duration*.86));
@@ -1046,16 +1059,15 @@ function animate(kind,targetInfo=null,runnerSpeed=55,hitBases=null){
   if(token!==animationToken)return;
   const t=Math.min(1,(now-begun)/duration);
   const rolling=kind==='groundThrough';
-  const groundBreak=.55;
-  const groundProgress=rolling?Math.min(1,t/groundBreak):t;
+  const groundPosition=rolling?groundRollPosition(targetInfo||{point:target},t):null;
   const rebounding=kind==='fenceDouble'&&targetInfo?.rebound;
   const wallAt=targetInfo?.wallAt||.68;
   const wallT=rebounding?Math.min(1,t/wallAt):0;
   const bounceT=rebounding?Math.max(0,(t-wallAt)/(1-wallAt)):0;
   const x=rebounding?(t<wallAt?start[0]+(target[0]-start[0])*wallT:target[0]+(targetInfo.rebound[0]-target[0])*bounceT):
-   rolling&&t>groundBreak?target[0]+(targetInfo.rollEnd[0]-target[0])*(t-groundBreak)/(1-groundBreak):start[0]+(target[0]-start[0])*groundProgress;
+   rolling?groundPosition[0]:start[0]+(target[0]-start[0])*t;
   const y=rebounding?(t<wallAt?start[1]+(target[1]-start[1])*wallT:target[1]+(targetInfo.rebound[1]-target[1])*bounceT):
-   rolling&&t>groundBreak?target[1]+(targetInfo.rollEnd[1]-target[1])*(t-groundBreak)/(1-groundBreak):start[1]+(target[1]-start[1])*groundProgress;
+   rolling?groundPosition[1]:start[1]+(target[1]-start[1])*t;
   const lift=rebounding?(t<wallAt?Math.sin(Math.PI*wallT)*65:Math.sin(Math.PI*bounceT)*9):isFly?90*Math.sin(Math.PI*t):isLiner?16*Math.sin(Math.PI*t):0;
   const visibleY=(kind==='homeRun'||kind==='home')?y-lift:Math.max(y-lift,outfieldFenceY(x)+8);
   ball.setAttribute('cx',x.toFixed(1));ball.setAttribute('cy',visibleY.toFixed(1));
