@@ -35,9 +35,9 @@ function tournament(){const x=Math.random(),selected=$('matchType').value,select
 function school(pref){return pref+choose(areas)+choose(schoolEnd)}
 function player(pref,idx,tier){const grade=rnd(1,3),isP=idx<5,pos=isP?'投手':idx<7?'捕手':idx<14?'内野手':'外野手',talent=clamp(Math.round(47+tier*6+(Math.random()-.5)*42),12,96),attr=()=>clamp(talent+rnd(-22,22),5,99);const real=actualMiddle[pref]&&chance(.5),middle=real?choose(actualMiddle[pref]):`${pref}${choose(areas)}${choose(['第一中学校','中学校','学園中学校'])}`;return {id:makePlayerId(),name:choose(surnames)+' '+choose(given),grade,pos,number:idx+1,throws:chance(.12)?'左投':'右投',bats:chance(.35)?'左打':'右打',height:rnd(160,188),weight:rnd(56,90),middle,club:chance(.65)?'中学軟式野球部':'地域硬式クラブ',bio:choose(['地区大会出場','地区大会ベスト8','主将経験','県大会出場','高校入学後に成長','堅実なプレーが持ち味']),contact:attr(),power:attr(),eye:attr(),speed:attr(),field:attr(),arm:attr(),control:attr(),stuff:attr(),stamina:attr(),pitches:0,outsPitched:0,runsAllowed:0,er:0,bbAllowed:0,kP:0,ab:0,h:0,r:0,rbi:0,bb:0,k:0,hr:0};}
 function team(pref,level){return {name:school(pref),pref,level,players:Array.from({length:20},(_,i)=>player(pref,i,level)),runs:Array(9).fill(null),hits:0,errors:0,bat:0,pitcher:0,used:new Set()}}
-let game=null,timer=null,flightTimer=null,playing=false,frame=0,activeRoster=0,animationToken=0,playTimers=[];
+let game=null,timer=null,flightTimer=null,playing=false,frame=0,activeRoster=0,animationToken=0,playTimers=[],animationHoldUntil=0;
 function init(){stop();const category=$('category').value;if(!['random','high'].includes(category))throw Error('このカテゴリーはまだ実装されていません');const t=tournament(),levels=['新興・小規模','弱小','中堅','地方強豪','全国強豪'];const pick=()=>{let x=Math.random();return x<.1?0:x<.4?1:x<.8?2:x<.95?3:4};let a=pick(),b=pick();if(t.kind.includes('全国')){a=Math.max(a,2);b=Math.max(b,2)}const away=team(t.p,a),home=team(t.q,b);if(away.name===home.name)home.name+='第二';document.querySelector('.field').style.background=t.time==='ナイター'?'#061626':'#113a2b';game={t,teams:[away,home],inning:1,half:0,outs:0,balls:0,strikes:0,bases:[null,null,null],pitch:0,ended:false,events:[],totalPitches:0};activeRoster=0;$('rosterAway').disabled=$('rosterHome').disabled=false;$('pause').disabled=$('next').disabled=false;$('pause').textContent='一時停止';log('プレーボール！ '+away.name+' 対 '+home.name);log(t.kind==='練習試合'?'采配：練習試合（投手の早めの交代・積極的な試走を重視）':'采配：公式戦（局面に応じて犠打・スクイズ・勝負の継投を判断）');renderRoster(0);playing=true;render();schedule()}
-function stop(){playing=false;clearTimeout(timer);clearTimeout(flightTimer);for(const id of playTimers)clearTimeout(id);playTimers=[];timer=flightTimer=null;animationToken++;}
+function stop(){playing=false;clearTimeout(timer);clearTimeout(flightTimer);for(const id of playTimers)clearTimeout(id);playTimers=[];timer=flightTimer=null;animationHoldUntil=0;animationToken++;}
 function log(msg){if(!game)return;game.events.push(msg);if(game.events.length>250)game.events.shift();$('log').replaceChildren(...game.events.slice(-90).reverse().map(s=>{let d=document.createElement('div');d.textContent=s;return d}))}
 function current(){return {bat:game.teams[game.half],def:game.teams[1-game.half]}}
 function addRuns(n,runnerIds=[]){const {bat}=current();bat.runs[game.inning-1]=(bat.runs[game.inning-1]||0)+n;for(const p of runnerIds)p.r++;if(game.half===1&&game.inning>=9&&total(1)>total(0))finish('サヨナラ')}
@@ -200,6 +200,7 @@ function animateGround(outcome){
  const field=$('fielders'),ball=$('ball');
  if(!field||typeof field.querySelector!=='function'||!ball)return;
  const token=animationToken;
+ animationHoldUntil=Date.now()+(outcome==='double'?1370:1080);
  const fielderName=game.totalPitches%3===0?'3B':game.totalPitches%3===1?'SS':'2B';
  const defender=field.querySelector('circle[data-position="'+fielderName+'"]');
  const label=field.querySelector('text[data-position="'+fielderName+'"]');
@@ -216,8 +217,8 @@ function animateGround(outcome){
  // Give the browser one paint for the ball's starting position.
  requestAnimationFrame(()=>{
   if(token!==animationToken)return;
-  reposition(fielded[0],fielded[1]);
   defender.style.transition='cx 330ms ease-out, cy 330ms ease-out';
+  reposition(fielded[0],fielded[1]);
   moveBall(fielded[0],fielded[1],470);
  });
  later(540,()=>{
@@ -255,6 +256,6 @@ const KEY='kaku-yakyu-watch-v01-history';function getHistory(){try{return JSON.p
 function saveGame(){try{let h=getHistory();h.unshift({id:Date.now(),date:new Date().toLocaleString('ja-JP'),t:game.t,teams:game.teams.map(t=>({...t,used:undefined})),events:game.events.slice(-80),pitches:game.totalPitches});localStorage.setItem(KEY,JSON.stringify(h.slice(0,30)))}catch(e){log('保存できませんでした（ブラウザの保存領域をご確認ください）。')}}
 function historyRender(){let h=getHistory();$('history').replaceChildren();if(!h.length){$('history').textContent='保存済みの試合はありません。';return}h.forEach(g=>{let b=document.createElement('button');b.className='secondary';b.style.cssText='display:block;width:100%;text-align:left;margin-bottom:8px';b.textContent=`${g.date}｜${g.t.title}｜${g.teams[0].name} ${g.teams[0].runs.reduce((a,v)=>a+(v||0),0)} - ${g.teams[1].runs.reduce((a,v)=>a+(v||0),0)} ${g.teams[1].name}`;b.onclick=()=>showSaved(g);$('history').append(b)})}
 function showSaved(g){$('detailTitle').textContent=`${g.teams[0].name} 対 ${g.teams[1].name}`;let body=`<p>${esc(g.t.title)}｜${g.date}｜${g.pitches}球</p>`;for(let t of g.teams){body+=`<h3>${esc(t.name)}　${t.runs.reduce((a,v)=>a+(v||0),0)}点 / ${t.hits}安打</h3><div class="tablewrap"><table><tr><th>選手</th><th>出身中学校</th><th>打数</th><th>安打</th><th>打点</th><th>投球数</th></tr>${t.players.map(p=>`<tr><td>${esc(p.name)}</td><td>${esc(p.middle)}</td><td>${p.ab}</td><td>${p.h}</td><td>${p.rbi}</td><td>${p.pitches}</td></tr>`).join('')}</table></div>`}$('detailBody').innerHTML=body;$('detail').showModal()}
-function schedule(){clearTimeout(timer);if(!playing||!game||game.ended)return;/* The completed pitch call stays visible before the next windup. */timer=setTimeout(()=>{timer=null;pitch()},Math.max(450,1650/Number($('speed').value)))}
+function schedule(){clearTimeout(timer);if(!playing||!game||game.ended)return;/* The completed pitch call stays visible before the next windup. */timer=setTimeout(()=>{timer=null;pitch()},Math.max(450,1650/Number($('speed').value),animationHoldUntil-Date.now()+200))}
 $('start').onclick=()=>{if(game&&!game.ended&&!confirm('進行中の試合を破棄して新しい試合を始めますか？'))return;try{init()}catch(e){console.error(e);$('status').textContent='開始エラー';$('event').textContent='開始できません: '+(e&&e.message?e.message:String(e));}};$('pause').onclick=()=>{if(!game||game.ended)return;playing=!playing;$('pause').textContent=playing?'一時停止':'再開';render();if(playing)schedule();else {clearTimeout(timer);clearTimeout(flightTimer);flightTimer=null;animationToken++}};$('next').onclick=()=>{if(!game||game.ended)return;stop();$('pause').textContent='再開';pitch()};$('speed').onchange=()=>{if(playing)schedule()};$('rosterAway').onclick=()=>renderRoster(0);$('rosterHome').onclick=()=>renderRoster(1);$('closeDetail').onclick=()=>$('detail').close();$('clear').onclick=()=>{if(confirm('保存済みの試合履歴をすべて削除しますか？')){localStorage.removeItem(KEY);historyRender()}};historyRender();
 </script></body></html>
