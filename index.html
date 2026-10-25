@@ -665,6 +665,12 @@ function animateFieldingError(throwing,speed){
  later(1050,()=>showPitchResult('エラー！','ball'));
  animationHoldUntil=Math.max(animationHoldUntil,Date.now()+1280);
 }
+// Single clock shared by the throw and the advancing runner.
+// A dropped throw beats neither runner; an out always has the throw first.
+function crossPlayClock(play,throwArrival){
+ const offset=play.safe?(play.wild?-300:-135):155;
+ return {id:play.id,base:play.base,runnerArrival:Math.max(780,throwArrival+offset),throwArrival,safe:play.safe,wild:!!play.wild};
+}
 function animateOutfieldReturn(kind,scoring=false,arm=55,homePlay=null,targetInfo=null,thirdBasePlay=null){
  const token=animationToken,ball=$('ball'),field=$('fielders');
  if(!ball||!field||typeof field.querySelectorAll!=='function')return;
@@ -682,12 +688,7 @@ function animateOutfieldReturn(kind,scoring=false,arm=55,homePlay=null,targetInf
  const relayMs=throwFlightMs(arm,landed,cutoff),relayPause=130,finalMs=throwFlightMs(65,cutoff,goal);
  const atRelay=release+relayMs,atGoal=atRelay+relayPause+finalMs;
  const closePlay=homePlay?{...homePlay,base:'home'}:thirdBasePlay?{...thirdBasePlay,base:'third'}:null;
- if(closePlay){
-  // Game logic owns the decision; screen timing reflects that result.
-  const offset=closePlay.safe?(closePlay.wild?-300:-135):155;
-  const runnerArrival=Math.max(780,atGoal+offset);
-  game.crossPlayVisual={id:closePlay.id,base:closePlay.base,runnerArrival,throwArrival:atGoal,safe:closePlay.safe,wild:!!closePlay.wild};
- }
+ if(closePlay)game.crossPlayVisual=crossPlayClock(closePlay,atGoal);
  // The middle infielder runs out to receive the relay and returns after the play.
  const relayPosition=(fielder==='LF'?'SS':'2B');
  const relayFielder=field.querySelector&&field.querySelector('circle[data-position="'+relayPosition+'"]');
