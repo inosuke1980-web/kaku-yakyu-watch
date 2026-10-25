@@ -892,3 +892,29 @@ assert.ok(cornerDepthAudit.nearFirst.reachable&&cornerDepthAudit.nearThird.reach
 assert.match(html,/\['1B',282,149\].*\['3B',118,149\]/,'visual fielder origins must match standard depth');
 assert.match(html,/SS:\[150,121\],'2B':\[250,121\],'1B':\[282,149\],'3B':\[118,149\]/,'fielder reset must use the same coordinates');
 console.log('CORNER INFIELDERS STANDARD DEPTH PASS');
+
+const situationalInfieldAudit=vm.runInContext(`(()=>{
+ const team=runs=>({runs:[runs]});
+ const state=(bases,outs,inning=4,defRuns=0,batRuns=0)=>({
+  bases,outs,inning,half:0,ended:false,teams:[team(batRuns),team(defRuns)]
+ });
+ const normal=defensiveAlignment(state([null,null,null],1));
+ const bunt=defensiveAlignment(state([{id:'a'},null,null],0));
+ const infieldIn=defensiveAlignment(state([null,null,{id:'c'}],1));
+ const twoOut=defensiveAlignment(state([null,null,{id:'c'}],2));
+ const deep=defensiveAlignment(state([null,null,null],1,8,6,1));
+ return {normal,bunt,infieldIn,twoOut,deep};
+})()`,ctx);
+assert.equal(situationalInfieldAudit.normal.name,'通常守備');
+assert.equal(situationalInfieldAudit.bunt.name,'バント警戒');
+assert.ok(situationalInfieldAudit.bunt.positions['1B'][1]>situationalInfieldAudit.normal.positions['1B'][1],'first baseman charges for bunt');
+assert.ok(situationalInfieldAudit.bunt.positions['3B'][1]>situationalInfieldAudit.normal.positions['3B'][1],'third baseman charges for bunt');
+assert.equal(situationalInfieldAudit.infieldIn.name,'前進守備');
+assert.ok(situationalInfieldAudit.infieldIn.positions.SS[1]>situationalInfieldAudit.normal.positions.SS[1],'middle infielders come in with third runner and fewer than two outs');
+assert.notEqual(situationalInfieldAudit.twoOut.name,'前進守備','do not automatically play in with two outs');
+assert.equal(situationalInfieldAudit.deep.name,'深めの守備');
+assert.ok(situationalInfieldAudit.deep.positions['1B'][1]<situationalInfieldAudit.normal.positions['1B'][1],'protect late lead with deeper defense');
+assert.match(html,/applyDefensiveAlignment\(\);\s*showPitchResult\('投球中/,'defensive positions must update before the pitch');
+assert.match(html,/const origin=infieldOrigin\(direction\.defender\)\|\|point/,'fielding clock must use shifted origin');
+assert.match(html,/const pos=direction\.defender,origin=infieldOrigin\(pos\)\|\|direction\.point/,'coverage must use shifted origin');
+console.log('SITUATIONAL DEFENSIVE ALIGNMENTS PASS');
