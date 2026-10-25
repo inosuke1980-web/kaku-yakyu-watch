@@ -74,3 +74,19 @@ assert.ok(outfield.average_fly.catches>outfield.weak_fly.catches,'weak outfielde
 assert.ok(outfield.elite_liner.catches>outfield.average_liner.catches,'elite outfielders should catch more liners');
 assert.ok(outfield.average_liner.catches>outfield.weak_liner.catches,'weak outfielders should catch fewer liners');
 console.log('OUTFIELD CHECKS PASS',JSON.stringify(outfield));
+
+const scoreboard=vm.runInContext(`(()=>{
+ init();
+ const t=game.teams[0];t.runs[0]=null;
+ render();
+ const live=$('lines').innerHTML;
+ const highlighted=live.includes('current-inning')&&live.includes('◀');
+ const zeroLive=live.includes('>0</td>');
+ // An empty top of first becomes 0 when its half-inning finishes.
+ game.outs=3;endHalf();render();
+ const zeroCommitted=t.runs[0]===0&&$('lines').innerHTML.includes('>0</td>');
+ const currentHalf=game.half===1&&game.inning===1;
+ return {highlighted,zeroLive,zeroCommitted,currentHalf};
+})()`,ctx);
+assert.ok(Object.values(scoreboard).every(Boolean),'inning display and score transitions must match');
+console.log('SCOREBOARD CHECKS PASS',JSON.stringify(scoreboard));
