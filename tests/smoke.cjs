@@ -358,3 +358,50 @@ console.log('FIRST BASE COVER CHECKS PASS',JSON.stringify(firstBaseCover));
  }
  console.log('FIRST-BASE COVER ANIMATION FRAMES CHECKS PASS');
 }
+
+{
+ // Foreground coverage is separate from normal fielders so it is never hidden
+ // under an occupied first base marker. Test actual scheduled SVG movement.
+ const begin=src.indexOf('function moveGroundFielder(');
+ const finish=src.indexOf('function animate(kind,',begin);
+ assert.ok(begin>=0&&finish>begin,'ground animation source required');
+ const ground=src.slice(begin,finish);
+ function runCover(defender){
+  let now=0,frames=[],timers=[],token=1;
+  function node(x,y){return {style:{},attrs:{cx:String(x),cy:String(y)},
+   setAttribute(k,v){this.attrs[k]=String(v)},getAttribute(k){return this.attrs[k]??null},textContent:''}}
+  const first=node(286,189),label=node(286,192);
+  const foreground={children:[],replaceChildren(){this.children=[]},append(...nodes){this.children.push(...nodes)}};
+  const context={animationToken:token,playTimers:[],Date,performance:{now:()=>now},
+   $:()=>foreground,document:{createElementNS:()=>node(0,0)},
+   requestAnimationFrame:fn=>frames.push(fn),
+   setTimeout:(fn,delay)=>{timers.push({at:now+delay,fn});return timers.length},
+   clamp:(x,lo,hi)=>Math.max(lo,Math.min(hi,x))};
+  vm.createContext(context);vm.runInContext(ground,context);
+  context.showFirstCoverSprite(first,label,token,600,defender,1200,1800);
+  const progress=(until)=>{
+   while(now<until){now=Math.min(now+20,until);
+    const due=timers.filter(t=>t.at<=now);timers=timers.filter(t=>t.at>now);
+    for(const t of due)t.fn();
+    const callbacks=frames;frames=[];for(const c of callbacks)c(now);
+   }
+  };
+  progress(defender==='1B'?1000:700);
+  const sprite=foreground.children[0];
+  const onBag=[Number(sprite.getAttribute('cx')),Number(sprite.getAttribute('cy'))];
+  const overlay=foreground.children.length===2;
+  const originalHidden=first.getAttribute('opacity')==='0';
+  progress(1750);
+  const held=[Number(sprite.getAttribute('cx')),Number(sprite.getAttribute('cy'))];
+  progress(2400);
+  const restored=foreground.children.length===0&&first.getAttribute('opacity')==='1';
+  return {onBag,held,overlay,originalHidden,restored};
+ }
+ for(const defender of ['SS','1B']){
+  const result=runCover(defender);
+  assert.ok(Math.hypot(result.onBag[0]-323,result.onBag[1]-169)<1,defender+' foreground first-base arrival');
+  assert.ok(Math.hypot(result.held[0]-323,result.held[1]-169)<1,defender+' foreground hold on base');
+  assert.ok(result.overlay&&result.originalHidden&&result.restored,defender+' foreground visibility and cleanup');
+ }
+ console.log('FOREGROUND FIRST-BASE COVER VISUAL CHECKS PASS');
+}
