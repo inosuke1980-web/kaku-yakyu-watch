@@ -199,3 +199,16 @@ for(const x of closePlayTimes){
  assert.equal(x.throwFirst,!x.safe,'out play should show throw arriving before runner');
 }
 console.log('CLOSE PLAY TIMING CHECKS PASS',JSON.stringify(closePlayTimes));
+
+const gestureContract=vm.runInContext(`(()=>{
+ init();
+ const before={outs:game.outs,runs:game.teams.map(t=>t.runs.reduce((sum,v)=>sum+(v||0),0)),errors:game.teams.map(t=>t.errors)};
+ const safe=crossPlayClock({id:'slide-safe',base:'third',safe:true},1900);
+ const out=crossPlayClock({id:'slide-out',base:'home',safe:false},2100);
+ const wild=crossPlayClock({id:'slide-wild',base:'home',safe:true,wild:true},2200);
+ animateClosePlayGestures(safe);animateClosePlayGestures(out);animateClosePlayGestures(wild);
+ const after={outs:game.outs,runs:game.teams.map(t=>t.runs.reduce((sum,v)=>sum+(v||0),0)),errors:game.teams.map(t=>t.errors)};
+ return {safeFirst:safe.runnerArrival<safe.throwArrival,outFirst:out.throwArrival<out.runnerArrival,wildFirst:wild.runnerArrival<wild.throwArrival,unchanged:JSON.stringify(before)===JSON.stringify(after)};
+})()`,ctx);
+assert.ok(Object.values(gestureContract).every(Boolean),'sliding/tag rendering must respect calls without mutating scores or outs');
+console.log('SLIDING AND TAG CHECKS PASS',JSON.stringify(gestureContract));
