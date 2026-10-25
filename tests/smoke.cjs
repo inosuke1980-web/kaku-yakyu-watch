@@ -653,3 +653,31 @@ assert.match(html,/animateFieldingError\(errorType,p\.speed,errorPlan,direction\
 assert.match(html,/トンネル！/,'tunnel must be called distinctly');
 assert.match(html,/はじいた！/,'bobble must be called distinctly');
 console.log('GROUND FIELDING ERROR VARIETIES CHECKS PASS',JSON.stringify(fieldingErrorVarieties.results));
+
+const extraOnErrors=vm.runInContext(`(()=>{
+ const attempts={tunnel:0,bobble:0,wildThrow:0},invalid=[];
+ for(const type of Object.keys(attempts)){
+  for(let i=0;i<3000;i++){
+   const runner={id:'lead',speed:55},batter={id:'batter',speed:55};
+   const bases=[batter,runner,null],scored=[];
+   const extra=groundErrorExtraAdvance(bases,type,scored);
+   if(extra)attempts[type]++;
+   if(bases[0]!==batter||scored.length||extra&&(bases[1]!==null||bases[2]!==runner))invalid.push(type);
+  }
+ }
+ // The runner on third may score, but nobody may occupy the same base.
+ const bases=[{id:'batter'},null,{id:'lead',speed:99}],scored=[];
+ let gotHome=false;
+ for(let i=0;i<2000&&!gotHome;i++){
+  bases[2]={id:'lead',speed:99};scored.length=0;
+  gotHome=!!groundErrorExtraAdvance(bases,'tunnel',scored);
+ }
+ return {attempts,invalid,gotHome,scoredCount:scored.length,thirdVacant:bases[2]===null};
+})()`,ctx);
+assert.equal(extraOnErrors.invalid.length,0,'error extra advances must preserve batter and base occupancy');
+assert.ok(extraOnErrors.attempts.tunnel>extraOnErrors.attempts.wildThrow,'tunnel must allow more extra advances than wild throws');
+assert.ok(extraOnErrors.attempts.wildThrow>extraOnErrors.attempts.bobble,'bobble should be easiest to recover');
+assert.ok(extraOnErrors.gotHome&&extraOnErrors.scoredCount===1&&extraOnErrors.thirdVacant,'a runner on third may score safely when the ball gets away');
+assert.match(html,/creditRuns\(scored,p,false\)/,'error-assisted runs must not credit RBI');
+assert.match(html,/走者が追加進塁！/,'error extra advancement should appear in match commentary');
+console.log('GROUND ERROR EXTRA ADVANCEMENT TESTS PASS',JSON.stringify(extraOnErrors.attempts));
