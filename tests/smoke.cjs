@@ -440,7 +440,9 @@ const broadcastMini=vm.runInContext(`(()=>{
  return {names,start,live,other,final};
 })()`,ctx);
 assert.match(html,/id="miniScore" class="mini-score"/,'field mini scoreboard must exist');
-assert.match(html,/\.mini-score\{position:absolute;right:9px;bottom:9px/,'panel should be anchored to bottom right');
+assert.match(html,/\.field-score-row\{display:flex;justify-content:flex-end/,'mini scoreboard must be right-aligned below field');
+assert.match(html,/<\/svg><\/div><div class="field-score-row"><div id="miniScore"/,'scoreboard must not overlap the SVG field');
+assert.doesNotMatch(html,/\.mini-score\{position:absolute/,'mini scoreboard must not cover first baseman');
 assert.match(broadcastMini.start,/1回表/);
 assert.match(broadcastMini.live,/1回表/);
 assert.match(broadcastMini.live,/mini-points">2<\/span>/);
