@@ -13,7 +13,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Check HTML script syntax
-        run: node -e "const fs=require('fs'),vm=require('vm');let s=fs.readFileSync('index.html','utf8').match(/<script>([\\s\\S]*?)<\\/script>/)[1];new vm.Script(s);"
-      - name: Simulate 1,000 games
+      - name: Simulate 1,000 games and validate script syntax
         run: node tests/smoke.cjs
