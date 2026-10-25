@@ -64,7 +64,7 @@ if(bases!==4&&scored.length&&game.outs<2){
   const pick=options[0],seg=Math.round(clamp(740-(pick.runner.speed-50)*3.2,570,900));
   const kind=bases===1?'single':'double',landed=kind==='single'?[277,138]:[311,-33],cutoff=[200,116],plate=[200,293];
   const runnerMs=70+(3-pick.origin)*seg;
-  const throwMs=830+190+throwFlightMs(fieldArm,landed,cutoff)+130+throwFlightMs(65,cutoff,plate);
+  const throwMs=830+(bases>=2?600:0)+190+throwFlightMs(fieldArm,landed,cutoff)+130+throwFlightMs(65,cutoff,plate);
   const wild=chance(clamp(.10-(fieldSkill-50)*.0008,.035,.15));
   const safe=wild||runnerMs+rnd(-100,100)<=throwMs+rnd(-125,125);
   homePlay={id:pick.runner.id,origin:pick.origin,runnerMs,throwMs,wild,safe};
@@ -398,7 +398,7 @@ function animateOutfieldReturn(kind,scoring=false,arm=55,homePlay=null){
   return dist<best.dist?{el,dist}:best;
  },{el:null,dist:Infinity}).el;
  const fielder=chosen?.getAttribute('data-position')||'CF';
- const flightMs=kind==='fly'?1150:kind==='single'?830:kind==='triple'?830:kind==='double'?830:540;
+ const flightMs=kind==='fly'?1150:kind==='single'?830:kind==='triple'||kind==='double'?1430:540;
  const gatherMs=190,release=flightMs+gatherMs;
  const relayMs=throwFlightMs(arm,landed,cutoff),relayPause=130,finalMs=throwFlightMs(65,cutoff,goal);
  const atRelay=release+relayMs,atGoal=atRelay+relayPause+finalMs;
