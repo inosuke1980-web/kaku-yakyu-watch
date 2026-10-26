@@ -1041,3 +1041,21 @@ assert.match(html,/sprite\.setAttribute\('data-first-phase','catch'\)/,'first ba
 assert.match(html,/const moveBall=\(x,y,duration\)=>moveGroundFielder\(ball,null,\[x,y\],duration,token\)/,'infield throw uses animation frames instead of SVG CSS');
 assert.match(html,/if\(outcome!=='force'\)showFirstCoverSprite\(firstCover,firstLabel,token,fieldMs,player,decisionMs,holdUntil,arrival\)/,'first baseman catch synchronized to first arrival');
 console.log('PIVOT FOOTWORK, FORCE SLIDE, FIRST-BASE CATCH PASS');
+
+const handedBatterAudit=vm.runInContext(`(()=>{
+ const right=batterStancePlan({bats:'右打'});
+ const left=batterStancePlan({bats:'左打'});
+ const fallback=batterStancePlan({bats:'右打'});
+ return {right,left,fallback};
+})()`,ctx);
+assert.equal(handedBatterAudit.right.hand,'右','right batter must have a right-hand label');
+assert.equal(handedBatterAudit.left.hand,'左','left batter must have a left-hand label');
+assert.ok(handedBatterAudit.right.position[0]<200&&handedBatterAudit.left.position[0]>200,'batter box must change sides of plate');
+assert.ok(handedBatterAudit.right.batEnd[0]<0&&handedBatterAudit.left.batEnd[0]>0,'bat rests on mirrored shoulders');
+assert.match(html,/id="battingStance"/,'actual batter SVG needed on field');
+assert.match(html,/id="batterHandLabel"/,'batter side visible on field');
+assert.match(html,/showBattingStance\(batter\(\)\)/,'render updates stance with current lineup');
+assert.match(html,/else if\(x<\.70\)\{animateBatterSwing\(p\);foulBall\(p\)\}/,'foul ball includes swing');
+assert.match(html,/else\{complete=true;animateBatterSwing\(p\);showPitchResult/,'ball in play includes swing');
+assert.match(html,/if\(!force&&Date\.now\(\)<batterVisualLockedUntil\)return/,'swing should not turn into next batter mid-animation');
+console.log('BATTING STANCE MIRROR AND SWING PASS');
