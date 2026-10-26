@@ -755,6 +755,161 @@ function trySteal(){const b=game.bases,pi=pitcher();if(!b[0]||b[1]||game.outs>=3
 const runner=b[0],success=chance(clamp(.58+(runner.speed-50)*.004,.35,.86));b[0]=null;
 game.stealVisual={id:runner.id,speed:runner.speed,safe:success,from:0,to:1,inning:game.inning,half:game.half};
 if(success){b[1]=runner;log(`${runner.name} 二塁盗塁成功！`)}else{game.outs++;pi.outsPitched++;log(`${runner.name} 二塁盗塁失敗、タッチアウト！`)}return true}
+// Runner-aware spectator choreography. All moving sprites are ephemeral;
+// base occupancy, outs and scores remain exclusively owned by the rules engine.
+const TACTICAL_BASES=[[323,169],[200,47],[77,169]];
+function runnerLeadPlan(index,speed=55){
+ const from=TACTICAL_BASES[index],to=TACTICAL_BASES[index+1]||[200,293];
+ const length=clamp(.11+(speed-50)*.0007,.07,.16);
+ return {from,to,lead:[from[0]+(to[0]-from[0])*length,from[1]+(to[1]-from[1])*length],
+  extendMs:Math.round(clamp(380-(speed-50),300,440)),retreatMs:Math.round(clamp(310-(speed-50),240,390))};
+}
+function tacticalCircle(layer,point,id,fill){
+ const circle=document.createElementNS('http://www.w3.org/2000/svg','circle');
+ circle.setAttribute('cx',point[0]);circle.setAttribute('cy',point[1]);
+ circle.setAttribute('r','7');circle.setAttribute('fill',fill);
+ circle.setAttribute('stroke','#ffffff');circle.setAttribute('stroke-width','2');
+ circle.setAttribute('data-tactical-runner',id);
+ layer.append(circle);return circle;
+}
+function leadRunnerVisual(token){
+ if(!game||game.ended)return 0;
+ const layer=$('leadRunnerSprites'),staticLayer=$('runners');
+ if(!layer)return 0;
+ layer.replaceChildren();
+ let longest=0;
+ for(let index=0;index<3;index++){
+  const p=game.bases[index];if(!p)continue;
+  const plan=runnerLeadPlan(index,p.speed);
+  const circle=tacticalCircle(layer,plan.from,p.id,'#ffd65c');
+  const marker=staticLayer?.querySelector?.('circle[data-runner="'+p.id+'"]');
+  if(marker)marker.setAttribute('opacity','0');
+  circle.setAttribute('data-lead-base',String(index+1));
+  circle.setAttribute('data-lead-phase','depart');
+  moveGroundFielder(circle,null,plan.lead,plan.extendMs,token);
+  const stayMs=200;
+  playTimers.push(setTimeout(()=>{
+   if(token!==animationToken)return;
+   circle.setAttribute('data-lead-phase','return');
+   moveGroundFielder(circle,null,plan.from,plan.retreatMs,token);
+  },plan.extendMs+stayMs));
+  const end=plan.extendMs+stayMs+plan.retreatMs+30;
+  longest=Math.max(longest,end);
+  playTimers.push(setTimeout(()=>{
+   if(token!==animationToken)return;
+   circle.setAttribute('visibility','hidden');
+   if(marker)marker.setAttribute('opacity','1');
+  },end));
+ }
+ playTimers.push(setTimeout(()=>{if(token===animationToken)layer.replaceChildren()},longest+50));
+ return longest;
+}
+function pitcherSetVisual(token){
+ const set=$('pitcherSet'),glance=$('pitcherGlance');
+ if(!set||!glance)return;
+ set.setAttribute('visibility','visible');
+ const occupied=game?.bases?.some(Boolean);
+ if(occupied){
+  glance.setAttribute('visibility','visible');
+  glance.setAttribute('cx',game.bases[0]?'204':'195');
+  playTimers.push(setTimeout(()=>{if(token===animationToken)glance.setAttribute('visibility','hidden')},320));
+ }
+ playTimers.push(setTimeout(()=>{if(token===animationToken)set.setAttribute('visibility','hidden')},500));
+}
+function pickoffVisualPlan(index){
+ const base=TACTICAL_BASES[index];
+ return {index,base,throwMs:Math.round(360+Math.hypot(base[0]-200,base[1]-203)*.45),
+  holdMs:240,returnMs:380};
+}
+function animatePickoffReturn(index,token){
+ const layer=$('pickoffSprites');if(!layer||!game?.bases[index])return 0;
+ layer.replaceChildren();
+ const plan=pickoffVisualPlan(index);
+ const runner=game.bases[index],lead=runnerLeadPlan(index,runner.speed);
+ const circle=tacticalCircle(layer,lead.lead,runner.id,'#ffd65c');
+ const ball=tacticalCircle(layer,[200,203],'pickoff-ball','#fff');
+ ball.setAttribute('r','4');ball.setAttribute('data-pickoff-ball','yes');
+ const staticMarker=$('runners')?.querySelector?.('circle[data-runner="'+runner.id+'"]');
+ if(staticMarker)staticMarker.setAttribute('opacity','0');
+ circle.setAttribute('data-pickoff-phase','dive');
+ moveGroundFielder(circle,null,plan.base,plan.throwMs,token);
+ moveGroundFielder(ball,null,plan.base,plan.throwMs,token);
+ const bagCover=$('fielders')?.querySelector?.('circle[data-position="'+(index===0?'1B':index===1?'SS':'3B')+'"]');
+ if(bagCover)bagCover.setAttribute('data-pickoff-cover','yes');
+ const finish=plan.throwMs+plan.holdMs+plan.returnMs;
+ playTimers.push(setTimeout(()=>{
+  if(token!==animationToken)return;
+  circle.setAttribute('data-pickoff-phase','safe');
+  circle.setAttribute('stroke','#8ef2c3');
+  ball.setAttribute('visibility','hidden');
+ },plan.throwMs));
+ playTimers.push(setTimeout(()=>{
+  if(token!==animationToken)return;
+  if(staticMarker)staticMarker.setAttribute('opacity','1');
+  if(bagCover)bagCover.setAttribute('data-pickoff-cover','');
+  layer.replaceChildren();
+ },finish));
+ return finish;
+}
+function stealPlayPlan(speed=55){
+ const runnerMs=Math.round(clamp(1040-(speed-50)*5.2,780,1240));
+ return {runnerMs,catcherRiseMs:180,catcherReleaseMs:340,
+  throwMs:440,catchAt:780,tagAt:Math.max(800,runnerMs-65)};
+}
+function animateStealPlay(visual){
+ const layer=$('stealPlaySprites'),glove=$('catcherGlove'),catcher=$('catcherThrowSprite');
+ if(!layer||!visual)return;
+ layer.replaceChildren();
+ const token=animationToken,first=TACTICAL_BASES[0],second=TACTICAL_BASES[1];
+ const plan=stealPlayPlan(visual.speed);
+ const circle=tacticalCircle(layer,first,visual.id,'#ffda67');
+ circle.setAttribute('data-steal-phase','break');
+ const oldMarker=$('runners')?.querySelector?.('circle[data-runner="'+visual.id+'"]');
+ if(oldMarker)oldMarker.setAttribute('opacity','0');
+ const ball=tacticalCircle(layer,[200,310],'catcher-throw','#fff');
+ ball.setAttribute('r','4');ball.setAttribute('visibility','hidden');
+ const covering=$('fielders')?.querySelector?.('circle[data-position="SS"]');
+ const baseOrigin=covering?[Number(covering.getAttribute('cx')),Number(covering.getAttribute('cy'))]:null;
+ if(covering){
+  covering.setAttribute('data-steal-cover','second');
+  moveGroundFielder(covering,$('fielders')?.querySelector?.('text[data-position="SS"]'),second,400,token);
+ }
+ if(catcher)catcher.setAttribute('visibility','visible');
+ moveGroundFielder(circle,null,[212,60],Math.max(200,plan.runnerMs-145),token);
+ const later=(ms,fn)=>playTimers.push(setTimeout(()=>{if(token===animationToken)fn()},ms));
+ later(plan.catcherRiseMs,()=>{if(glove)glove.setAttribute('cy','296');if(catcher)catcher.setAttribute('data-throw-phase','rise')});
+ later(plan.catcherReleaseMs,()=>{
+  ball.setAttribute('visibility','visible');
+  ball.setAttribute('data-throw-phase','flight');
+  moveGroundFielder(ball,null,second,plan.throwMs,token);
+  if(catcher)catcher.setAttribute('data-throw-phase','release');
+ });
+ later(plan.runnerMs-145,()=>{
+  circle.setAttribute('data-steal-phase','slide');
+  circle.setAttribute('r','6');
+  moveGroundFielder(circle,null,second,145,token);
+ });
+ later(Math.max(plan.runnerMs,plan.catchAt),()=>{
+  circle.setAttribute('data-steal-phase',visual.safe?'safe':'tag-out');
+  circle.setAttribute('stroke',visual.safe?'#8ef2c3':'#ff8585');
+  circle.setAttribute('stroke-width','4');
+  ball.setAttribute('visibility','hidden');
+  if(covering)covering.setAttribute('data-steal-tag',visual.safe?'late':'out');
+  showPitchResult(visual.safe?'盗塁成功！':'盗塁阻止！',visual.safe?'ball':'strike');
+ });
+ const end=Math.max(plan.runnerMs,plan.catchAt)+530;
+ later(end,()=>{
+  if(oldMarker&&visual.safe)oldMarker.setAttribute('opacity','1');
+  if(covering&&baseOrigin){
+   covering.setAttribute('data-steal-cover','');covering.setAttribute('data-steal-tag','');
+   moveGroundFielder(covering,$('fielders')?.querySelector?.('text[data-position="SS"]'),baseOrigin,300,token);
+  }
+  if(glove)glove.setAttribute('cy','302');
+  if(catcher){catcher.setAttribute('visibility','hidden');catcher.setAttribute('data-throw-phase','')}
+  layer.replaceChildren();
+ });
+ animationHoldUntil=Math.max(animationHoldUntil,Date.now()+end+170);
+}
 function endHalf(){const endedTeam=current().bat;if(endedTeam.runs[game.inning-1]===null||endedTeam.runs[game.inning-1]===undefined)endedTeam.runs[game.inning-1]=0;game.balls=0;game.strikes=0;game.bases=[null,null,null];game.outs=0;game.pitch=0;if(game.half===0){if(game.inning>=9&&total(1)>total(0)){finish('後攻勝利');return}game.half=1}else{if(game.inning>=9&&total(0)!==total(1)){finish('試合終了');return}game.half=0;game.inning++;for(const t of game.teams)if(t.runs.length<game.inning)t.runs.push(null)}if(game.inning>=10){const bat=current().bat;const order=[5,6,7,8,9,10,11,12,13];const previous=bat.bat;game.bases=[bat.players[order[(previous+7)%9]],bat.players[order[(previous+8)%9]],null];log('延長タイブレーク：無死一・二塁。')}log(`${game.inning}回${game.half?'裏':'表'} 開始。`)}
 function maybeChangePitcher(){const p=pitcher(),t=current().def;if(p.pitches>strategy().hook+rnd(-8,12)&&t.pitcher<4&&chance(strategy().training?.30:.12)){t.pitcher++;log(`${t.name} 投手交代：${t.players[t.pitcher].name} が登板。`)}}
 function showPitchResult(label,kind){const el=$('pitchResult');el.className='pitch-result '+kind;el.textContent=label}
