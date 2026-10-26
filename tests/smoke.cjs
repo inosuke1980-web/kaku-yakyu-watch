@@ -1325,6 +1325,6 @@ for(const {kind,point,duration,plan} of fieldingVisualAudit){
  if(plan.dropped)assert.ok(!plan.caught,'cannot catch and drop simultaneously');
 }
 assert.match(html,/nearest\.setAttribute\('data-fielding-phase',visual\.phase\)/,'fielder visibly changes phase');
-assert.match(html,/moveGroundFielder\(ball,null,visual\.deflect,210,token\)/,'dropped ball ricochets');
+assert.match(html,/const dropX=target\[0\]\+23\*dropProgress/,'dropped ball ricochets in frame animation');
 assert.match(html,/nearest\.setAttribute\('data-fielding-phase','miss'\)/,'untouched hit shows miss');
 console.log('THREE HUNDRED FIELDING VISUAL PLANS PASS');
