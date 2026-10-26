@@ -41,10 +41,10 @@
 <label>カテゴリー <select id="category"><option value="random">ランダム（現在は高校のみ）</option><option value="high">高校野球</option><option value="university" disabled>大学野球（今後追加）</option><option value="corporate" disabled>社会人野球（今後追加）</option><option value="pro" disabled>プロ野球（今後追加）</option></select></label>
 <label>試合種別 <select id="matchType"><option value="random">ランダム</option><option value="official">公式戦</option><option value="practice">練習試合</option></select></label>
 <label>開催時間 <select id="dayNight"><option value="random">ランダム</option><option value="day">デイゲーム</option><option value="night">ナイター</option></select></label>
-<label>球場タイプ <select id="parkType"><option value="random">ランダム</option><option value="grass">芝球場</option><option value="clayInfield">内野土の球場</option><option value="allDirt">全面土の球場</option></select></label>
+<label>グラウンド <select id="parkType"><option value="random">ランダム</option><option value="grass">内野芝</option><option value="clayInfield">内野土</option><option value="allDirt">全面土</option></select></label><label>球場形状 <select id="parkShape"><option value="random">ランダム（8種類）</option><option value="standard">① 標準</option><option value="wide">② 広い球場</option><option value="small">③ 狭い球場</option><option value="leftWide">④ 左翼が広い</option><option value="rightWide">⑤ 右翼が広い</option><option value="dome">⑥ ドーム</option><option value="grassPark">⑦ 内野芝の球場</option><option value="grassDome">⑧ 内野芝のドーム</option></select></label>
 </div><div class="muted" style="margin-top:8px">未指定の項目だけランダム抽選。選択内容は次の「新しい試合」から反映されます。</div></section>
 <section class="card"><div class="flex between"><span id="event" class="muted">試合開始で大会・学校・選手を生成します</span><span id="status">待機中</span></div><div class="teams"><div class="team" id="away">先攻 —</div><div class="score" id="score">0 - 0<small>1回表</small></div><div class="team" id="home">後攻 —</div></div><div class="scoreboard-scroll" id="lines" tabindex="0" aria-label="イニング別スコアボード。横にスクロールできます"></div><div class="scoreboard-hint">横スクロールで各回を確認できます。チーム名と R・H・E は固定表示。</div></section>
-<div class="layout"><section class="card"><div class="field-header"><h2>グラウンド</h2></div><div class="field-stage"><svg class="field" viewBox="0 -155 400 485" role="img" aria-label="俯瞰の野球場。外野が奥に広がり、守備位置を表示">
+<div class="layout"><section class="card"><div class="field-header"><h2>グラウンド</h2><span id="parkDescription" class="muted" style="font-size:12px"></span></div><div class="field-stage"><svg class="field" viewBox="0 -155 400 485" role="img" aria-label="俯瞰の野球場。外野が奥に広がり、守備位置を表示">
 <defs>
 <!-- Original tiny retro-uniform sprite drawn inside the existing moving fielder circles.
      Keeps cx/cy, data-position, hit tests and all existing animations unchanged. -->
@@ -56,17 +56,17 @@
  <path d="M5 7 Q6 1 11 2 Q15 2 16 7 L12 6 L6 8 Z" fill="#294761"/>
  <path d="M5 6 L16 6" stroke="#142f46" stroke-width="1.4"/>
 </pattern>
-<clipPath id="parkClip"><path d="M12 171 L12 82 Q25 -80 200 -122 Q375 -80 388 82 L388 171 L200 317 Z"/></clipPath>
+<clipPath id="parkClip"><path id="parkClipPath" d="M12 171 L12 82 Q25 -80 200 -122 Q375 -80 388 82 L388 171 L200 317 Z"/></clipPath>
 <pattern id="grassStripes" width="62" height="62" patternUnits="userSpaceOnUse" patternTransform="rotate(20)"><rect width="62" height="62" fill="transparent"/><rect width="31" height="62" fill="#d3ecc1" opacity=".11"/></pattern>
 <pattern id="dirtTexture" width="29" height="29" patternUnits="userSpaceOnUse"><circle cx="6" cy="8" r="1.1" fill="#7a5032" opacity=".24"/><circle cx="21" cy="20" r="1.4" fill="#e1bb86" opacity=".18"/></pattern>
 </defs>
 <!-- A broad outfield, curved warning track, and visible grandstands. -->
-<path d="M0 170 L0 72 Q12 -118 200 -150 Q388 -118 400 72 L400 170 L200 328 Z" fill="#384f4b" stroke="#74847b" stroke-width="4"/>
-<path d="M8 171 L8 82 Q25 -80 200 -130 Q375 -80 392 82 L392 171 L200 320 Z" fill="#ad8864"/>
+<path id="parkGrandstand" d="M0 170 L0 72 Q12 -118 200 -150 Q388 -118 400 72 L400 170 L200 328 Z" fill="#384f4b" stroke="#74847b" stroke-width="4"/>
+<path id="parkWarningTrack" d="M8 171 L8 82 Q25 -80 200 -130 Q375 -80 392 82 L392 171 L200 320 Z" fill="#ad8864"/>
 <path id="parkSurface" d="M12 171 L12 82 Q25 -80 200 -122 Q375 -80 388 82 L388 171 L200 317 Z" fill="#2e8553" stroke="#f0e9d2" stroke-width="2"/>
 <path id="parkSurfaceTexture" d="M12 171 L12 82 Q25 -80 200 -122 Q375 -80 388 82 L388 171 L200 317 Z" fill="url(#grassStripes)"/>
 <g id="parkMowing" clip-path="url(#parkClip)" opacity=".45"><path d="M-30 20 L430 20" fill="none" stroke="#b7dfb4" stroke-width="18" opacity=".08"/><path d="M-30 -72 L430 -72" fill="none" stroke="#b7dfb4" stroke-width="18" opacity=".08"/></g>
-<path d="M12 82 Q25 -80 200 -122 Q375 -80 388 82" fill="none" stroke="#405f43" stroke-width="8"/>
+<path id="parkFence" d="M12 82 Q25 -80 200 -122 Q375 -80 388 82" fill="none" stroke="#405f43" stroke-width="8"/>
 <path id="infieldDirt" d="M200 293 L77 169 L200 47 L323 169 Z" fill="#a78055" stroke="#f6f2e7" stroke-width="2"/>
 <path id="infieldGrass" d="M200 278 L93 169 L200 62 L307 169 Z" fill="#348d58"/>
 <path id="infieldTexture" d="M200 293 L77 169 L200 47 L323 169 Z" fill="url(#dirtTexture)" opacity=".55" pointer-events="none"/>
@@ -175,7 +175,37 @@ function applyParkStyle(style){
  infield.setAttribute('fill',fullDirt?'#a57a50':clay?'#936640':'#348d58');
  grain.setAttribute('opacity',fullDirt?'.68':clay?'.80':'.35');
 }
-function init(){stop();const category=$('category').value;if(!['random','high'].includes(category))throw Error('このカテゴリーはまだ実装されていません');const t=tournament(),levels=['新興・小規模','弱小','中堅','地方強豪','全国強豪'];const pick=()=>{let x=Math.random();return x<.1?0:x<.4?1:x<.8?2:x<.95?3:4};let a=pick(),b=pick();if(t.kind.includes('全国')){a=Math.max(a,2);b=Math.max(b,2)}const away=team(t.p,a),home=team(t.q,b);if(away.name===home.name)home.name+='第二';document.querySelector('.field').style.background=t.time==='ナイター'?'#061626':'#113a2b';const requestedPark=$('parkType').value;const parkStyle=['grass','clayInfield','allDirt'].includes(requestedPark)?requestedPark:choose(['grass','clayInfield','allDirt']);applyParkStyle(parkStyle);game={t,parkStyle,teams:[away,home],inning:1,half:0,outs:0,balls:0,strikes:0,bases:[null,null,null],pitch:0,ended:false,events:[],totalPitches:0};activeRoster=0;$('rosterAway').disabled=$('rosterHome').disabled=false;$('pause').disabled=$('next').disabled=false;$('pause').textContent='一時停止';log('プレーボール！ '+away.name+' 対 '+home.name);log(t.kind==='練習試合'?'采配：練習試合（投手の早めの交代・積極的な試走を重視）':'采配：公式戦（局面に応じて犠打・スクイズ・勝負の継投を判断）');renderRoster(0);playing=true;render();schedule()}
+const PARK_SHAPES={
+ standard:{name:'標準球場',center:-122,shoulder:-80,left:82,right:82,dimensions:'両翼91m・中堅120m'},
+ wide:{name:'広い球場',center:-146,shoulder:-99,left:82,right:82,dimensions:'両翼100m・中堅130m'},
+ small:{name:'狭い球場',center:-92,shoulder:-60,left:82,right:82,dimensions:'両翼85m・中堅110m'},
+ leftWide:{name:'左翼が広い球場',center:-116,shoulder:-99,left:82,right:82,dimensions:'左翼100m・右翼85m・中堅118m'},
+ rightWide:{name:'右翼が広い球場',center:-116,shoulder:-60,left:82,right:82,dimensions:'左翼85m・右翼100m・中堅118m'},
+ dome:{name:'ドーム球場',center:-130,shoulder:-83,left:82,right:82,dimensions:'両翼92m・中堅122m'},
+ grassPark:{name:'内野芝の球場',center:-122,shoulder:-80,left:82,right:82,dimensions:'両翼92m・中堅120m'},
+ grassDome:{name:'内野芝のドーム',center:-130,shoulder:-83,left:82,right:82,dimensions:'両翼92m・中堅122m'}
+};
+// Ball-flight physics are deliberately unchanged in this first visual stadium pass.
+function applyParkShape(shape){
+ const p=PARK_SHAPES[shape]||PARK_SHAPES.standard;
+ const top=p.center;
+ const surface=`M12 171 L12 ${p.left} Q25 ${p.shoulder} 200 ${top} Q375 ${p.shoulder} 388 ${p.right} L388 171 L200 317 Z`;
+ const fence=`M12 ${p.left} Q25 ${p.shoulder} 200 ${top} Q375 ${p.shoulder} 388 ${p.right}`;
+ const paths={
+  parkSurface:surface,parkSurfaceTexture:surface,
+  parkGrandstand:`M0 170 L0 72 Q12 ${p.shoulder-38} 200 ${top-28} Q388 ${p.shoulder-38} 400 72 L400 170 L200 328 Z`,
+  parkWarningTrack:`M8 171 L8 82 Q25 ${p.shoulder-8} 200 ${top-8} Q375 ${p.shoulder-8} 392 82 L392 171 L200 320 Z`,
+  parkFence:fence
+ };
+ for(const [id,d] of Object.entries(paths))$(id)?.setAttribute('d',d);
+ $('parkClipPath')?.setAttribute('d',surface);
+ const domed=shape==='dome'||shape==='grassDome';
+ $('parkGrandstand')?.setAttribute('fill',domed?'#63747d':'#384f4b');
+ $('parkFence')?.setAttribute('stroke',domed?'#6b8492':'#405f43');
+ const note=$('parkDescription');
+ if(note)note.textContent=`${p.name}｜${p.dimensions}（球場形状は現在、見た目のみ反映）`;
+}
+function init(){stop();const category=$('category').value;if(!['random','high'].includes(category))throw Error('このカテゴリーはまだ実装されていません');const t=tournament(),levels=['新興・小規模','弱小','中堅','地方強豪','全国強豪'];const pick=()=>{let x=Math.random();return x<.1?0:x<.4?1:x<.8?2:x<.95?3:4};let a=pick(),b=pick();if(t.kind.includes('全国')){a=Math.max(a,2);b=Math.max(b,2)}const away=team(t.p,a),home=team(t.q,b);if(away.name===home.name)home.name+='第二';document.querySelector('.field').style.background=t.time==='ナイター'?'#061626':'#113a2b';const requestedPark=$('parkType').value;let parkStyle=['grass','clayInfield','allDirt'].includes(requestedPark)?requestedPark:choose(['grass','clayInfield','allDirt']);const requestedShape=$('parkShape').value;const parkShape=PARK_SHAPES[requestedShape]?requestedShape:choose(Object.keys(PARK_SHAPES));if(parkShape==='grassPark'||parkShape==='grassDome')parkStyle='grass';applyParkStyle(parkStyle);applyParkShape(parkShape);game={t,parkStyle,parkShape,teams:[away,home],inning:1,half:0,outs:0,balls:0,strikes:0,bases:[null,null,null],pitch:0,ended:false,events:[],totalPitches:0};activeRoster=0;$('rosterAway').disabled=$('rosterHome').disabled=false;$('pause').disabled=$('next').disabled=false;$('pause').textContent='一時停止';log('プレーボール！ '+away.name+' 対 '+home.name);log(t.kind==='練習試合'?'采配：練習試合（投手の早めの交代・積極的な試走を重視）':'采配：公式戦（局面に応じて犠打・スクイズ・勝負の継投を判断）');renderRoster(0);playing=true;render();schedule()}
 // One alignment contract for visuals, pursuit distance and fielding verdicts.
 // Shift only between pitches, never while a ball is in play.
 // Shortstop normally sets up a little deeper than second base, not as a mirror image.
