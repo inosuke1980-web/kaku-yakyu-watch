@@ -1132,3 +1132,22 @@ assert.ok(html.includes('if(game.stealVisual)animateStealPlay(game.stealVisual)'
 assert.ok(html.includes('if(game.stealVisual?.id===person.id||index===i'),'avoid duplicate runner');
 assert.ok(html.includes('if(pickoff){'),'pickoff optional');
 console.log('TWENTY RUNNER AND PICKOFF VISUAL FEATURES PASS');
+
+const tacticalCleanupAudit=vm.runInContext(`(()=>{
+ const before=clearTacticalVisuals.toString();
+ const pause=$('pause').onclick.toString();
+ const stopCode=stop.toString();
+ const pickoff=animatePickoffReturn.toString();
+ const stealGate=resolvePitch.toString();
+ return {before,pause,stopCode,pickoff,stealGate};
+})()`,ctx);
+assert.ok(tacticalCleanupAudit.stopCode.includes('clearTacticalVisuals()'),'stop clears all tactical overlays');
+assert.ok(tacticalCleanupAudit.pause.includes('clearTacticalVisuals()'),'pause clears all tactical overlays');
+assert.ok(tacticalCleanupAudit.before.includes('pendingRunnerArrivals.has'),'cleanup preserves moving runner markers until arrival');
+assert.ok(tacticalCleanupAudit.before.includes('data-steal-tag'),'cleanup clears old tag indicator');
+assert.ok(tacticalCleanupAudit.before.includes('data-pickoff-cover'),'cleanup clears old pickoff indicator');
+assert.ok(tacticalCleanupAudit.pickoff.includes('moveGroundFielder(bagCover,coverLabel,plan.base'),'pickoff fielder physically covers bag');
+assert.ok(tacticalCleanupAudit.pickoff.includes('moveGroundFielder(bagCover,coverLabel,coverOrigin'),'fielder returns after pickoff');
+assert.ok(tacticalCleanupAudit.stealGate.includes('game.stealVisual.inning===game.inning'),'stale inning steal animation not shown');
+assert.ok(tacticalCleanupAudit.stealGate.includes('game.stealVisual.half===game.half'),'stale half inning steal animation not shown');
+console.log('TACTICAL OVERLAY CLEANUP, PICKOFF COVER AND INNING GUARDS PASS');
