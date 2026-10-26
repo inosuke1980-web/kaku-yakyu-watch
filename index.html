@@ -229,7 +229,7 @@ function resetOutfieldPositions(){
   if(label){label.setAttribute('x',place[0]);label.setAttribute('y',place[1]+3)}
  }
 }
-function stop(){for(const id of ['pitcherLeg','pitcherArm','catcherCall']){const el=$(id);if(el)el.setAttribute('visibility','hidden')}const glove=$('catcherGlove');if(glove){glove.setAttribute('r','5');glove.setAttribute('fill','#b57943');glove.setAttribute('cx','207');glove.setAttribute('cy','302')}const crouch=$('catcherCrouch');if(crouch)crouch.setAttribute('d','M 193 320 Q 200 328 207 320');const knees=$('batterKnees');if(knees)knees.setAttribute('d','M -5 17 L -9 23 M 5 17 L 9 23');batterVisualLockedUntil=0;batterRunnerOnField=false;const batting=$('battingStance');if(batting)batting.setAttribute('visibility','hidden');const coverLayer=$('firstBaseCoverForeground');if(coverLayer)coverLayer.replaceChildren();const covering=$('fielders');if(covering&&covering.querySelector){for(const type of ['circle','text']){const el=covering.querySelector(type+'[data-position="1B"]');if(el)el.setAttribute('opacity','1')}}playing=false;clearTimeout(timer);clearTimeout(flightTimer);for(const id of playTimers)clearTimeout(id);playTimers=[];timer=flightTimer=null;animationHoldUntil=0;animationToken++;pendingRunnerArrivals.clear();const moving=$('movingRunners');if(moving)moving.replaceChildren();const runner=$('batterRunner');if(runner){runner.style.transition='none';runner.setAttribute('visibility','hidden')}resetOutfieldPositions()}
+function stop(){for(const id of ['leadRunnerSprites','stealPlaySprites','pickoffSprites']){const layer=$(id);if(layer)layer.replaceChildren()}const set=$('pitcherSet'),glance=$('pitcherGlance'),thrower=$('catcherThrowSprite');for(const el of [set,glance,thrower])if(el)el.setAttribute('visibility','hidden');for(const id of ['pitcherLeg','pitcherArm','catcherCall']){const el=$(id);if(el)el.setAttribute('visibility','hidden')}const glove=$('catcherGlove');if(glove){glove.setAttribute('r','5');glove.setAttribute('fill','#b57943');glove.setAttribute('cx','207');glove.setAttribute('cy','302')}const crouch=$('catcherCrouch');if(crouch)crouch.setAttribute('d','M 193 320 Q 200 328 207 320');const knees=$('batterKnees');if(knees)knees.setAttribute('d','M -5 17 L -9 23 M 5 17 L 9 23');batterVisualLockedUntil=0;batterRunnerOnField=false;const batting=$('battingStance');if(batting)batting.setAttribute('visibility','hidden');const coverLayer=$('firstBaseCoverForeground');if(coverLayer)coverLayer.replaceChildren();const covering=$('fielders');if(covering&&covering.querySelector){for(const type of ['circle','text']){const el=covering.querySelector(type+'[data-position="1B"]');if(el)el.setAttribute('opacity','1')}}playing=false;clearTimeout(timer);clearTimeout(flightTimer);for(const id of playTimers)clearTimeout(id);playTimers=[];timer=flightTimer=null;animationHoldUntil=0;animationToken++;pendingRunnerArrivals.clear();const moving=$('movingRunners');if(moving)moving.replaceChildren();const runner=$('batterRunner');if(runner){runner.style.transition='none';runner.setAttribute('visibility','hidden')}resetOutfieldPositions()}
 function log(msg){if(!game)return;const prefix=game.inning+'回'+(game.half?'裏':'表');game.events.push('【'+prefix+'】 '+msg);if(game.events.length>250)game.events.shift();$('log').replaceChildren(...game.events.slice(-90).reverse().map(s=>{let d=document.createElement('div');d.textContent=s;return d}))}
 function current(){return {bat:game.teams[game.half],def:game.teams[1-game.half]}}
 function addRuns(n,runnerIds=[]){const {bat}=current();bat.runs[game.inning-1]=(bat.runs[game.inning-1]||0)+n;for(const p of runnerIds)p.r++;if(game.half===1&&game.inning>=9&&total(1)>total(0))finish('サヨナラ')}
@@ -851,17 +851,18 @@ function animatePickoffReturn(index,token){
  },finish));
  return finish;
 }
-function stealPlayPlan(speed=55){
+function stealPlayPlan(speed=55,safe=false){
  const runnerMs=Math.round(clamp(1040-(speed-50)*5.2,780,1240));
- return {runnerMs,catcherRiseMs:180,catcherReleaseMs:340,
-  throwMs:440,catchAt:780,tagAt:Math.max(800,runnerMs-65)};
+ const catcherReleaseMs=340,catchAt=safe?runnerMs+135:runnerMs-125;
+ return {runnerMs,catcherRiseMs:180,catcherReleaseMs,
+  throwMs:catchAt-catcherReleaseMs,catchAt,tagAt:Math.max(800,runnerMs-65)};
 }
 function animateStealPlay(visual){
  const layer=$('stealPlaySprites'),glove=$('catcherGlove'),catcher=$('catcherThrowSprite');
  if(!layer||!visual)return;
  layer.replaceChildren();
  const token=animationToken,first=TACTICAL_BASES[0],second=TACTICAL_BASES[1];
- const plan=stealPlayPlan(visual.speed);
+ const plan=stealPlayPlan(visual.speed,visual.safe);
  const circle=tacticalCircle(layer,first,visual.id,'#ffda67');
  circle.setAttribute('data-steal-phase','break');
  const oldMarker=$('runners')?.querySelector?.('circle[data-runner="'+visual.id+'"]');
@@ -1204,6 +1205,7 @@ function drawPitch(type){
  const ball=$('ball'),startX=200,startY=203,endY=278;
  const ballToken=++animationToken;
  pitchActionVisual(type,ballToken);
+ pitcherSetVisual(ballToken);
  catcherSetTarget(ballToken);
  batterReadyMotion(ballToken);
  ball.style.transition='none';
@@ -1224,15 +1226,31 @@ function pitch(){
  if(!game||game.ended||flightTimer!==null)return;
  const token=animationToken;
  const moveMs=applyDefensiveAlignment(true);
- if(moveMs){
-  showPitchResult('守備位置を調整中…','play');
-  // Reserve the in-flight slot while moving. A pause or manual next-pitch
-  // cancels this timer and invalidates the movement's animation token.
+ // Pickoff is a non-scoring, non-pitch defensive attempt. A runner always
+ // retreats safely here; no outs or pitcher statistics are manufactured.
+ const occupied=game.bases.findIndex(Boolean);
+ const pickoff=occupied>=0&&Math.random()<.008;
+ if(pickoff){
+  showPitchResult('牽制球！','play');
+  const duration=animatePickoffReturn(occupied,token);
+  flightTimer=setTimeout(()=>{
+   flightTimer=null;
+   if(token!==animationToken||!game||game.ended)return;
+   showPitchResult('帰塁セーフ','ball');
+   if(playing)schedule();
+  },Math.max(duration,moveMs)+110);
+  return;
+ }
+ const leadMs=game.bases.some(Boolean)&&Math.random()<.30?leadRunnerVisual(token):0;
+ const beforePitchMs=Math.max(moveMs,leadMs);
+ if(beforePitchMs){
+  showPitchResult(leadMs?'走者がリード':'守備位置を調整中…','play');
+  // A pending movement occupies the same cancellable slot as a live pitch.
   flightTimer=setTimeout(()=>{
    flightTimer=null;
    if(token!==animationToken||!game||game.ended)return;
    startPitchMotion();
-  },moveMs+90);
+  },beforePitchMs+90);
  }else startPitchMotion();
 }
 function startPitchMotion(){
