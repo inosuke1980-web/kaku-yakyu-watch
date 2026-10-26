@@ -1189,3 +1189,24 @@ assert.ok(html.includes("later(firstArrival+45,()=>showPitchResult('二塁アウ
 assert.ok(html.includes('.pitch-result.neutral{visibility:hidden'),'neutral status does not appear as a speech bubble');
 assert.ok(html.includes("'インプレー','投球中…','守備位置を調整中…'"),'generic phrases hidden');
 console.log('FORCE TIMELINE AND CALLOUT REGRESSION PASS');
+
+const synchronizedForceCallAudit=vm.runInContext(`(()=>{
+ const original=game;
+ const roster=Array.from({length:20},()=>({field:68,arm:65,speed:55}));
+ game={half:0,teams:[{players:roster},{players:roster}]};
+ const direction={defender:'SS',point:[158,156]},fielder={arm:68};
+ const early=groundForceTimeline(direction,fielder,{pickup:420,releaseMs:140,runnerMs:1550},{speed:32});
+ const late=groundForceTimeline(direction,fielder,{pickup:1800,releaseMs:320,runnerMs:1550},{speed:75});
+ game=original;
+ return {early,late};
+})()`,ctx);
+assert.equal(synchronizedForceCallAudit.early.forceOut,synchronizedForceCallAudit.early.receiveAt+25<synchronizedForceCallAudit.early.runnerAt,'early throw makes force out');
+assert.equal(synchronizedForceCallAudit.late.forceOut,false,'throw after runner cannot produce force out');
+assert.ok(synchronizedForceCallAudit.early.forceCallAt>=synchronizedForceCallAudit.early.runnerAt,'visible call waits for runner slide');
+assert.ok(synchronizedForceCallAudit.early.forceCallAt>=synchronizedForceCallAudit.early.receiveAt,'visible call cannot predate catch');
+assert.ok(html.includes("const runStart=45,slideDuration=150,slideStart=arrival-slideDuration"),'runner slide concludes at official runnerAt');
+assert.ok(html.includes("later(slideStart,()=>{"),'slide uses official arrival');
+assert.ok(html.includes("later(forceCallAt,()=>showPitchResult('二塁封殺！'"),'force bubble only after visible runner reaches bag');
+assert.ok(html.includes("later(Math.max(decisionMs,forceCallAt+140),()=>showPitchResult('併殺！'"),'DP call follows force-out signal');
+assert.ok(!html.includes("showPitchResult('インプレー','play')"),'no generic in-play speech bubble');
+console.log('SYNCHRONIZED SECOND BASE FORCE CALL AND RUNNER SLIDE PASS');
