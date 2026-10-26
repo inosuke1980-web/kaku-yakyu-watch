@@ -31,7 +31,7 @@ const perPark=Number(process.env.PARK_GAMES||1000),data=[];
 assert.ok(Number.isInteger(perPark)&&perPark>0&&perPark<=10000);
 for(const shape of shapes){
  document.getElementById('parkShape').value=shape;
- const metric={shape,games:0,homeRuns:0,triples:0,doubles:0,hits:0,runs:0,plateAppearances:0,uncompleted:0,runMismatches:0};
+ const metric={shape,games:0,homeRuns:0,triples:0,hits:0,runs:0,plateAppearances:0,uncompleted:0,runMismatches:0};
  for(let n=0;n<perPark;n++){
   randomState=(0x5c9d4a71+Math.imul(n+1,0x9e3779b1))|0;
   vm.runInContext('comparisonTriples=0;init()',ctx);
@@ -49,7 +49,6 @@ for(const shape of shapes){
   metric.triples+=result.triples;
   metric.hits+=result.teams.reduce((sum,t)=>sum+t.hits,0);
   metric.runs+=result.teams.reduce((sum,t)=>sum+t.runs,0);
-  metric.doubles+=0;
   if(!result.ended)metric.uncompleted++;
   for(const t of result.teams)if(t.runs!==t.playerRuns)metric.runMismatches++;
  }
