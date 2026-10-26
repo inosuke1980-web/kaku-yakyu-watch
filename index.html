@@ -920,8 +920,8 @@ if(tactics()){if(game.ended){render();return}
  render(beforeBases);animateBaseRunners(beforeBases,beforeRuns,halfAtStart,inningAtStart);renderRoster(activeRoster);return;}
 const {bat}=current(),p=batter(),pi=pitcher();game.totalPitches++;pi.pitches++;game.pitch++;
 const pskill=(pi.control+pi.stuff)/2,x=Math.random();let complete=false;
-if(x<clamp(.29+(pi.control-p.eye)*.0015,.17,.42)){game.balls++;showPitchResult('ボール','ball');log(`${p.name} ボール。`)}
-else if(x<.54){game.strikes++;showPitchResult('ストライク','strike');log(`${p.name} 見逃しストライク。`)}
+if(x<clamp(.29+(pi.control-p.eye)*.0015,.17,.42)){animateBatterTake(p,'ball');game.balls++;showPitchResult('ボール','ball');log(`${p.name} ボール。`)}
+else if(x<.54){animateBatterTake(p,'strike');game.strikes++;showPitchResult('ストライク','strike');log(`${p.name} 見逃しストライク。`)}
 else if(x<.70){animateBatterSwing(p,false);foulBall(p)}
 else{complete=true;animateBatterSwing(p,true);showPitchResult('インプレー','play');const z=Math.random(),hitChance=clamp(.22+(p.contact-pskill)*.002,.10,.42);
 if(z<hitChance){const pow=Math.random(),bases=pow<.75?1:pow<.92?2:pow<.96?3:4;if(bases<=2&&game.totalPitches%3===0)hit(p,bases,'liner');else hit(p,bases)}
@@ -1054,10 +1054,10 @@ function animateBatterRun(result,speed=55,groundPlan=null){
  const stanceGroup=$('battingStance');
  runner.style.transition='none';
  runner.setAttribute('cx',stance.position[0]);runner.setAttribute('cy',stance.position[1]);
- runner.setAttribute('visibility','visible');
+ runner.setAttribute('visibility','hidden');
  if(stanceGroup)stanceGroup.setAttribute('data-visual-phase','depart');
  // Keep batting stance visible only through the initial push off the box.
- later(75,()=>{if(stanceGroup)stanceGroup.setAttribute('visibility','hidden')});
+ later(75,()=>{if(stanceGroup)stanceGroup.setAttribute('visibility','hidden');runner.setAttribute('visibility','visible')});
  moveGroundFielder(runner,null,home,departureMs,token);
  const visiblePlayer=atBat;
  runner.setAttribute('data-runner-id',visiblePlayer?.id||'');
@@ -1650,6 +1650,24 @@ function finishBatterVisual(token){
  const group=$('battingStance');
  if(!game||game.ended){if(group)group.setAttribute('visibility','hidden');return}
  showBattingStance(batter(),true);
+}
+// Called pitches keep the batter in the box; only a genuine ball in play
+// triggers a departure toward first. This never changes pitch probabilities.
+function animateBatterTake(player,call){
+ if(!player)return;
+ showBattingStance(player);
+ const token=animationToken,group=$('battingStance'),bat=$('batterBat');
+ if(!group||!bat)return;
+ const plan=batterStancePlan(player);
+ batterVisualLockedUntil=Date.now()+310;
+ group.setAttribute('data-visual-phase',call==='ball'?'take-ball':'take-strike');
+ bat.setAttribute('y2',plan.batEnd[1]+5);
+ playTimers.push(setTimeout(()=>{
+  if(token!==animationToken)return;
+  bat.setAttribute('y2',plan.batEnd[1]);
+  group.setAttribute('data-visual-phase','ready');
+  finishBatterVisual(token);
+ },310));
 }
 function animateBatterSwing(player,inPlay=false){
  if(!player)return;
