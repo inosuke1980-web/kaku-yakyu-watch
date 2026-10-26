@@ -1803,7 +1803,7 @@ function animate(kind,targetInfo=null,runnerSpeed=55,hitBases=null){
     nearest.setAttribute('stroke','#f58b8b');
     nearest.setAttribute('stroke-width','3');
     // The ball visibly ricochets away from the glove, then is recovered.
-    moveGroundFielder(ball,null,visual.deflect,210,token);
+    ball.setAttribute('data-ball-deflection','drop');
     at(230,()=>{nearest.setAttribute('data-fielding-phase','recover');move(visual.deflect,300)});
    }else if(visual.caught){
     nearest.setAttribute('stroke','#ffe77b');nearest.setAttribute('stroke-width','3');
@@ -1837,9 +1837,12 @@ function animate(kind,targetInfo=null,runnerSpeed=55,hitBases=null){
   const wallAt=targetInfo?.wallAt||.68;
   const wallT=rebounding?Math.min(1,t/wallAt):0;
   const bounceT=rebounding?Math.max(0,(t-wallAt)/(1-wallAt)):0;
-  const x=rebounding?(t<wallAt?start[0]+(target[0]-start[0])*wallT:target[0]+(targetInfo.rebound[0]-target[0])*bounceT):
+  const drop=kind==='outfieldError'||!!targetInfo?.dropped;
+  const dropAt=.82,dropProgress=clamp((t-dropAt)/(1-dropAt),0,1);
+  const dropX=target[0]+23*dropProgress,dropY=target[1]+26*dropProgress;
+  const x=drop&&t>=dropAt?dropX:rebounding?(t<wallAt?start[0]+(target[0]-start[0])*wallT:target[0]+(targetInfo.rebound[0]-target[0])*bounceT):
    rolling?groundPosition[0]:start[0]+(target[0]-start[0])*t;
-  const y=rebounding?(t<wallAt?start[1]+(target[1]-start[1])*wallT:target[1]+(targetInfo.rebound[1]-target[1])*bounceT):
+  const y=drop&&t>=dropAt?dropY:rebounding?(t<wallAt?start[1]+(target[1]-start[1])*wallT:target[1]+(targetInfo.rebound[1]-target[1])*bounceT):
    rolling?groundPosition[1]:start[1]+(target[1]-start[1])*t;
   const lift=rebounding?(t<wallAt?Math.sin(Math.PI*wallT)*65:Math.sin(Math.PI*bounceT)*9):isFly?90*Math.sin(Math.PI*t):isLiner?16*Math.sin(Math.PI*t):0;
   const visibleY=(kind==='homeRun'||kind==='home')?y-lift:Math.max(y-lift,outfieldFenceY(x)+8);
