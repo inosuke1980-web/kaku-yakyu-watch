@@ -1251,12 +1251,14 @@ function drawPitch(type){
 function pitch(){
  if(!game||game.ended||flightTimer!==null)return;
  const token=animationToken;
- const moveMs=applyDefensiveAlignment(true);
  // Pickoff is a non-scoring, non-pitch defensive attempt. A runner always
  // retreats safely here; no outs or pitcher statistics are manufactured.
  const occupied=game.bases.findIndex(Boolean);
  const pickoff=occupied>=0&&Math.random()<.008;
  if(pickoff){
+  // Snap into a stable defensive alignment first. Otherwise a pre-pitch
+  // reposition and a pickoff cover can fight over the same SVG fielder.
+  applyDefensiveAlignment(false);
   showPitchResult('牽制球！','play');
   const duration=animatePickoffReturn(occupied,token);
   flightTimer=setTimeout(()=>{
@@ -1264,9 +1266,10 @@ function pitch(){
    if(token!==animationToken||!game||game.ended)return;
    showPitchResult('帰塁セーフ','ball');
    if(playing)schedule();
-  },Math.max(duration,moveMs)+110);
+  },duration+110);
   return;
  }
+ const moveMs=applyDefensiveAlignment(true);
  const leadMs=game.bases.some(Boolean)&&Math.random()<.30?leadRunnerVisual(token):0;
  const beforePitchMs=Math.max(moveMs,leadMs);
  if(beforePitchMs){
