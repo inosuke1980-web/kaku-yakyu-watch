@@ -1353,3 +1353,22 @@ const continuity=vm.runInContext(`outfieldBallMotion('outfieldError',{dropped:tr
 assert.deepEqual(Array.from(continuity),[300,-40],'ball touches glove before deflection');
 assert.match(html,/const dropPosition=drop\?outfieldBallMotion/,'ball frame uses motion planner');
 console.log('FIVE HUNDRED OUTFIELD BALL MOTION SAMPLES PASS');
+
+// Defensive alignment: the second-inning five-run lead must NEVER trigger infield-in.
+const alignmentAudit=vm.runInContext(`(()=>{
+ const make=(inning,lead,outs,third,first=false)=>({inning,half:0,outs,ended:false,
+  bases:[first?{id:'r1'}:null,null,third?{id:'r3'}:null],
+  teams:[{runs:[0],players:[],bat:0},{runs:[lead],players:[],bat:0}]});
+ return [
+  {state:make(2,5,0,true,true),expected:'通常守備'},
+  {state:make(2,0,0,true,true),expected:'通常守備'},
+  {state:make(7,0,0,true,true),expected:'前進守備'},
+  {state:make(9,-1,1,true),expected:'前進守備'},
+  {state:make(9,3,0,true),expected:'深めの守備'},
+  {state:make(9,1,0,true),expected:'通常守備'},
+  {state:make(9,-2,0,true),expected:'通常守備'},
+  {state:make(9,0,2,true),expected:'通常守備'}
+ ].map(x=>({...x,actual:defensiveAlignment(x.state).name}));
+})()`,ctx);
+for(const {actual,expected} of alignmentAudit)assert.equal(actual,expected,'defensive alignment follows inning and score');
+console.log('SCORE-AWARE INFIELD ALIGNMENT CASES PASS');
