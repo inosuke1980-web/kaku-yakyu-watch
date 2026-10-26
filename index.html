@@ -930,16 +930,23 @@ if(tactics()){if(game.ended){render();return}
  render(beforeBases);animateBaseRunners(beforeBases,beforeRuns,halfAtStart,inningAtStart);renderRoster(activeRoster);return;}
 const {bat}=current(),p=batter(),pi=pitcher();game.totalPitches++;pi.pitches++;game.pitch++;
 const pskill=(pi.control+pi.stuff)/2,x=Math.random();let complete=false;
-if(x<clamp(.29+(pi.control-p.eye)*.0015,.17,.42)){animateBatterTake(p,'ball');game.balls++;showPitchResult('ボール','ball');log(`${p.name} ボール。`)}
-else if(x<.54){animateBatterTake(p,'strike');game.strikes++;showPitchResult('ストライク','strike');log(`${p.name} 見逃しストライク。`)}
+if(x<clamp(.29+(pi.control-p.eye)*.0015,.17,.42)){animateBatterTake(p,'ball');catcherReceiveVisual('ball',animationToken);game.balls++;showPitchResult('ボール','ball');log(`${p.name} ボール。`)}
+else if(x<.54){animateBatterTake(p,'strike');catcherReceiveVisual('strike',animationToken);game.strikes++;showPitchResult('ストライク','strike');log(`${p.name} 見逃しストライク。`)}
 else if(x<.70){animateBatterSwing(p,false);foulBall(p)}
+else if(x<.755){
+ // The miss is a distinct swinging strike rather than a called strike.
+ animateBatterSwing(p,false);
+ batterReactionVisual('whiff',p,animationToken);
+ catcherReceiveVisual('whiff',animationToken);
+ game.strikes++;showPitchResult('空振り！','strike');log(p.name+' 空振り。');
+ }
 else{complete=true;animateBatterSwing(p,true);showPitchResult('インプレー','play');const z=Math.random(),hitChance=clamp(.22+(p.contact-pskill)*.002,.10,.42);
 if(z<hitChance){const pow=Math.random(),bases=pow<.75?1:pow<.92?2:pow<.96?3:4;if(bases<=2&&game.totalPitches%3===0)hit(p,bases,'liner');else hit(p,bases)}
 else if(z<hitChance+.13){lineBall(p)}
 else if(z<hitChance+.32){flyBall(p)}
 else{groundBall(p)} }
 if(!complete&&game.balls>=4){showPitchResult('フォアボール','ball');walk(p);complete=true}
-if(!complete&&game.strikes>=3){showPitchResult('三振！','strike');outBatter(p,true);log(`${p.name} 三振！`);complete=true}
+if(!complete&&game.strikes>=3){batterReactionVisual('strikeout',p,animationToken);showPitchResult('三振！','strike');outBatter(p,true);log(`${p.name} 三振！`);complete=true}
 if(complete){bat.bat++;game.balls=game.strikes=0}
 if(game.ended){render();return}
 if(game.outs>=3)endHalf();else{if(!complete&&trySteal()&&game.outs>=3)endHalf();else maybeChangePitcher()}
@@ -1008,10 +1015,34 @@ function batterReactionVisual(kind,player,token){
   group.setAttribute('data-reaction','ready');
  },kind==='strikeout'?700:330));
 }
+// Between pitches the catcher gives a small target and resets the glove.
+function catcherSetTarget(token){
+ const glove=$('catcherGlove'),crouch=$('catcherCrouch');
+ if(!glove||!crouch)return;
+ glove.setAttribute('cx','207');glove.setAttribute('cy','302');
+ crouch.setAttribute('d','M 193 320 Q 200 331 207 320');
+ playTimers.push(setTimeout(()=>{
+  if(token!==animationToken)return;
+  crouch.setAttribute('d','M 193 320 Q 200 328 207 320');
+ },220));
+}
+// Waiting batter makes a small rhythmic knee bend, never while a swing or run
+// animation owns the batting sprite.
+function batterReadyMotion(token){
+ if(Date.now()<batterVisualLockedUntil||batterRunnerOnField)return;
+ const knees=$('batterKnees');if(!knees)return;
+ knees.setAttribute('d','M -5 17 L -8 24 M 5 17 L 10 24');
+ playTimers.push(setTimeout(()=>{
+  if(token!==animationToken)return;
+  knees.setAttribute('d','M -5 17 L -9 23 M 5 17 L 9 23');
+ },200));
+}
 function drawPitch(type){
  const ball=$('ball'),startX=200,startY=203,endY=278;
  const ballToken=++animationToken;
  pitchActionVisual(type,ballToken);
+ catcherSetTarget(ballToken);
+ batterReadyMotion(ballToken);
  ball.style.transition='none';
  ball.setAttribute('cx',startX);ball.setAttribute('cy',startY);
  const started=performance.now();
