@@ -1213,3 +1213,7 @@ console.log('SYNCHRONIZED SECOND BASE FORCE CALL AND RUNNER SLIDE PASS');
 
 assert.match(html,/const decisionMs=Math\.max\(arrival,runnerMs\)\+110/,'first-base call waits for both catch and runner arrival');
 console.log('FIRST-BASE ARRIVAL CALLOUT ORDER PASS');
+
+assert.match(html,/const firstLeg=player==='1B'\?225:atSecond\?relay\.pickupToSecond:throwFlightMs/,'first baseman carries ball to first before its arrival clock completes');
+assert.match(html,/if\(player==='1B'\)moveBall\(first\[0\],first\[1\],225\)/,'first baseman ball movement matches its arrival clock');
+console.log('FIRST BASEMAN FIELD-AND-CARRY TIMELINE PASS');
