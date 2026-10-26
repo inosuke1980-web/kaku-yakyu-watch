@@ -1401,7 +1401,9 @@ function animateBatterRun(result,speed=55,groundPlan=null){
  const finishFirst=groundPlan?.runnerMs||normal;
  const extra=['hit2','hit3','homeRun'].includes(result);
  const single=result==='hit1';
+ const outfieldSingle=result==='hit1Outfield';
  const route=single?'through':extra?'round':'straight';
+ // Outfield singles are rounded down to first without running through the bag.
  const firstDuration=result==='fly'?440:finishFirst;
  const runningMs=Math.max(120,firstDuration-departureMs);
  if(result==='fly'){
@@ -1435,7 +1437,7 @@ function animateBatterRun(result,speed=55,groundPlan=null){
   result==='fly'?700:
   Math.max(finalArrival+65,groundPlan?.decisionMs||0);
  // Use the player which is actually on a base, never the next batter.
- if(['hit1','hit2','hit3','forceSafe'].includes(result)){
+ if(['hit1','hit1Outfield','hit2','hit3','forceSafe'].includes(result)){
   const player=batter();
   if(player&&game.bases.some(p=>p&&p.id===player.id)){
    stageRunnerArrival(player.id,finalArrival,token);
@@ -1716,7 +1718,7 @@ function outfieldPursuitPlan(kind,info,origin,duration){
   groundStrength:info?.strength||'normal'};
 }
 function animate(kind,targetInfo=null,runnerSpeed=55,hitBases=null){
- const runnerType=targetInfo?.flight?(hitBases===1?'hit1':hitBases===2?'hit2':hitBases===3?'hit3':'homeRun'):kind==='outfieldError'?'hit1':kind==='linerHit'?'hit1':kind==='linerHit2'?'hit2':kind==='single'?'hit1':kind==='double'?'hit2':kind==='home'?'homeRun':kind==='fly'?'fly':null;
+ const runnerType=targetInfo?.flight?(hitBases===1?'hit1Outfield':hitBases===2?'hit2':hitBases===3?'hit3':'homeRun'):kind==='outfieldError'?'hit1Outfield':kind==='linerHit'?'hit1Outfield':kind==='linerHit2'?'hit2':kind==='single'?'hit1Outfield':kind==='double'?'hit2':kind==='home'?'homeRun':kind==='fly'?'fly':null;
  if(runnerType)animateBatterRun(runnerType,runnerSpeed);
  // Delay the catch call until the ball reaches the fielder. Do not spoil the result.
  const ball=$('ball'),shadow=$('ballShadow'),field=$('fielders'),token=animationToken;
