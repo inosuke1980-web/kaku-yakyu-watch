@@ -1100,3 +1100,35 @@ assert.match(html,/batterReactionVisual\('foul',player,token\)/,'foul balance re
 assert.match(html,/batterReactionVisual\(call,player,token\)/,'called pitch stance reaction');
 assert.match(html,/if\(token!==animationToken\)return/,'visual timeout invalidation on stop');
 console.log('TEN PITCHER CATCHER BATTER VISUAL FEATURES PASS');
+
+const twentyRunnerVisualAudit=vm.runInContext(`(()=>{
+ const leads=[0,1,2].map(i=>runnerLeadPlan(i,55));
+ const fast=runnerLeadPlan(0,90),slow=runnerLeadPlan(0,20);
+ const pickoff=[0,1,2].map(pickoffVisualPlan);
+ const caught=stealPlayPlan(55,false),stolen=stealPlayPlan(55,true);
+ return {leads,fast,slow,pickoff,caught,stolen};
+})()`,ctx);
+assert.equal(twentyRunnerVisualAudit.leads.length,3,'1: leads on three bases');
+assert.ok(twentyRunnerVisualAudit.leads[0].lead[0]<323,'2: first runner leads toward second');
+assert.ok(twentyRunnerVisualAudit.leads[1].lead[0]<200,'3: second runner leads toward third');
+assert.ok(twentyRunnerVisualAudit.leads[2].lead[0]>77,'4: third runner leads toward home');
+assert.ok(twentyRunnerVisualAudit.fast.extendMs<twentyRunnerVisualAudit.slow.extendMs,'5: speed affects lead');
+assert.ok(twentyRunnerVisualAudit.fast.retreatMs<twentyRunnerVisualAudit.slow.retreatMs,'6: speed affects retreat');
+assert.ok(twentyRunnerVisualAudit.leads[0].retreatMs>0,'7: runner returns after lead');
+assert.ok(twentyRunnerVisualAudit.pickoff.every(p=>p.throwMs>0),'8: pickoff clock');
+assert.deepEqual(Array.from(twentyRunnerVisualAudit.pickoff[0].base),[323,169],'9: first pickoff');
+assert.deepEqual(Array.from(twentyRunnerVisualAudit.pickoff[1].base),[200,47],'10: second pickoff');
+assert.deepEqual(Array.from(twentyRunnerVisualAudit.pickoff[2].base),[77,169],'11: third pickoff');
+assert.ok(twentyRunnerVisualAudit.caught.catchAt<twentyRunnerVisualAudit.caught.runnerMs,'12: caught stealing throw first');
+assert.ok(twentyRunnerVisualAudit.stolen.catchAt>twentyRunnerVisualAudit.stolen.runnerMs,'13: successful steal runner first');
+assert.ok(html.includes('id="pitcherSet"'),'14: set graphic');
+assert.ok(html.includes('id="pitcherGlance"'),'15: look at runner');
+assert.ok(html.includes('id="catcherThrowSprite"'),'16: catcher throw graphic');
+assert.ok(html.includes('data-steal-cover'),'17: second base cover');
+assert.ok(html.includes('data-steal-phase'),'18: steal break/slide');
+assert.ok(html.includes('data-steal-tag'),'19: tag result');
+assert.ok(html.includes("'leadRunnerSprites','stealPlaySprites','pickoffSprites'"),'20: cancel cleanup');
+assert.ok(html.includes('if(game.stealVisual)animateStealPlay(game.stealVisual)'),'steal motion called');
+assert.ok(html.includes('if(game.stealVisual?.id===person.id||index===i'),'avoid duplicate runner');
+assert.ok(html.includes('if(pickoff){'),'pickoff optional');
+console.log('TWENTY RUNNER AND PICKOFF VISUAL FEATURES PASS');
