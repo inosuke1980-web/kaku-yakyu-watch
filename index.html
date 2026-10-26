@@ -569,9 +569,9 @@ function groundPlayTimes(p,direction,fielder){
  const strength=direction.strength||'normal';
  const origin=infieldOrigin(direction.defender)||point;
  const pursuit=Math.hypot(point[0]-origin[0],point[1]-origin[1]);
- const softness=strength==='soft'?440:strength==='hard'?-85:0;
- const pickup=Math.round(clamp(650+pursuit*5.6+softness-(fielder.field-50)*2.5
-  -(fielder.speed-50)*1.7+rnd(-95,95),480,1720));
+ const softness=strength==='soft'?240:strength==='hard'?-55:0;
+ const pickup=Math.round(clamp(465+pursuit*2.15+softness-(fielder.field-50)*2.5
+  -(fielder.speed-50)*1.7+rnd(-75,75),350,1280));
  const throwMs=throwFlightMs(fielder.arm,point,first);
  const releaseMs=fielderReleaseMs(fielder.field,fielder.arm);
  const runnerMs=Math.round(1553-(p.speed-55)*2.5);
