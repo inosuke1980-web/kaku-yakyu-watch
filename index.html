@@ -36,7 +36,7 @@
 .scoreboard-scroll td.attack-team{background:#1f382f}
 .scoreboard-hint{font-size:11px;color:#a7c6b5;margin:5px 0 0}
 @media(max-width:750px){.scoreboard-scroll th:first-child,.scoreboard-scroll td:first-child{min-width:102px;width:112px;max-width:112px}.scoreboard-scroll th,.scoreboard-scroll td{padding:6px 4px}}
-.current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.6.8 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
+.current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.6.9 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
 <section class="card"><h2>試合生成の条件</h2><div class="flex" style="gap:12px">
 <label>カテゴリー <select id="category"><option value="random">ランダム（現在は高校のみ）</option><option value="high">高校野球</option><option value="university" disabled>大学野球（今後追加）</option><option value="corporate" disabled>社会人野球（今後追加）</option><option value="pro" disabled>プロ野球（今後追加）</option></select></label>
 <label>試合種別 <select id="matchType"><option value="random">ランダム</option><option value="official">公式戦</option><option value="practice">練習試合</option></select></label>
@@ -566,7 +566,10 @@ function groundForceTimeline(direction,thrower,timing,runner,quick=false){
  // with the batter's home-to-first clock, adjusted by runner speed.
  const runnerAt=Math.round(clamp(1390-(runner.speed-55)*3.3,1120,1660));
  const firstAt=receiveAt+relay.pivotRelease+relay.secondToFirst;
- return {relay,receiveAt,runnerAt,firstAt,forceOut:receiveAt+25<runnerAt,
+ const forceOut=receiveAt+25<runnerAt;
+ // The throw decides the out; the visible call waits until the runner reaches the bag.
+ const forceCallAt=Math.max(receiveAt+70,runnerAt+45);
+ return {relay,receiveAt,runnerAt,firstAt,forceCallAt,forceOut,
   doubleOut:firstAt+25<timing.runnerMs,quick};
 }
 function groundBall(p){
@@ -626,7 +629,7 @@ function groundBall(p){
  const quickForce=couldTurnTwo?groundForceTimeline(direction,fielder,quickTiming,b[0],true):null;
  if(quickForce?.forceOut&&quickForce.doubleOut&&chance(clamp(.60+(fielder.field-55)*.004,.34,.83))){
   game.forceOutVisual={id:b[0].id,speed:b[0].speed,outcome:'double',
-   runnerAt:quickForce.runnerAt,receiveAt:quickForce.receiveAt};
+   runnerAt:quickForce.runnerAt,receiveAt:quickForce.receiveAt,forceCallAt:quickForce.forceCallAt};
   b[0]=null;game.outs+=2;pi.outsPitched+=2;
   log(`${p.name} ${direction.label}、二塁から一塁へ！ ダブルプレー！`);
   animateGround('double',direction,p.speed,fielder.arm,quickTiming);return;
@@ -636,7 +639,7 @@ function groundBall(p){
  const ordinaryForce=b[0]&&relay?groundForceTimeline(direction,fielder,timing,b[0]):null;
  if(ordinaryForce?.forceOut&&chance(clamp(.16+(fielder.field-50)*.002,.08,.29))){
   game.forceOutVisual={id:b[0].id,speed:b[0].speed,outcome:'force',
-   runnerAt:ordinaryForce.runnerAt,receiveAt:ordinaryForce.receiveAt};
+   runnerAt:ordinaryForce.runnerAt,receiveAt:ordinaryForce.receiveAt,forceCallAt:ordinaryForce.forceCallAt};
   b[0]=p;game.outs++;pi.outsPitched++;
   log(`${p.name} ${direction.label}、二塁封殺。一塁セーフ。`);
   animateGround('force',direction,p.speed,fielder.arm,timing);return;
@@ -1585,22 +1588,23 @@ function animateForceAtSecond(visual,receiveAt,holdUntil,token){
  layer.append(circle);
  const planned=Math.round(clamp(runnerSegmentMs(visual.speed),500,960));
  const arrival=Number.isFinite(visual.runnerAt)?visual.runnerAt:Math.max(460,planned);
+ const runStart=45,slideDuration=150,slideStart=arrival-slideDuration;
+ const approachMs=Math.max(180,slideStart-runStart);
  // The same runner-arrival timestamp used by the official force decision.
  circle.setAttribute('data-runner-arrival-ms',String(arrival));
  circle.setAttribute('data-force-receive-ms',String(receiveAt));
  const later=(ms,fn)=>playTimers.push(setTimeout(()=>{if(token===animationToken)fn()},ms));
  later(45,()=>{
   circle.setAttribute('data-run-state','sprint');
-  moveRunnerRoundBase(circle,[212,56],Math.max(250,arrival-190),'run',token);
+  moveRunnerRoundBase(circle,[212,56],approachMs,'run',token);
  });
- later(arrival-110,()=>{
+ later(slideStart,()=>{
   circle.setAttribute('data-run-state','slide');
   circle.setAttribute('r','6');
-  moveRunnerRoundBase(circle,[200,47],150,'charge',token);
+  moveRunnerRoundBase(circle,[200,47],slideDuration,'charge',token);
  });
- later(receiveAt+70,()=>{
-  // On a force out the ball has already reached the bag; a runner may
-  // slide there afterwards, but can never be ruled out on a late throw.
+ later(Math.max(receiveAt+70,arrival+45),()=>{
+  // The force was completed when the ball arrived; signal only after the slide.
   circle.setAttribute('data-run-state','out');
   circle.setAttribute('stroke','#f58b8b');
   circle.setAttribute('stroke-width','3');
@@ -1633,7 +1637,8 @@ function animateGround(outcome,direction,batterSpeed=55,arm=55,timing=null){
  const arrival=outcome==='double'?secondThrowAt+transferMs:firstArrival;
  const runnerMs=timing?timing.runnerMs:runnerFirstMs(batterSpeed);
  const decisionMs=arrival+110;
- const holdUntil=Math.max(decisionMs,runnerMs)+290;
+ const forceCallAt=atSecond?Math.max(firstArrival+70,game.forceOutVisual?.forceCallAt||0):0;
+ const holdUntil=Math.max(decisionMs,runnerMs,forceCallAt)+290;
  animationHoldUntil=Math.max(animationHoldUntil,Date.now()+holdUntil+330);
  ball.style.transition='none';ball.setAttribute('cx','200');ball.setAttribute('cy','283');ball.setAttribute('r','4');
  showPitchResult('', 'neutral');
@@ -1664,9 +1669,11 @@ function animateGround(outcome,direction,batterSpeed=55,arm=55,timing=null){
   moveBall(first[0],first[1],transferMs);
  });
  if(atSecond){
-  later(firstArrival+45,()=>showPitchResult('二塁アウト！','out'));
-  if(outcome==='double')later(decisionMs,()=>showPitchResult('ダブルプレー！','out'));
-  else later(Math.max(firstArrival+330,game.forceOutVisual?.runnerAt||0),()=>showPitchResult('二塁封殺','out'));
+  // The ball establishes the verdict, but the call follows the runner's slide.
+  if(outcome==='double'){
+   later(forceCallAt,()=>showPitchResult('二塁アウト！','out'));
+   later(Math.max(decisionMs,forceCallAt+140),()=>showPitchResult('併殺！','out'));
+  }else later(forceCallAt,()=>showPitchResult('二塁封殺！','out'));
  }else later(decisionMs,()=>showPitchResult(outcome==='safe'?'内野安打！':'一塁アウト！',outcome==='safe'?'hit':'out'));
  // Keep 1B physically on the bag through the call before returning to position.
  later(holdUntil,()=>{
