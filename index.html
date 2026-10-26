@@ -773,7 +773,9 @@ function outfieldContact(type){
  const caught=chance(catchProb);
  const ordinary=distance<reach*.72;
  const dropped=!caught&&ordinary&&chance(clamp(.035+(55-fielder.field)*.0012,.008,.10));
- const gapMiss=!caught&&!dropped&&excess>8;
+ // A ball past the glove is not automatically a double: most are cut off for singles.
+ // Only clear, genuinely deep gaps produce frequent extra bases.
+ const gapMiss=!caught&&!dropped&&excess>12&&point[1]<-20&&chance(clamp(.18+(excess-12)*.0018,.18,.34));
  return {defender:cover.defender,label:cover.label,point,fielder,caught,dropped,type,
   catchProb,distance,reach,excess,gapMiss,diving:caught&&distance>reach*.73,
   nearMiss:!caught&&!dropped&&distance>reach*.7,atFence:point[1]<-110};
@@ -1762,7 +1764,11 @@ function animateGround(outcome,direction,batterSpeed=55,arm=55,timing=null){
   // There is no throw to first; the first baseman remains in position.
  }else if(player==='1B'){
   // Same player: only leave the ball after it has been fielded.
-  later(fieldMs,()=>moveGroundFielder(defender,label,first,225,token));
+  later(fieldMs,()=>{
+   defender.setAttribute('data-first-phase','carry');
+   moveGroundFielder(defender,label,first,225,token);
+  });
+  later(firstArrival,()=>defender.setAttribute('data-first-phase','bag'));
  }else{
   // First baseman starts moving at contact, not after the throw.
   moveGroundFielder(firstCover,firstLabel,first,Math.min(520,Math.max(260,arrival-230)),token);
@@ -1786,6 +1792,7 @@ function animateGround(outcome,direction,batterSpeed=55,arm=55,timing=null){
  // Keep 1B physically on the bag through the call before returning to position.
  later(holdUntil,()=>{
   if(outcome!=='force'&&player!=='1B')moveGroundFielder(firstCover,firstLabel,firstOrigin,350,token);
+  defender.setAttribute('data-first-phase','');
   moveGroundFielder(defender,label,origin,350,token);
  });
 }
