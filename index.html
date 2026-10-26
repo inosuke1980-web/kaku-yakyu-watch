@@ -1632,7 +1632,7 @@ function animateGround(outcome,direction,batterSpeed=55,arm=55,timing=null){
  const relay=atSecond?groundSecondRelayPlan(direction,{arm}):null;
  // A first baseman fielding away from the bag still needs time to carry the ball there.
  const firstLeg=player==='1B'?225:atSecond?relay.pickupToSecond:throwFlightMs(arm,fielded,first);
- const firstArrival=fieldMs+releaseMs+firstLeg;
+ const firstArrival=fieldMs+(player==='1B'?25:releaseMs)+firstLeg;
  const transferMs=outcome==='double'?relay.secondToFirst:0;
  const secondThrowAt=firstArrival+(relay?.pivotRelease||0);
  const arrival=outcome==='double'?secondThrowAt+transferMs:firstArrival;
@@ -1662,7 +1662,7 @@ function animateGround(outcome,direction,batterSpeed=55,arm=55,timing=null){
   moveGroundFielder(firstCover,firstLabel,first,Math.min(520,Math.max(260,arrival-230)),token);
  }
  requestAnimationFrame(()=>{if(token===animationToken)moveBall(fielded[0],fielded[1],fieldMs)});
- later(fieldMs+releaseMs,()=>{
+ later(fieldMs+(player==='1B'?25:releaseMs),()=>{
   if(player==='1B')moveBall(first[0],first[1],225);
   else moveBall(atSecond?second[0]:first[0],atSecond?second[1]:first[1],firstLeg);
  });
