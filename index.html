@@ -620,7 +620,7 @@ function groundRangePlan(direction,fielder,offset=0){
  const pos=direction.defender,origin=infieldOrigin(pos)||direction.point;
  const point=[clamp(direction.point[0]+offset,56,344),direction.point[1]];
  const distance=Math.hypot(point[0]-origin[0],point[1]-origin[1]);
- const range=clamp(27+(fielder.field-50)*.34+(fielder.speed-50)*.24,13,65)+(direction.strength==='soft'?58:0);
+ const range=clamp(42+(fielder.field-50)*.34+(fielder.speed-50)*.24,23,79)+(direction.strength==='soft'?58:0);
  const reachable=distance<=range;
  return {point,origin,distance,range,reachable,defender:pos};
 }
@@ -747,9 +747,11 @@ const OUTFIELD_ZONES=[
 // Compare each outfielder's actual position, foot speed and glove range.
 // The best-positioned player takes the ball, including a CF crossing into the gaps.
 function outfieldCoverage(type,point,players){
+ const parkPositions=parkOutfieldPositions();
  const candidates=OUTFIELD_ZONES.map(zone=>{
   const fielder=players[zone.playerIndex];
-  const distance=Math.hypot(point[0]-zone.origin[0],point[1]-zone.origin[1]);
+  const origin=parkPositions[zone.defender]||zone.origin;
+  const distance=Math.hypot(point[0]-origin[0],point[1]-origin[1]);
   const reach=clamp((type==='fly'?67:46)+(fielder.speed-50)*.43+(fielder.field-50)*.25,
    type==='fly'?36:23,type==='fly'?101:75);
   const timeRatio=distance/reach;
@@ -1253,10 +1255,10 @@ else if(x<.755){
  catcherReceiveVisual('whiff',animationToken);
  game.strikes++;showPitchResult('空振り！','strike');log(p.name+' 空振り。');
  }
-else{complete=true;animateBatterSwing(p,true);showPitchResult('', 'neutral');const z=Math.random(),hitChance=clamp(.22+(p.contact-pskill)*.002,.10,.42);
+else{complete=true;animateBatterSwing(p,true);showPitchResult('', 'neutral');const z=Math.random(),hitChance=clamp(.105+(p.contact-pskill)*.0013,.055,.23);
 if(z<hitChance){const pow=Math.random(),bases=parkHitBases(pow,game.parkShape);if(bases<=2&&game.totalPitches%3===0)hit(p,bases,'liner');else hit(p,bases)}
-else if(z<hitChance+.13){lineBall(p)}
-else if(z<hitChance+.32){flyBall(p)}
+else if(z<hitChance+.085){lineBall(p)}
+else if(z<hitChance+.225){flyBall(p)}
 else{groundBall(p)} }
 if(!complete&&game.balls>=4){showPitchResult('フォアボール','ball');walk(p);complete=true}
 if(!complete&&game.strikes>=3){batterReactionVisual('strikeout',p,animationToken);showPitchResult('三振！','strike');outBatter(p,true);log(`${p.name} 三振！`);complete=true}
