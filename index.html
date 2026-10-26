@@ -620,7 +620,7 @@ function groundRangePlan(direction,fielder,offset=0){
  const pos=direction.defender,origin=infieldOrigin(pos)||direction.point;
  const point=[clamp(direction.point[0]+offset,56,344),direction.point[1]];
  const distance=Math.hypot(point[0]-origin[0],point[1]-origin[1]);
- const range=clamp(42+(fielder.field-50)*.34+(fielder.speed-50)*.24,23,79)+(direction.strength==='soft'?58:0);
+ const range=clamp(83+(fielder.field-50)*.34+(fielder.speed-50)*.24,59,113)+(direction.strength==='soft'?25:0);
  const reachable=distance<=range;
  return {point,origin,distance,range,reachable,defender:pos};
 }
