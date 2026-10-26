@@ -1636,7 +1636,8 @@ function animateGround(outcome,direction,batterSpeed=55,arm=55,timing=null){
  const secondThrowAt=firstArrival+(relay?.pivotRelease||0);
  const arrival=outcome==='double'?secondThrowAt+transferMs:firstArrival;
  const runnerMs=timing?timing.runnerMs:runnerFirstMs(batterSpeed);
- const decisionMs=arrival+110;
+ // Do not call the play at first before both the throw and batter-runner arrive.
+ const decisionMs=Math.max(arrival,runnerMs)+110;
  const forceCallAt=atSecond?Math.max(firstArrival+70,game.forceOutVisual?.forceCallAt||0):0;
  const holdUntil=Math.max(decisionMs,runnerMs,forceCallAt)+290;
  animationHoldUntil=Math.max(animationHoldUntil,Date.now()+holdUntil+330);
