@@ -1160,3 +1160,32 @@ assert.ok(pickoffOrderingAudit.pickoff>=0,'pickoff branch present');
 assert.ok(pickoffOrderingAudit.snap>pickoffOrderingAudit.pickoff,'pickoff settles defense without a concurrent walking animation');
 assert.ok(pickoffOrderingAudit.normal>pickoffOrderingAudit.snap,'normal pre-pitch reposition only follows non-pickoff branch');
 console.log('PICKOFF AND DEFENSIVE REPOSITION MUST NOT OVERLAP PASS');
+
+const forceTimelineAudit=vm.runInContext(`(()=>{
+ const old=game;
+ const roster=Array.from({length:20},()=>({field:65,arm:65,speed:55}));
+ game={half:0,teams:[{players:roster},{players:roster}]};
+ const direction={defender:'SS',point:[158,156]};
+ const thrower={arm:66};
+ const timing={pickup:620,releaseMs:210,runnerMs:1510};
+ const fast=groundForceTimeline(direction,thrower,timing,{speed:85});
+ const slow=groundForceTimeline(direction,thrower,timing,{speed:25});
+ const impossiblyLate=groundForceTimeline(direction,thrower,{...timing,pickup:1700},{speed:55});
+ game=old;
+ return {fast,slow,impossiblyLate};
+})()`,ctx);
+assert.ok(forceTimelineAudit.fast.runnerAt<forceTimelineAudit.slow.runnerAt,'fast runner arrives at second earlier');
+assert.ok(forceTimelineAudit.impossiblyLate.receiveAt>forceTimelineAudit.impossiblyLate.runnerAt,'late throw arrives after runner');
+assert.equal(forceTimelineAudit.impossiblyLate.forceOut,false,'late throw may never get a second-base force');
+for(const plan of [forceTimelineAudit.fast,forceTimelineAudit.slow]){
+ assert.equal(plan.forceOut,plan.receiveAt+25<plan.runnerAt,'force result derives only from the same timestamps');
+ assert.equal(plan.firstAt,plan.receiveAt+plan.relay.pivotRelease+plan.relay.secondToFirst,'double-play first-base call follows transfer');
+}
+assert.ok(html.includes('if(ordinaryForce?.forceOut&&chance('),'ordinary force requires timing predicate');
+assert.ok(html.includes('if(quickForce?.forceOut&&quickForce.doubleOut&&chance('),'DP requires both base timing predicates');
+assert.ok(html.includes('runnerAt:ordinaryForce.runnerAt,receiveAt:ordinaryForce.receiveAt'),'actual force timestamps stored for animation');
+assert.ok(html.includes("const arrival=Number.isFinite(visual.runnerAt)?visual.runnerAt"),'forced runner motion uses actual arrival');
+assert.ok(html.includes("later(firstArrival+45,()=>showPitchResult('二塁アウト！'"),'second out appears only after ball arrives');
+assert.ok(html.includes('.pitch-result.neutral{visibility:hidden'),'neutral status does not appear as a speech bubble');
+assert.ok(html.includes("'インプレー','投球中…','守備位置を調整中…'"),'generic phrases hidden');
+console.log('FORCE TIMELINE AND CALLOUT REGRESSION PASS');
