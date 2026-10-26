@@ -179,8 +179,8 @@ const PARK_SHAPES={
  standard:{name:'標準球場',center:-122,shoulder:-80,left:82,right:82,dimensions:'両翼91m・中堅120m'},
  wide:{name:'広い球場',center:-146,shoulder:-99,left:82,right:82,dimensions:'両翼100m・中堅130m'},
  small:{name:'狭い球場',center:-92,shoulder:-60,left:82,right:82,dimensions:'両翼85m・中堅110m'},
- leftWide:{name:'左翼が広い球場',center:-116,shoulder:-99,left:82,right:82,dimensions:'左翼100m・右翼85m・中堅118m'},
- rightWide:{name:'右翼が広い球場',center:-116,shoulder:-60,left:82,right:82,dimensions:'左翼85m・右翼100m・中堅118m'},
+ leftWide:{name:'左翼が広い球場',center:-116,shoulder:-99,rightShoulder:-60,left:82,right:82,dimensions:'左翼100m・右翼85m・中堅118m'},
+ rightWide:{name:'右翼が広い球場',center:-116,shoulder:-60,rightShoulder:-99,left:82,right:82,dimensions:'左翼85m・右翼100m・中堅118m'},
  dome:{name:'ドーム球場',center:-130,shoulder:-83,left:82,right:82,dimensions:'両翼92m・中堅122m'},
  grassPark:{name:'内野芝の球場',center:-122,shoulder:-80,left:82,right:82,dimensions:'両翼92m・中堅120m'},
  grassDome:{name:'内野芝のドーム',center:-130,shoulder:-83,left:82,right:82,dimensions:'両翼92m・中堅122m'}
@@ -188,13 +188,13 @@ const PARK_SHAPES={
 // Ball-flight physics are deliberately unchanged in this first visual stadium pass.
 function applyParkShape(shape){
  const p=PARK_SHAPES[shape]||PARK_SHAPES.standard;
- const top=p.center;
- const surface=`M12 171 L12 ${p.left} Q25 ${p.shoulder} 200 ${top} Q375 ${p.shoulder} 388 ${p.right} L388 171 L200 317 Z`;
- const fence=`M12 ${p.left} Q25 ${p.shoulder} 200 ${top} Q375 ${p.shoulder} 388 ${p.right}`;
+ const top=p.center;const rightShoulder=p.rightShoulder??p.shoulder;
+ const surface=`M12 171 L12 ${p.left} Q25 ${p.shoulder} 200 ${top} Q375 ${rightShoulder} 388 ${p.right} L388 171 L200 317 Z`;
+ const fence=`M12 ${p.left} Q25 ${p.shoulder} 200 ${top} Q375 ${rightShoulder} 388 ${p.right}`;
  const paths={
   parkSurface:surface,parkSurfaceTexture:surface,
-  parkGrandstand:`M0 170 L0 72 Q12 ${p.shoulder-38} 200 ${top-28} Q388 ${p.shoulder-38} 400 72 L400 170 L200 328 Z`,
-  parkWarningTrack:`M8 171 L8 82 Q25 ${p.shoulder-8} 200 ${top-8} Q375 ${p.shoulder-8} 392 82 L392 171 L200 320 Z`,
+  parkGrandstand:`M0 170 L0 72 Q12 ${p.shoulder-38} 200 ${top-28} Q388 ${rightShoulder-38} 400 72 L400 170 L200 328 Z`,
+  parkWarningTrack:`M8 171 L8 82 Q25 ${p.shoulder-8} 200 ${top-8} Q375 ${rightShoulder-8} 392 82 L392 171 L200 320 Z`,
   parkFence:fence
  };
  for(const [id,d] of Object.entries(paths))$(id)?.setAttribute('d',d);
