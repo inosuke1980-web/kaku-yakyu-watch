@@ -34,6 +34,10 @@ assert.ok(parkHitAudit.wide.triple>parkHitAudit.small.triple);
 assert.ok(parkHitAudit.small.homer>parkHitAudit.wide.homer);
 assert.match(html,/bases=parkHitBases\(pow,game\.parkShape\)/,'live pitch outcome uses selected stadium');
 console.log('EIGHT STADIUM HIT-PROBABILITY CALIBRATIONS PASS');
+// The pitcher uses a compact glove, not a long line resembling a thrown bat.
+assert.match(html,/<circle id="pitcherSet"[^>]*r="3\.4"/,'pitcher glove is compact');
+assert.doesNotMatch(html,/<path id="pitcherSet"/,'pitcher no longer carries long horizontal bat-like stroke');
+console.log('PITCHER VISUAL GEOMETRY PASS');
 
 const results={games:0,extraInnings:0,maxInning:0,violations:[],scores:0,tactics:{}};
 for(let n=0;n<1000;n++){
