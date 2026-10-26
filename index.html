@@ -575,7 +575,8 @@ function groundPlayTimes(p,direction,fielder){
  const throwMs=throwFlightMs(fielder.arm,point,first);
  const releaseMs=fielderReleaseMs(fielder.field,fielder.arm);
  const runnerMs=Math.round(1553-(p.speed-55)*2.5);
- const arrive=pickup+releaseMs+throwMs;
+ // First baseman carries the ball to first: never invent a throw to himself.
+ const arrive=direction.defender==='1B'?pickup+225:pickup+releaseMs+throwMs;
  const risk=clamp(.025+(55-fielder.field)*.0012+(50-fielder.arm)*.0003,.008,.115);
  return {pickup,throwMs,releaseMs,runnerMs,arrive,risk,second,strength};
 }
@@ -1735,7 +1736,7 @@ function animateGround(outcome,direction,batterSpeed=55,arm=55,timing=null){
  const relay=atSecond?groundSecondRelayPlan(direction,{arm}):null;
  // A first baseman fielding away from the bag still needs time to carry the ball there.
  const firstLeg=player==='1B'?225:atSecond?relay.pickupToSecond:throwFlightMs(arm,fielded,first);
- const firstArrival=fieldMs+(player==='1B'?25:releaseMs)+firstLeg;
+ const firstArrival=player==='1B'?(timing?.arrive??fieldMs+225):fieldMs+releaseMs+firstLeg;
  const transferMs=outcome==='double'?relay.secondToFirst:0;
  const secondThrowAt=firstArrival+(relay?.pivotRelease||0);
  const arrival=outcome==='double'?secondThrowAt+transferMs:firstArrival;
@@ -1748,7 +1749,9 @@ function animateGround(outcome,direction,batterSpeed=55,arm=55,timing=null){
  ball.style.transition='none';ball.setAttribute('cx','200');ball.setAttribute('cy','283');ball.setAttribute('r','4');
  showPitchResult('', 'neutral');
  animateBatterRun(outcome==='double'?'doublePlay':outcome==='force'||outcome==='safe'?'forceSafe':'groundOut',batterSpeed,{runnerMs,decisionMs});
- if(outcome!=='force')showFirstCoverSprite(firstCover,firstLabel,token,fieldMs,player,decisionMs,holdUntil,arrival);
+ // A first baseman fielding a grounder is the same physical player as the bag cover.
+ // Avoid rendering a cloned 1B sprite over the actual fielder.
+ if(outcome!=='force'&&player!=='1B')showFirstCoverSprite(firstCover,firstLabel,token,fieldMs,player,decisionMs,holdUntil,arrival);
  if(relay){
   animateSecondBaseCover(relay,firstArrival,holdUntil,token,outcome==='double');
   animateForceAtSecond(game.forceOutVisual,firstArrival,holdUntil,token);
@@ -1759,13 +1762,13 @@ function animateGround(outcome,direction,batterSpeed=55,arm=55,timing=null){
   // There is no throw to first; the first baseman remains in position.
  }else if(player==='1B'){
   // Same player: only leave the ball after it has been fielded.
-  later(fieldMs+25,()=>moveGroundFielder(firstCover,firstLabel,first,225,token));
+  later(fieldMs,()=>moveGroundFielder(defender,label,first,225,token));
  }else{
   // First baseman starts moving at contact, not after the throw.
   moveGroundFielder(firstCover,firstLabel,first,Math.min(520,Math.max(260,arrival-230)),token);
  }
  requestAnimationFrame(()=>{if(token===animationToken)moveBall(fielded[0],fielded[1],fieldMs)});
- later(fieldMs+(player==='1B'?25:releaseMs),()=>{
+ later(fieldMs+(player==='1B'?0:releaseMs),()=>{
   if(player==='1B')moveBall(first[0],first[1],225);
   else moveBall(atSecond?second[0]:first[0],atSecond?second[1]:first[1],firstLeg);
  });
@@ -1782,8 +1785,8 @@ function animateGround(outcome,direction,batterSpeed=55,arm=55,timing=null){
  }else later(decisionMs,()=>showPitchResult(outcome==='safe'?'内野安打！':'一塁アウト！',outcome==='safe'?'hit':'out'));
  // Keep 1B physically on the bag through the call before returning to position.
  later(holdUntil,()=>{
-  if(outcome!=='force')moveGroundFielder(firstCover,firstLabel,firstOrigin,350,token);
-  if(player!=='1B')moveGroundFielder(defender,label,origin,350,token);
+  if(outcome!=='force'&&player!=='1B')moveGroundFielder(firstCover,firstLabel,firstOrigin,350,token);
+  moveGroundFielder(defender,label,origin,350,token);
  });
 }
 // Plan a visual pursuit using the ball's true destination, not only its
