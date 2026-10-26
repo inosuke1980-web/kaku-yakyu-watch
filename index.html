@@ -172,15 +172,19 @@ function defensiveAlignment(state=game){
   out['2B']=[positions['2B'][0]-(force?13:0)+pull,positions['2B'][1]+(force?4:0)];
   return out;
  };
- if(bases[2]&&outs<2){
+ const defending=state.teams?.[1-state.half];
+ const runs=t=>t?.runs?.reduce((a,b)=>a+(b||0),0)||0;
+ const lead=runs(defending)-runs(attacking);
+ // Do not sacrifice an easy out for one run early or with a comfortable lead.
+ // Only bring the infield in late when preventing the go-ahead/tying run matters.
+ const closeLate=state.inning>=7&&lead<=0&&lead>=-1;
+ if(bases[2]&&outs<2&&closeLate){
   return {name:'前進守備',positions:middle({...normal,'1B':[293,185],'3B':[107,185],'2B':[258,164],SS:[142,148]})};
  }
  if((bases[0]||bases[1])&&!bases[2]&&outs===0){
   return {name:'バント警戒',positions:middle({...normal,'1B':[292,176],'3B':[108,176]})};
  }
- const defending=state.teams?.[1-state.half];
- const runs=t=>t?.runs?.reduce((a,b)=>a+(b||0),0)||0;
- if(state.inning>=7&&runs(defending)-runs(attacking)>=3){
+ if(state.inning>=7&&lead>=3){
   return {name:'深めの守備',positions:middle({...normal,'1B':[277,135],'3B':[123,135],'2B':[257,116],SS:[143,91]})};
  }
  return {name:'通常守備',positions:middle(normal)};
