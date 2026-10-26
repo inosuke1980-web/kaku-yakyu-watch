@@ -1247,3 +1247,25 @@ assert.match(html,/kind==='outfieldError'\?'hit1Outfield'/,'outfield errors stop
 assert.match(html,/kind==='linerHit'\?'hit1Outfield'/,'outfield liner singles stop at first');
 assert.match(html,/kind==='single'\?'hit1Outfield'/,'ordinary outfield singles stop at first');
 console.log('OUTFIELD SINGLE FIRST BASE ARRIVAL REGRESSIONS PASS');
+
+
+// Thirty numeric route checks: six progress points across five runner routes.
+const routeAudit=vm.runInContext(`(()=>{
+ const kinds=['through','stop','round','straight','unknown'];
+ const steps=[0,.25,.50,.70,.85,1];
+ return kinds.flatMap(kind=>steps.map(t=>({kind,t,point:batterFirstRoute(kind,t)})));
+})()`,ctx);
+assert.equal(routeAudit.length,30,'all 30 route cases produced');
+for(const {kind,t,point} of routeAudit){
+ assert.ok(point.every(Number.isFinite),'route has finite coordinates: '+kind+' '+t);
+ if(t===0)assert.deepEqual(Array.from(point),[200,283],kind+' starts at home');
+ if(kind==='stop'&&t===1)assert.deepEqual(Array.from(point),[323,169],'outfield single stops at first');
+ if(kind==='through'&&t===1)assert.ok(point[0]>323&&point[1]<169,'infield runner passes first');
+ if(kind==='round'&&t===1)assert.deepEqual(Array.from(point),[323,169],'extra-base runner touches first');
+ if(kind==='straight'&&t===1)assert.deepEqual(Array.from(point),[323,169],'straight route touches first');
+ if(kind==='stop'&&t>.70&&t<1)assert.ok(point[0]<323&&point[1]>169,'deceleration stays before first');
+}
+const stopAt=Object.fromEntries(routeAudit.filter(x=>x.kind==='stop').map(x=>[x.t,x.point]));
+assert.ok(stopAt[.85][0]>stopAt[.70][0],'outfield runner still advances while slowing');
+assert.match(html,/const route=single\?'through':outfieldSingle\?'stop':extra\?'round':'straight'/,'single route selects deceleration');
+console.log('THIRTY BATTER RUNNING ROUTE CASES PASS');
