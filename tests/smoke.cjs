@@ -1391,3 +1391,22 @@ for(const p of infieldGeometry){
  assert.ok(p.second[1]<=112,'second baseman not too shallow');
 }
 console.log('BALANCED MIDDLE INFIELD POSITION CASES PASS');
+
+// Generated school profiles: current strength and past fictional results are distinct.
+const schoolProfileAudit=vm.runInContext(`(()=>{
+ const output=[];
+ for(let level=0;level<5;level++)for(let i=0;i<20;i++){
+  const profile=schoolProfile(level);
+  output.push({level,profile});
+ }
+ return output;
+})()`,ctx);
+assert.equal(schoolProfileAudit.length,100);
+for(const {level,profile} of schoolProfileAudit){
+ assert.equal(profile.rank,['E','D','C','B','A'][level]);
+ assert.ok(profile.previousSummer.startsWith('昨夏'));
+ assert.ok(profile.historyTier>=0&&profile.historyTier<=4);
+}
+assert.match(html,/miniTeamName\(t.name\).*t.profile\?\.rank/s,'mini scoreboard includes strength');
+assert.match(html,/t.profile\?\.previousSummer/,'mini scoreboard includes prior tournament result');
+console.log('SCHOOL STRENGTH AND HISTORY PROFILES PASS');
