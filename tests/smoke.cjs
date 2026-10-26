@@ -1269,3 +1269,31 @@ const stopAt=Object.fromEntries(routeAudit.filter(x=>x.kind==='stop').map(x=>[x.
 assert.ok(stopAt[.85][0]>stopAt[.70][0],'outfield runner still advances while slowing');
 assert.match(html,/const route=single\?'through':outfieldSingle\?'stop':extra\?'round':'straight'/,'single route selects deceleration');
 console.log('THIRTY BATTER RUNNING ROUTE CASES PASS');
+
+
+// 100 combinations: ten ball outcomes x ten fielding/award contexts.
+const verdictAudit=vm.runInContext(`(()=>{
+ const cases=[
+ ['outfieldError',null,'error'],['groundThrough',null,'hit'],['single',null,'hit'],
+ ['double',null,'hit'],['linerHit',null,'hit'],['linerHit2',null,'hit'],
+ ['home',null,'homeRun'],['fenceDouble',null,'hit'],['fly',{caught:true},'out'],
+ ['single',{nearMiss:true},'hit']
+ ];
+ const contexts=[null,{}, {diving:true},{atFence:true},{nearMiss:true},
+  {flight:'groundThrough'},{flight:'fenceDouble'},{flight:'gapLiner'},
+  {flight:'overHead'},{flight:'homeRun'}];
+ return cases.flatMap(([kind,base,expected])=>contexts.map(context=>{
+  const info={...(base||{}),...(context||{})};
+  return {kind,expected,context:context?.flight||Object.keys(context||{}).join(',')||'none',
+   verdict:battedBallVerdict(kind,info,kind==='double'||kind==='linerHit2'?2:1)};
+ }));
+})()`,ctx);
+assert.equal(verdictAudit.length,100,'100 batted-ball verdict cases');
+for(const item of verdictAudit){
+ assert.ok(item.verdict?.label,'ball verdict has visible text: '+item.kind+' '+item.context);
+ assert.ok(['hit','ball','strike'].includes(item.verdict.style),'verdict has recognized style');
+ if(item.kind==='outfieldError')assert.equal(item.verdict.type,'error','error cannot be called a hit');
+ if(item.kind==='fly'&&item.context!=='flight:homeRun')assert.equal(item.verdict.type,'out','caught fly is an out');
+}
+assert.match(html,/const verdict=battedBallVerdict\(kind,targetInfo,hitBases\)/,'landing display uses verdict helper');
+console.log('ONE HUNDRED BATTED BALL VERDICT CASES PASS');
