@@ -1210,3 +1210,6 @@ assert.ok(html.includes("later(forceCallAt,()=>showPitchResult('二塁封殺！'
 assert.ok(html.includes("later(Math.max(decisionMs,forceCallAt+140),()=>showPitchResult('併殺！'"),'DP call follows force-out signal');
 assert.ok(!html.includes("showPitchResult('インプレー','play')"),'no generic in-play speech bubble');
 console.log('SYNCHRONIZED SECOND BASE FORCE CALL AND RUNNER SLIDE PASS');
+
+assert.match(html,/const decisionMs=Math\.max\(arrival,runnerMs\)\+110/,'first-base call waits for both catch and runner arrival');
+console.log('FIRST-BASE ARRIVAL CALLOUT ORDER PASS');
