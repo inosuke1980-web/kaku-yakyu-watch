@@ -81,9 +81,9 @@
 <g id="fielders" fill="url(#retroFielder)" stroke="#1c3552" stroke-width="1.5"></g>
 <g id="runnerTacticalLayers" pointer-events="none"><g id="leadRunnerSprites"></g><g id="stealPlaySprites"></g><g id="pickoffSprites"></g></g>
 <g id="pitcherMotion" pointer-events="none">
- <path id="pitcherLeg" d="M 200 207 L 209 212" fill="none" stroke="#d5e6f2" stroke-width="3" stroke-linecap="round" visibility="hidden"/>
+ <path id="pitcherLeg" d="M 200 207 L 205 211" fill="none" stroke="#d5e6f2" stroke-width="2.2" stroke-linecap="round" visibility="hidden"/>
  <circle id="pitcherArm" cx="200" cy="202" r="4.5" fill="#a6c0d8" stroke="#264054" stroke-width="1" visibility="hidden"/>
- <path id="pitcherSet" d="M 194 196 L 206 196" stroke="#f9da91" stroke-width="3" stroke-linecap="round" visibility="hidden"/>
+ <circle id="pitcherSet" cx="197" cy="195" r="3.4" fill="#bd8857" stroke="#734923" stroke-width="1" visibility="hidden"/>
  <circle id="pitcherGlance" cx="200" cy="192" r="3" fill="#f2c49d" visibility="hidden"/>
 </g>
 <g id="catcherMotion" pointer-events="none">
@@ -1283,17 +1283,17 @@ function pitchActionVisual(type,token){
  const leg=$('pitcherLeg'),arm=$('pitcherArm'),glove=$('catcherGlove');
  if(!leg||!arm||!glove)return;
  leg.setAttribute('visibility','visible');arm.setAttribute('visibility','visible');
- leg.setAttribute('d','M 200 207 L 210 213');
+ leg.setAttribute('d','M 200 207 L 205 211');
  arm.setAttribute('cx','191');arm.setAttribute('cy','197');
  glove.setAttribute('cx',String(207+type.side*.25));
  glove.setAttribute('cy',String(302+type.drop*.25));
  const later=(ms,fn)=>playTimers.push(setTimeout(()=>{if(token===animationToken)fn()},ms));
  later(Math.round(type.flight*.20),()=>{
-  leg.setAttribute('d','M 200 207 L 190 213');
+  leg.setAttribute('d','M 200 207 L 196 211');
   arm.setAttribute('cx','211');arm.setAttribute('cy','197');
  });
  later(Math.round(type.flight*.70),()=>{
-  leg.setAttribute('d','M 200 207 L 204 211');
+  leg.setAttribute('d','M 200 207 L 202 210');
   arm.setAttribute('cx','203');arm.setAttribute('cy','203');
  });
  later(type.flight+120,()=>{
