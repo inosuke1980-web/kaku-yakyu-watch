@@ -1735,6 +1735,19 @@ function battedBallVerdict(kind,info=null,hitBases=null){
  if(hitBases===1||['single','linerHit'].includes(kind))return {label:'外野へのヒット！',style:'hit',type:'hit'};
  return null;
 }
+// The fielding outcome drives visible contact, miss and recovery choreography.
+function outfieldVisualPlan(kind,info,point,duration){
+ const dropped=kind==='outfieldError'||!!info?.dropped;
+ const caught=!!info?.caught&&!dropped;
+ const untouched=!caught&&!dropped;
+ const gap=untouched&&(!!info?.gapMiss||!!info?.nearMiss||info?.flight==='groundThrough');
+ const contactAt=Math.round(duration*(dropped?.82:caught?.96:.88));
+ const approach=gap?.72:untouched?.87:1;
+ const reach=[200+(point[0]-200)*approach,283+(point[1]-283)*approach];
+ const deflect=dropped?[Math.max(15,Math.min(385,point[0]+23)),Math.max(-120,Math.min(287,point[1]+26))]:null;
+ return {dropped,caught,untouched,gap,contactAt,approach,reach,deflect,
+  phase:dropped?'bobble':caught?'catch':gap?'chase':'pickup'};
+}
 function animate(kind,targetInfo=null,runnerSpeed=55,hitBases=null){
  const runnerType=targetInfo?.flight?(hitBases===1?'hit1Outfield':hitBases===2?'hit2':hitBases===3?'hit3':'homeRun'):kind==='outfieldError'?'hit1Outfield':kind==='linerHit'?'hit1Outfield':kind==='linerHit2'?'hit2':kind==='single'?'hit1Outfield':kind==='double'?'hit2':kind==='home'?'homeRun':kind==='fly'?'fly':null;
  if(runnerType)animateBatterRun(runnerType,runnerSpeed);
@@ -1756,8 +1769,9 @@ function animate(kind,targetInfo=null,runnerSpeed=55,hitBases=null){
   const pursuit=outfieldPursuitPlan(kind,targetInfo,[x,y],duration);
   const move=(point,ms)=>moveGroundFielder(nearest,label,point,ms,token);
   const at=(ms,callback)=>playTimers.push(setTimeout(()=>{if(token===animationToken)callback()},ms));
-  const diving=!!(targetInfo?.caught&&targetInfo.diving);
-  const missed=!!targetInfo?.nearMiss;
+  const visual=outfieldVisualPlan(kind,targetInfo,target,duration);
+  const diving=visual.caught&&!!targetInfo?.diving;
+  const missed=visual.gap;
   if(pursuit){
    if(targetInfo?.flight==='groundThrough'){
     // The ball never seeks the fielder: the fielder follows the visible roll.
@@ -1776,18 +1790,38 @@ function animate(kind,targetInfo=null,runnerSpeed=55,hitBases=null){
     if(pursuit.latePickup)at(duration+60,()=>move(pursuit.destination,280));
    }
   }else{
-   const point=diving?target:[x+(target[0]-x)*(missed?.80:1),y+(target[1]-y)*(missed?.80:1)];
+   // On an untouched hit the fielder stays short; on a drop he reaches the ball.
+   const fraction=missed?.76:1;
+   const point=diving?target:[x+(target[0]-x)*fraction,y+(target[1]-y)*fraction];
    move(point,Math.round(duration*.86));
   }
+  nearest.setAttribute('data-fielding-phase','pursuit');
+  at(visual.contactAt,()=>{
+   nearest.setAttribute('data-fielding-phase',visual.phase);
+   if(visual.dropped){
+    nearest.setAttribute('r','13');
+    nearest.setAttribute('stroke','#f58b8b');
+    nearest.setAttribute('stroke-width','3');
+    // The ball visibly ricochets away from the glove, then is recovered.
+    moveGroundFielder(ball,null,visual.deflect,210,token);
+    at(230,()=>{nearest.setAttribute('data-fielding-phase','recover');move(visual.deflect,300)});
+   }else if(visual.caught){
+    nearest.setAttribute('stroke','#ffe77b');nearest.setAttribute('stroke-width','3');
+   }else if(visual.gap){
+    nearest.setAttribute('data-fielding-phase','miss');
+   }
+  });
   if(diving)at(Math.round(duration*.75),()=>nearest.setAttribute('r','13'));
   at(duration+60,()=>{
    const verdict=battedBallVerdict(kind,targetInfo,hitBases);
    if(verdict)showPitchResult(verdict.label,verdict.style);
   });
   const releaseAt=targetInfo?.flight?outfieldPickupTiming(targetInfo,targetInfo.fielder?.field??55).release:duration;
-  const resetAt=Math.max(pursuit?.latePickup?duration+600:duration+430,releaseAt+220);
+  const resetAt=Math.max(pursuit?.latePickup?duration+600:duration+430,releaseAt+220,visual.dropped?visual.contactAt+650:0);
   at(resetAt,()=>{
    nearest.setAttribute('r','10');
+   nearest.setAttribute('stroke','#1c3552');nearest.setAttribute('stroke-width','2');
+   nearest.setAttribute('data-fielding-phase','return');
    move([x,y],350);
   });
   animationHoldUntil=Math.max(animationHoldUntil,Date.now()+resetAt+370);
