@@ -23,31 +23,34 @@ vm.runInContext(source,ctx);
 vm.runInContext(`render=()=>{};renderRoster=()=>{};animate=()=>{};animateGround=()=>{};
 animateFieldingError=()=>{};animateOutfieldReturn=()=>{};animateBaseRunners=()=>{};
 animateFlyLeadAndReturn=()=>{};log=()=>{};historyRender=()=>{};saveGame=()=>{};
-let comparisonTriples=0;
+let comparisonTriples=0,comparisonDoubles=0;
 const originalHitForComparison=hit;
-hit=function(p,bases,style,info){if(bases===3)comparisonTriples++;return originalHitForComparison(p,bases,style,info)};`,ctx);
+hit=function(p,bases,style,info){if(bases===3)comparisonTriples++;if(bases===2)comparisonDoubles++;return originalHitForComparison(p,bases,style,info)};`,ctx);
 const shapes=['standard','wide','small','leftWide','rightWide','dome','grassPark','grassDome'];
 const perPark=Number(process.env.PARK_GAMES||1000),data=[];
 assert.ok(Number.isInteger(perPark)&&perPark>0&&perPark<=10000);
 for(const shape of shapes){
  document.getElementById('parkShape').value=shape;
- const metric={shape,games:0,homeRuns:0,triples:0,hits:0,runs:0,plateAppearances:0,uncompleted:0,runMismatches:0};
+ const metric={shape,games:0,homeRuns:0,triples:0,doubles:0,hits:0,walks:0,strikeouts:0,atBats:0,runs:0,plateAppearances:0,uncompleted:0,runMismatches:0};
  for(let n=0;n<perPark;n++){
   randomState=(0x5c9d4a71+Math.imul(n+1,0x9e3779b1))|0;
-  vm.runInContext('comparisonTriples=0;init()',ctx);
+  vm.runInContext('comparisonTriples=0;comparisonDoubles=0;init()',ctx);
   const result=vm.runInContext(`(()=>{
    let steps=0;
    while(!game.ended&&steps<10000){resolvePitch();steps++}
-   return {ended:game.ended,steps,triples:comparisonTriples,
+   return {ended:game.ended,steps,triples:comparisonTriples,doubles:comparisonDoubles,
     teams:game.teams.map(t=>({hits:t.hits,runs:t.runs.reduce((sum,v)=>sum+(v||0),0),
      playerRuns:t.players.reduce((sum,p)=>sum+p.r,0),
-     homers:t.players.reduce((sum,p)=>sum+p.hr,0),bat:t.bat}))}
+     homers:t.players.reduce((sum,p)=>sum+p.hr,0),walks:t.players.reduce((sum,p)=>sum+p.bb,0),strikeouts:t.players.reduce((sum,p)=>sum+p.k,0),atBats:t.players.reduce((sum,p)=>sum+p.ab,0),bat:t.bat}))}
   })()`,ctx);
   metric.games++;
   metric.plateAppearances+=result.teams.reduce((sum,t)=>sum+t.bat,0);
   metric.homeRuns+=result.teams.reduce((sum,t)=>sum+t.homers,0);
-  metric.triples+=result.triples;
+  metric.triples+=result.triples;metric.doubles+=result.doubles;
   metric.hits+=result.teams.reduce((sum,t)=>sum+t.hits,0);
+  metric.walks+=result.teams.reduce((sum,t)=>sum+t.walks,0);
+  metric.strikeouts+=result.teams.reduce((sum,t)=>sum+t.strikeouts,0);
+  metric.atBats+=result.teams.reduce((sum,t)=>sum+t.atBats,0);
   metric.runs+=result.teams.reduce((sum,t)=>sum+t.runs,0);
   if(!result.ended)metric.uncompleted++;
   for(const t of result.teams)if(t.runs!==t.playerRuns)metric.runMismatches++;
@@ -55,6 +58,10 @@ for(const shape of shapes){
  metric.homeRunsPerGame=+(metric.homeRuns/metric.games).toFixed(3);
  metric.triplesPerGame=+(metric.triples/metric.games).toFixed(3);
  metric.runsPerGame=+(metric.runs/metric.games).toFixed(3);
+ metric.battingAverage=+(metric.hits/metric.atBats).toFixed(3);
+ metric.walksPerGame=+(metric.walks/metric.games).toFixed(3);
+ metric.strikeoutsPerGame=+(metric.strikeouts/metric.games).toFixed(3);
+ metric.doublesPerGame=+(metric.doubles/metric.games).toFixed(3);
  data.push(metric);
  console.log(JSON.stringify(metric));
 }
