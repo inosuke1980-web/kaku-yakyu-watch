@@ -1059,3 +1059,22 @@ assert.match(html,/else if\(x<\.70\)\{animateBatterSwing\(p\);foulBall\(p\)\}/,'
 assert.match(html,/else\{complete=true;animateBatterSwing\(p\);showPitchResult/,'ball in play includes swing');
 assert.match(html,/if\(!force&&Date\.now\(\)<batterVisualLockedUntil\)return/,'swing should not turn into next batter mid-animation');
 console.log('BATTING STANCE MIRROR AND SWING PASS');
+
+const battingTransitionAudit=vm.runInContext(`(()=>{
+ const left=batterStancePlan({bats:'左打'}),right=batterStancePlan({bats:'右打'});
+ return {left,right};
+})()`,ctx);
+assert.ok(battingTransitionAudit.left.position[0]>200&&battingTransitionAudit.right.position[0]<200,'runner departs from real left or right batter box');
+assert.match(html,/const atBat=batter\(\),stance=batterStancePlan\(atBat\)/,'runner departure must track actual batter and box');
+assert.match(html,/moveGroundFielder\(runner,null,home,departureMs,token\)/,'runner moves from batting box to home plate before sprinting');
+assert.match(html,/later\(departureMs,\(\)=>animateBatterFirstLeg\(runner,route,runningMs,token\)\)/,'first base sprint begins after departure phase');
+assert.match(html,/const runningMs=Math\.max\(120,firstDuration-departureMs\)/,'first-base arrival timing retains original duration');
+assert.match(html,/runner\.setAttribute\('visibility','hidden'\);\s*if\(stanceGroup\)stanceGroup\.setAttribute\('data-visual-phase','depart'\)/,'do not duplicate batter and runner at contact');
+assert.match(html,/later\(75,\(\)=>\{if\(stanceGroup\)stanceGroup\.setAttribute\('visibility','hidden'\);runner\.setAttribute\('visibility','visible'\)\}\)/,'batter sprite hands off to runner on push-off');
+assert.match(html,/batterRunnerOnField=true/,'runner activity blocks premature next batter');
+assert.match(html,/batterRunnerOnField=false;\s*finishBatterVisual\(token\)/,'next batter appears after running animation finishes');
+assert.match(html,/animateBatterTake\(p,'ball'\)/,'ball taken without swing');
+assert.match(html,/animateBatterTake\(p,'strike'\)/,'called strike taken without swing');
+assert.match(html,/animateBatterSwing\(p,false\);foulBall\(p\)/,'foul ball has a swing');
+assert.match(html,/animateBatterSwing\(p,true\);showPitchResult\('インプレー'/,'ball in play locks next batter until action finishes');
+console.log('BATTER BOX TO FIRST, CALLED PITCH, NEXT HITTER TRANSITION PASS');
