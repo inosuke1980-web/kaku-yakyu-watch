@@ -1722,6 +1722,19 @@ function outfieldPursuitPlan(kind,info,origin,duration){
  return {destination,pickup,dist,type,chaseMs,caught,latePickup:!caught&&(flight==='overHead'||flight==='fenceDouble'),
   groundStrength:info?.strength||'normal'};
 }
+// Describe what actually happened to the ball, separately from the base award.
+function battedBallVerdict(kind,info=null,hitBases=null){
+ if(kind==='outfieldError')return {label:'落球！ 守備のエラー',style:'ball',type:'error'};
+ if(info?.caught)return {label:info.diving?'ダイビングキャッチ！':info.atFence?'フェンス際でキャッチ！':'捕球！ アウト',style:'strike',type:'out'};
+ if(kind==='groundThrough'||info?.flight==='groundThrough')return {label:'内野を抜けた！ ヒット',style:'hit',type:'hit'};
+ if(info?.nearMiss)return {label:'グラブ届かず！ ヒット',style:'hit',type:'hit'};
+ if(kind==='fenceDouble'||info?.flight==='fenceDouble')return {label:'フェンス直撃！ ヒット',style:'hit',type:'hit'};
+ if(kind==='home'||kind==='homeRun'||info?.flight==='homeRun')return {label:'ホームラン！',style:'hit',type:'homeRun'};
+ if(hitBases===3||kind==='triple')return {label:'外野を抜けた！ 三塁打',style:'hit',type:'hit'};
+ if(hitBases===2||['double','linerHit2'].includes(kind))return {label:'外野を抜けた！ 二塁打',style:'hit',type:'hit'};
+ if(hitBases===1||['single','linerHit'].includes(kind))return {label:'外野へのヒット！',style:'hit',type:'hit'};
+ return null;
+}
 function animate(kind,targetInfo=null,runnerSpeed=55,hitBases=null){
  const runnerType=targetInfo?.flight?(hitBases===1?'hit1Outfield':hitBases===2?'hit2':hitBases===3?'hit3':'homeRun'):kind==='outfieldError'?'hit1Outfield':kind==='linerHit'?'hit1Outfield':kind==='linerHit2'?'hit2':kind==='single'?'hit1Outfield':kind==='double'?'hit2':kind==='home'?'homeRun':kind==='fly'?'fly':null;
  if(runnerType)animateBatterRun(runnerType,runnerSpeed);
@@ -1768,10 +1781,8 @@ function animate(kind,targetInfo=null,runnerSpeed=55,hitBases=null){
   }
   if(diving)at(Math.round(duration*.75),()=>nearest.setAttribute('r','13'));
   at(duration+60,()=>{
-   if(diving)showPitchResult('ダイビングキャッチ！','strike');
-   else if(targetInfo?.caught&&targetInfo.atFence)showPitchResult('フェンス際でキャッチ！','strike');
-   else if(missed)showPitchResult('あと一歩、届かない！','play');
-   else if(kind==='outfieldError')showPitchResult('落球！ エラー','ball');
+   const verdict=battedBallVerdict(kind,targetInfo,hitBases);
+   if(verdict)showPitchResult(verdict.label,verdict.style);
   });
   const releaseAt=targetInfo?.flight?outfieldPickupTiming(targetInfo,targetInfo.fielder?.field??55).release:duration;
   const resetAt=Math.max(pursuit?.latePickup?duration+600:duration+430,releaseAt+220);
