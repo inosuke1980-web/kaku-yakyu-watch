@@ -292,8 +292,10 @@ function parkOutfieldPositions(shape=game?.parkShape){
  return {LF:[95,45+leftDepth],CF:[200,-76+(p.center-standard.center)],RF:[305,45+rightDepth]};
 }
 function resetOutfieldPositions(){
+ for(const id of ['pitcherLeg','pitcherArm','pitcherSet','pitcherGlance']){const el=$(id);if(el)el.setAttribute('visibility','hidden')}
+ const ball=$('ball');if(ball)ball.setAttribute('visibility','visible');
  const f=$('fielders');if(!f||!f.querySelectorAll)return;
- const base={...parkOutfieldPositions(),...defensiveAlignment().positions};
+ const base={P:[200,203],...parkOutfieldPositions(),...defensiveAlignment().positions};
  for(const circle of f.querySelectorAll('circle')){
   const place=base[circle.getAttribute('data-position')];if(!place)continue;
   circle.style.transition='none';circle.setAttribute('r','10');
@@ -1279,26 +1281,43 @@ const PITCH_TYPES=[
  {name:'チェンジアップ',speed:113,flight:590,side:3,drop:5}
 ];
 // A shared token cancels every visual cue on pause, manual advance or restart.
+// One continuous pose sequence; the release point is shared with the ball.
+const PITCH_WINDUP_MS=540;
+function pitcherPose(t){
+ const poses=[
+  [0,200,203,197,195,200,207,204,210],
+  [.25,200,202,197,195,200,207,195,202],
+  [.52,201,204,193,198,200,207,207,216],
+  [.75,203,207,194,201,200,207,210,217],
+  [1,200,203,197,195,200,207,204,210]
+ ];
+ t=clamp(t,0,1);let i=1;while(i<poses.length-1&&t>poses[i][0])i++;
+ const a=poses[i-1],b=poses[i],u=(t-a[0])/(b[0]-a[0]),v=u*u*(3-2*u);
+ return a.slice(1).map((n,j)=>n+(b[j+1]-n)*v);
+}
 function pitchActionVisual(type,token){
- const leg=$('pitcherLeg'),arm=$('pitcherArm'),glove=$('catcherGlove');
- if(!leg||!arm||!glove)return;
- leg.setAttribute('visibility','visible');arm.setAttribute('visibility','visible');
- leg.setAttribute('d','M 200 207 L 205 211');
- arm.setAttribute('cx','191');arm.setAttribute('cy','197');
- glove.setAttribute('cx',String(207+type.side*.25));
- glove.setAttribute('cy',String(302+type.drop*.25));
- const later=(ms,fn)=>playTimers.push(setTimeout(()=>{if(token===animationToken)fn()},ms));
- later(Math.round(type.flight*.20),()=>{
-  leg.setAttribute('d','M 200 207 L 196 211');
-  arm.setAttribute('cx','211');arm.setAttribute('cy','197');
- });
- later(Math.round(type.flight*.70),()=>{
-  leg.setAttribute('d','M 200 207 L 202 210');
-  arm.setAttribute('cx','203');arm.setAttribute('cy','203');
- });
- later(type.flight+120,()=>{
-  leg.setAttribute('visibility','hidden');arm.setAttribute('visibility','hidden');
- });
+ const leg=$('pitcherLeg'),arm=$('pitcherArm'),set=$('pitcherSet'),glove=$('catcherGlove');
+ const field=$('fielders'),body=field?.querySelector?.('circle[data-position="P"]');
+ const label=field?.querySelector?.('text[data-position="P"]');
+ if(!leg||!arm||!set||!glove)return;
+ glove.setAttribute('cx',String(207+type.side*.25));glove.setAttribute('cy',String(302+type.drop*.25));
+ leg.setAttribute('visibility','visible');arm.setAttribute('visibility','visible');set.setAttribute('visibility','visible');
+ const begun=performance.now(),total=PITCH_WINDUP_MS+330;
+ function frame(now){
+  if(token!==animationToken)return;
+  const t=clamp((now-begun)/total,0,1),p=pitcherPose(t);
+  if(body){body.setAttribute('cx',p[0]);body.setAttribute('cy',p[1])}
+  if(label){label.setAttribute('x',p[0]);label.setAttribute('y',p[1]+3)}
+  set.setAttribute('cx',p[2]);set.setAttribute('cy',p[3]);
+  leg.setAttribute('d',`M ${p[4]} ${p[5]} L ${p[6]} ${p[7]}`);
+  // Throwing hand moves forward to the release point, then follows through.
+  const phase=clamp((now-begun)/PITCH_WINDUP_MS,0,1);
+  arm.setAttribute('cx',String(197+8*phase));arm.setAttribute('cy',String(196+12*phase));
+  if(t<1)requestAnimationFrame(frame);else{
+   leg.setAttribute('visibility','hidden');arm.setAttribute('visibility','hidden');set.setAttribute('visibility','hidden');
+  }
+ }
+ requestAnimationFrame(frame);
 }
 function catcherReceiveVisual(kind,token){
  const glove=$('catcherGlove'),call=$('catcherCall');
@@ -1356,17 +1375,18 @@ function batterReadyMotion(token){
  },200));
 }
 function drawPitch(type){
- const ball=$('ball'),startX=200,startY=203,endY=278;
+ const ball=$('ball'),startX=205,startY=208,endY=278;
  const ballToken=++animationToken;
  pitchActionVisual(type,ballToken);
- pitcherSetVisual(ballToken);
  catcherSetTarget(ballToken);
  batterReadyMotion(ballToken);
  ball.style.transition='none';
- ball.setAttribute('cx',startX);ball.setAttribute('cy',startY);
- const started=performance.now();
+ ball.setAttribute('cx',startX);ball.setAttribute('cy',startY);ball.setAttribute('visibility','hidden');
+ const started=performance.now()+PITCH_WINDUP_MS;
  function step(now){
   if(ballToken!==animationToken)return;
+  if(now<started){requestAnimationFrame(step);return;}
+  ball.setAttribute('visibility','visible');
   const t=Math.min(1,(now-started)/type.flight),late=t*t;
   const x=startX+type.side*late;
   const y=startY+(endY-startY)*t+type.drop*late;
@@ -1422,7 +1442,7 @@ function startPitchMotion(){
    if(token!==animationToken||!game||game.ended)return;
    resolvePitch();
    if(playing&&game&&!game.ended)schedule();
- },type.flight+110);
+ },PITCH_WINDUP_MS+type.flight+110);
 }
 
 const GROUND_DIRECTIONS=[
@@ -1903,7 +1923,10 @@ function animate(kind,targetInfo=null,runnerSpeed=55,hitBases=null){
    }else{
     move(pursuit.pickup,pursuit.chaseMs);
     // Deep uncaught flies are picked up AFTER they land.
-    if(pursuit.latePickup)at(duration+60,()=>move(pursuit.destination,280));
+    if(!pursuit.caught){
+     const gather=outfieldPickupTiming(targetInfo,targetInfo?.fielder?.field??55).gather;
+     at(duration,()=>{nearest.setAttribute('data-fielding-phase','recover');move(pursuit.destination,Math.max(100,gather-30))});
+    }
    }
   }else{
    // On an untouched hit the fielder stays short; on a drop he reaches the ball.
@@ -1955,11 +1978,13 @@ function animate(kind,targetInfo=null,runnerSpeed=55,hitBases=null){
   const bounceT=rebounding?Math.max(0,(t-wallAt)/(1-wallAt)):0;
   const drop=kind==='outfieldError'||!!targetInfo?.dropped;
   const dropPosition=drop?outfieldBallMotion(kind,targetInfo,start,target,t):null;
+  // Horizontal travel eases independently of height; the endpoint stays exact.
+  const travel=1-Math.pow(1-t,isLiner?1.10:1.25);
   const x=drop?dropPosition[0]:rebounding?(t<wallAt?start[0]+(target[0]-start[0])*wallT:target[0]+(targetInfo.rebound[0]-target[0])*bounceT):
-   rolling?groundPosition[0]:start[0]+(target[0]-start[0])*t;
+   rolling?groundPosition[0]:start[0]+(target[0]-start[0])*travel;
   const y=drop?dropPosition[1]:rebounding?(t<wallAt?start[1]+(target[1]-start[1])*wallT:target[1]+(targetInfo.rebound[1]-target[1])*bounceT):
-   rolling?groundPosition[1]:start[1]+(target[1]-start[1])*t;
-  const lift=drop?(t<.82?90*Math.sin(Math.PI*t/.82):0):rebounding?(t<wallAt?Math.sin(Math.PI*wallT)*65:Math.sin(Math.PI*bounceT)*9):isFly?90*Math.sin(Math.PI*t):isLiner?16*Math.sin(Math.PI*t):0;
+   rolling?groundPosition[1]:start[1]+(target[1]-start[1])*travel;
+  const lift=drop?(t<.82?90*Math.sin(Math.PI*t/.82):0):rebounding?(t<wallAt?Math.sin(Math.PI*wallT)*65:Math.sin(Math.PI*bounceT)*9):isFly?75*Math.sin(Math.PI*t):isLiner?16*Math.sin(Math.PI*t):0;
   const visibleY=(kind==='homeRun'||kind==='home')?y-lift:Math.max(y-lift,outfieldFenceY(x)+8);
   ball.setAttribute('cx',x.toFixed(1));ball.setAttribute('cy',visibleY.toFixed(1));
   ball.setAttribute('r',String(isFly?4.5+2*Math.sin(Math.PI*t):isLiner?4.2:4));
