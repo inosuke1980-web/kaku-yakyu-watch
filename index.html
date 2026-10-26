@@ -33,7 +33,7 @@
 .scoreboard-scroll td.attack-team{background:#1f382f}
 .scoreboard-hint{font-size:11px;color:#a7c6b5;margin:5px 0 0}
 @media(max-width:750px){.scoreboard-scroll th:first-child,.scoreboard-scroll td:first-child{min-width:102px;width:112px;max-width:112px}.scoreboard-scroll th,.scoreboard-scroll td{padding:6px 4px}}
-.current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.6.3 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
+.current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.6.4 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
 <section class="card"><h2>試合生成の条件</h2><div class="flex" style="gap:12px">
 <label>カテゴリー <select id="category"><option value="random">ランダム（現在は高校のみ）</option><option value="high">高校野球</option><option value="university" disabled>大学野球（今後追加）</option><option value="corporate" disabled>社会人野球（今後追加）</option><option value="pro" disabled>プロ野球（今後追加）</option></select></label>
 <label>試合種別 <select id="matchType"><option value="random">ランダム</option><option value="official">公式戦</option><option value="practice">練習試合</option></select></label>
@@ -212,7 +212,7 @@ function resetOutfieldPositions(){
   if(label){label.setAttribute('x',place[0]);label.setAttribute('y',place[1]+3)}
  }
 }
-function stop(){batterVisualLockedUntil=0;const batting=$('battingStance');if(batting)batting.setAttribute('visibility','hidden');const coverLayer=$('firstBaseCoverForeground');if(coverLayer)coverLayer.replaceChildren();const covering=$('fielders');if(covering&&covering.querySelector){for(const type of ['circle','text']){const el=covering.querySelector(type+'[data-position="1B"]');if(el)el.setAttribute('opacity','1')}}playing=false;clearTimeout(timer);clearTimeout(flightTimer);for(const id of playTimers)clearTimeout(id);playTimers=[];timer=flightTimer=null;animationHoldUntil=0;animationToken++;pendingRunnerArrivals.clear();const moving=$('movingRunners');if(moving)moving.replaceChildren();const runner=$('batterRunner');if(runner){runner.style.transition='none';runner.setAttribute('visibility','hidden')}resetOutfieldPositions()}
+function stop(){batterVisualLockedUntil=0;batterRunnerOnField=false;const batting=$('battingStance');if(batting)batting.setAttribute('visibility','hidden');const coverLayer=$('firstBaseCoverForeground');if(coverLayer)coverLayer.replaceChildren();const covering=$('fielders');if(covering&&covering.querySelector){for(const type of ['circle','text']){const el=covering.querySelector(type+'[data-position="1B"]');if(el)el.setAttribute('opacity','1')}}playing=false;clearTimeout(timer);clearTimeout(flightTimer);for(const id of playTimers)clearTimeout(id);playTimers=[];timer=flightTimer=null;animationHoldUntil=0;animationToken++;pendingRunnerArrivals.clear();const moving=$('movingRunners');if(moving)moving.replaceChildren();const runner=$('batterRunner');if(runner){runner.style.transition='none';runner.setAttribute('visibility','hidden')}resetOutfieldPositions()}
 function log(msg){if(!game)return;const prefix=game.inning+'回'+(game.half?'裏':'表');game.events.push('【'+prefix+'】 '+msg);if(game.events.length>250)game.events.shift();$('log').replaceChildren(...game.events.slice(-90).reverse().map(s=>{let d=document.createElement('div');d.textContent=s;return d}))}
 function current(){return {bat:game.teams[game.half],def:game.teams[1-game.half]}}
 function addRuns(n,runnerIds=[]){const {bat}=current();bat.runs[game.inning-1]=(bat.runs[game.inning-1]||0)+n;for(const p of runnerIds)p.r++;if(game.half===1&&game.inning>=9&&total(1)>total(0))finish('サヨナラ')}
@@ -922,8 +922,8 @@ const {bat}=current(),p=batter(),pi=pitcher();game.totalPitches++;pi.pitches++;g
 const pskill=(pi.control+pi.stuff)/2,x=Math.random();let complete=false;
 if(x<clamp(.29+(pi.control-p.eye)*.0015,.17,.42)){game.balls++;showPitchResult('ボール','ball');log(`${p.name} ボール。`)}
 else if(x<.54){game.strikes++;showPitchResult('ストライク','strike');log(`${p.name} 見逃しストライク。`)}
-else if(x<.70){animateBatterSwing(p);foulBall(p)}
-else{complete=true;animateBatterSwing(p);showPitchResult('インプレー','play');const z=Math.random(),hitChance=clamp(.22+(p.contact-pskill)*.002,.10,.42);
+else if(x<.70){animateBatterSwing(p,false);foulBall(p)}
+else{complete=true;animateBatterSwing(p,true);showPitchResult('インプレー','play');const z=Math.random(),hitChance=clamp(.22+(p.contact-pskill)*.002,.10,.42);
 if(z<hitChance){const pow=Math.random(),bases=pow<.75?1:pow<.92?2:pow<.96?3:4;if(bases<=2&&game.totalPitches%3===0)hit(p,bases,'liner');else hit(p,bases)}
 else if(z<hitChance+.13){lineBall(p)}
 else if(z<hitChance+.32){flyBall(p)}
@@ -1047,9 +1047,19 @@ function animateBatterFirstLeg(runner,kind,duration,token){
 function animateBatterRun(result,speed=55,groundPlan=null){
  const runner=$('batterRunner');if(!runner)return;
  const token=animationToken,home=[200,283],first=[323,169],second=[200,47],third=[77,169];
+ const atBat=batter(),stance=batterStancePlan(atBat);
+ const departureMs=115;
  const later=(delay,callback)=>playTimers.push(setTimeout(()=>{if(token===animationToken)callback()},delay));
- runner.style.transition='none';runner.setAttribute('cx',home[0]);runner.setAttribute('cy',home[1]);runner.setAttribute('visibility','visible');
- const visiblePlayer=batter();
+ batterRunnerOnField=true;
+ const stanceGroup=$('battingStance');
+ runner.style.transition='none';
+ runner.setAttribute('cx',stance.position[0]);runner.setAttribute('cy',stance.position[1]);
+ runner.setAttribute('visibility','visible');
+ if(stanceGroup)stanceGroup.setAttribute('data-visual-phase','depart');
+ // Keep batting stance visible only through the initial push off the box.
+ later(75,()=>{if(stanceGroup)stanceGroup.setAttribute('visibility','hidden')});
+ moveGroundFielder(runner,null,home,departureMs,token);
+ const visiblePlayer=atBat;
  runner.setAttribute('data-runner-id',visiblePlayer?.id||'');
  const normal=runnerFirstMs(speed);
  const finishFirst=groundPlan?.runnerMs||normal;
@@ -1057,17 +1067,18 @@ function animateBatterRun(result,speed=55,groundPlan=null){
  const single=result==='hit1';
  const route=single?'through':extra?'round':'straight';
  const firstDuration=result==='fly'?440:finishFirst;
+ const runningMs=Math.max(120,firstDuration-departureMs);
  if(result==='fly'){
-  later(0,()=>animateBatterFirstLeg(runner,'straight',firstDuration,token));
+  later(departureMs,()=>animateBatterFirstLeg(runner,'straight',runningMs,token));
  }else if(result==='groundOut'||result==='doublePlay'){
-  later(0,()=>{const begun=performance.now();runner.style.transition='none';
-   function frame(now){if(token!==animationToken)return;const t=clamp((now-begun)/firstDuration,0,1);
+  later(departureMs,()=>{const begun=performance.now();runner.style.transition='none';
+   function frame(now){if(token!==animationToken)return;const t=clamp((now-begun)/runningMs,0,1);
     runner.setAttribute('cx',(home[0]+(309-home[0])*t).toFixed(2));
     runner.setAttribute('cy',(home[1]+(183-home[1])*t).toFixed(2));
     if(t<1)requestAnimationFrame(frame)}
    requestAnimationFrame(frame)});
  }else{
-  later(0,()=>animateBatterFirstLeg(runner,route,firstDuration,token));
+  later(departureMs,()=>animateBatterFirstLeg(runner,route,runningMs,token));
  }
  // A hit at first is a touch point, not a stop, when advancing to second.
  if(extra){
@@ -1095,7 +1106,11 @@ function animateBatterRun(result,speed=55,groundPlan=null){
   }
  }
  animationHoldUntil=Math.max(animationHoldUntil,Date.now()+finishAt+140);
- later(finishAt,()=>{runner.style.transition='none';runner.setAttribute('visibility','hidden')});
+ later(finishAt,()=>{
+  runner.style.transition='none';runner.setAttribute('visibility','hidden');
+  batterRunnerOnField=false;
+  finishBatterVisual(token);
+ });
 }
 // Cover first ahead of a ground-ball throw. When the first baseman fields
 // the grounder himself, he runs to the bag; the 2B backs up the throw.
@@ -1603,7 +1618,7 @@ function miniScoreMarkup(){
 }
 // Left/right labels follow the actual generated batting attribute.
 // This is a pure drawing layer; it does not modify batting or pitch results.
-let batterVisualLockedUntil=0;
+let batterVisualLockedUntil=0,batterRunnerOnField=false;
 function batterStancePlan(player){
  const left=player?.bats==='左打';
  return {hand:left?'左':'右',position:left?[219,285]:[181,285],
@@ -1627,15 +1642,24 @@ function showBattingStance(player,force=false){
  const label=$('batterHandLabel');if(label)label.textContent=plan.hand;
  const jersey=$('batterJersey');if(jersey)jersey.setAttribute('fill',plan.jersey);
 }
-function animateBatterSwing(player){
+// A completed plate appearance stays in the original batting box through
+// contact. Do not show the NEXT batter while the current one is running.
+function finishBatterVisual(token){
+ if(token!==animationToken)return;
+ batterVisualLockedUntil=0;
+ const group=$('battingStance');
+ if(!game||game.ended){if(group)group.setAttribute('visibility','hidden');return}
+ showBattingStance(batter(),true);
+}
+function animateBatterSwing(player,inPlay=false){
  if(!player)return;
  showBattingStance(player,true);
  const token=animationToken,group=$('battingStance'),bat=$('batterBat');
  if(!group||!bat)return;
- const plan=batterStancePlan(player);
- const swingSign=plan.hand==='左'?-1:1;
- batterVisualLockedUntil=Date.now()+380;
+ const plan=batterStancePlan(player),swingSign=plan.hand==='左'?-1:1;
+ batterVisualLockedUntil=Date.now()+(inPlay?9000:390);
  group.setAttribute('data-swing','yes');
+ group.setAttribute('data-visual-phase',inPlay?'contact':'foul');
  bat.setAttribute('x2',swingSign*15);
  bat.setAttribute('y2','7');
  playTimers.push(setTimeout(()=>{
@@ -1643,12 +1667,14 @@ function animateBatterSwing(player){
   bat.setAttribute('x2',plan.batEnd[0]);bat.setAttribute('y2',plan.batEnd[1]);
   group.setAttribute('data-swing','no');
  },210));
- playTimers.push(setTimeout(()=>{
-  if(token!==animationToken)return;
-  batterVisualLockedUntil=0;
-  if(game&&!game.ended)showBattingStance(batter(),true);
-  else group.setAttribute('visibility','hidden');
- },390));
+ if(inPlay){
+  // A line out may have no batter-runner sprite. In that case restore the
+  // correct on-deck hitter after the ball's flight, never during the swing.
+  playTimers.push(setTimeout(()=>{
+   if(token!==animationToken||batterRunnerOnField)return;
+   finishBatterVisual(token);
+  },1250));
+ }else playTimers.push(setTimeout(()=>finishBatterVisual(token),390));
 }
 function renderMiniScore(){
  const mini=$('miniScore');if(!mini)return;
