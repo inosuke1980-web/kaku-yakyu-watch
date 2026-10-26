@@ -254,7 +254,7 @@ function applyDefensiveAlignment(animateMove=false){
 }
 function resetOutfieldPositions(){
  const f=$('fielders');if(!f||!f.querySelectorAll)return;
- const base={LF:[92,-58],CF:[200,-76],RF:[308,-58],...defensiveAlignment().positions};
+ const base={LF:[65,-52],CF:[200,-76],RF:[335,-52],...defensiveAlignment().positions};
  for(const circle of f.querySelectorAll('circle')){
   const place=base[circle.getAttribute('data-position')];if(!place)continue;
   circle.style.transition='none';circle.setAttribute('r','10');
@@ -2159,7 +2159,7 @@ function renderMiniScore(){
 }
 function render(beforeBases=null){if(!game)return;renderMiniScore();showBattingStance(batter());const {bat,def}=current(),a=game.teams[0],h=game.teams[1];$('event').textContent=game.t.title;$('away').textContent=a.name+' ['+a.profile.rank+']';$('home').textContent=h.name+' ['+h.profile.rank+']';$('score').innerHTML=`${total(0)} - ${total(1)}<small>${game.ended?'試合終了':game.inning+'回'+(game.half?'裏':'表')}</small>`;$('status').textContent=game.ended?'終了':playing?'試合中':'一時停止';$('matchup').textContent=`投手 ${pitcher().name}（${pitcher().pitches}球） / 打者 ${batter().name}（${batter().bats}）`;let n=Math.max(9,game.inning);let headers=Array.from({length:n},(_,i)=>`<th${!game.ended&&i===game.inning-1?' class="current-inning"':''}>${i+1}</th>`).join('');$('lines').innerHTML=`<table><tr><th>TEAM</th>${headers}<th class="sticky-stat stat-r">R</th><th class="sticky-stat stat-h">H</th><th class="sticky-stat stat-e">E</th></tr>${[a,h].map((t,side)=>`<tr><td${!game.ended&&side===game.half?' class="attack-team"':''}>${esc(t.name)}</td>${Array.from({length:n},(_,i)=>{const live=!game.ended&&side===game.half&&i===game.inning-1;const played=t.runs[i]!==null&&t.runs[i]!==undefined;return `<td${live?' class="live-score"':''}>${played?t.runs[i]:live?'':'-'}</td>`}).join('')}<td class="sticky-stat stat-r">${t.runs.reduce((sum,x)=>sum+(x||0),0)}</td><td class="sticky-stat stat-h">${t.hits}</td><td class="sticky-stat stat-e">${t.errors}</td></tr>`).join('')}</table>`;let r=$('runners');r.replaceChildren();[[323,169],[200,47],[77,169]].forEach(([x,y],i)=>{if(game.bases[i]){let c=document.createElementNS('http://www.w3.org/2000/svg','circle');c.setAttribute('cx',x);c.setAttribute('cy',y);c.setAttribute('r','8');c.setAttribute('data-runner',game.bases[i].id);if(!runnerMarkerVisible(game.bases[i],i,beforeBases))c.setAttribute('opacity','0');r.append(c);}});let f=$('fielders');if(!f.childNodes.length){
 // Home plate is at (200,293); first base is right and third base is left.
-const positions=[['P',200,203],['C',200,315],...['1B','2B','SS','3B'].map(name=>[name,...defensiveAlignment().positions[name]]),['LF',92,-58],['CF',200,-76],['RF',308,-58]];
+const positions=[['P',200,203],['C',200,315],...['1B','2B','SS','3B'].map(name=>[name,...defensiveAlignment().positions[name]]),['LF',65,-52],['CF',200,-76],['RF',335,-52]];
 positions.forEach(([name,x,y])=>{const ns='http://www.w3.org/2000/svg',c=document.createElementNS(ns,'circle'),label=document.createElementNS(ns,'text');
 c.setAttribute('cx',x);c.setAttribute('cy',y);c.setAttribute('r','10');c.setAttribute('data-position',name);
 label.setAttribute('x',x);label.setAttribute('y',y+3);label.setAttribute('data-position',name);label.setAttribute('text-anchor','middle');label.setAttribute('font-size','8');label.setAttribute('font-weight','700');label.setAttribute('fill','#17372f');label.setAttribute('stroke','none');label.setAttribute('pointer-events','none');label.textContent=name;
