@@ -1217,3 +1217,20 @@ console.log('FIRST-BASE ARRIVAL CALLOUT ORDER PASS');
 assert.match(html,/const firstLeg=player==='1B'\?225:atSecond\?relay\.pickupToSecond:throwFlightMs/,'first baseman carries ball to first before its arrival clock completes');
 assert.match(html,/if\(player==='1B'\)moveBall\(first\[0\],first\[1\],225\)/,'first baseman ball movement matches its arrival clock');
 console.log('FIRST BASEMAN FIELD-AND-CARRY TIMELINE PASS');
+
+
+// Ten targeted regression checks for ground-ball/force-play choreography.
+const choreographyChecks=[
+ ['1. first baseman reaches the bag after a 25ms pickup step',/const firstArrival=fieldMs\+\(player==='1B'\?25:releaseMs\)\+firstLeg/],
+ ['2. first baseman ball travel starts on the same clock',/later\(fieldMs\+\(player==='1B'\?25:releaseMs\),\(\)=>\{/],
+ ['3. first baseman carries ball for 225ms',/const firstLeg=player==='1B'\?225/],
+ ['4. first baseman movement starts after fielding',/later\(fieldMs\+25,\(\)=>moveGroundFielder\(firstCover/],
+ ['5. first-base decision waits for runner',/const decisionMs=Math\.max\(arrival,runnerMs\)\+110/],
+ ['6. force call waits for slide',/const forceCallAt=atSecond\?Math\.max\(firstArrival\+70,game\.forceOutVisual\?\.forceCallAt\|\|0\):0/],
+ ['7. double-play second throw waits for pivot',/const secondThrowAt=firstArrival\+\(relay\?\.pivotRelease\|\|0\)/],
+ ['8. double-play ball flight starts after pivot',/if\(outcome==='double'\)later\(secondThrowAt,\(\)=>\{/],
+ ['9. second-base runner uses official arrival',/const arrival=Number\.isFinite\(visual\.runnerAt\)\?visual\.runnerAt/],
+ ['10. force runner is removed after animation',/later\(Math\.max\(holdUntil,arrival\+400\),\(\)=>\{circle\.setAttribute\('visibility','hidden'\)/]
+];
+for(const [name,pattern] of choreographyChecks)assert.match(html,pattern,name);
+console.log('TEN GROUND-PLAY CHOREOGRAPHY REGRESSIONS PASS');
