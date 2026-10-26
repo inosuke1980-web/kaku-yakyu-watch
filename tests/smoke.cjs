@@ -1078,3 +1078,25 @@ assert.match(html,/animateBatterTake\(p,'strike'\)/,'called strike taken without
 assert.match(html,/animateBatterSwing\(p,false\);foulBall\(p\)/,'foul ball has a swing');
 assert.match(html,/animateBatterSwing\(p,true\);showPitchResult\('インプレー'/,'ball in play locks next batter until action finishes');
 console.log('BATTER BOX TO FIRST, CALLED PITCH, NEXT HITTER TRANSITION PASS');
+
+const tenVisualImprovementsAudit=vm.runInContext(`(()=>{
+ const type=PITCH_TYPES[0];
+ return {pitchType:type.name,flight:type.flight};
+})()`,ctx);
+assert.ok(tenVisualImprovementsAudit.flight>0);
+for(const id of ['pitcherLeg','pitcherArm','catcherCrouch','catcherGlove','catcherCall','batterKnees']){
+ assert.ok(html.includes('id="'+id+'"'),'visual element missing: '+id);
+}
+assert.match(html,/pitchActionVisual\(type,ballToken\)/,'pitcher leg and arm animate during the flight');
+assert.match(html,/catcherSetTarget\(ballToken\)/,'catcher sets target before the pitch');
+assert.match(html,/batterReadyMotion\(ballToken\)/,'batting stance adjusts before delivery');
+assert.match(html,/catcherReceiveVisual\('ball',animationToken\)/,'catcher receives a ball');
+assert.match(html,/catcherReceiveVisual\('strike',animationToken\)/,'catcher receives called strike');
+assert.match(html,/catcherReceiveVisual\('whiff',animationToken\)/,'catcher receives swung-through pitch');
+assert.match(html,/else if\(x<\.755\)/,'new swing-and-miss branch');
+assert.match(html,/game\.strikes\+\+;showPitchResult\('空振り！'/,'whiff adds a strike');
+assert.match(html,/batterReactionVisual\('strikeout',p,animationToken\)/,'third strike reaction');
+assert.match(html,/batterReactionVisual\('foul',player,token\)/,'foul balance reaction');
+assert.match(html,/batterReactionVisual\(call,player,token\)/,'called pitch stance reaction');
+assert.match(html,/if\(token!==animationToken\)return/,'visual timeout invalidation on stop');
+console.log('TEN PITCHER CATCHER BATTER VISUAL FEATURES PASS');
