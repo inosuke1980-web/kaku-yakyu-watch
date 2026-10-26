@@ -1,0 +1,27 @@
+name: Stadium comparison 8000 games
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'tests/park-comparison.cjs'
+      - '.github/workflows/park-comparison.yml'
+  workflow_dispatch:
+jobs:
+  park-comparison:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run 1000 games for each of eight stadiums
+        run: node tests/park-comparison.cjs
+      - name: Upload stadium report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stadium-comparison
+          path: tests/park-comparison-results.json
+          if-no-files-found: ignore
