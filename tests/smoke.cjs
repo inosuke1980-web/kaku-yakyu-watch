@@ -1234,3 +1234,16 @@ const choreographyChecks=[
 ];
 for(const [name,pattern] of choreographyChecks)assert.match(html,pattern,name);
 console.log('TEN GROUND-PLAY CHOREOGRAPHY REGRESSIONS PASS');
+
+
+// Outfield singles stop at first; only error/infield sprint paths may overrun.
+assert.match(html,/const outfieldSingle=result==='hit1Outfield'/,'outfield single has distinct route');
+assert.match(html,/const single=result==='hit1';/,'infield/error overrun remains separate');
+assert.match(html,/const route=single\?'through':extra\?'round':'straight'/,'outfield single takes straight arrival rather than through-base route');
+assert.match(html,/if\(single\)\{\s*later\(finishFirst\+overrunHold/,'only through-base route returns to first');
+assert.match(html,/\['hit1','hit1Outfield','hit2','hit3','forceSafe'\]/,'outfield singles still stage the first-base marker');
+assert.match(html,/hitBases===1\?'hit1Outfield'/,'outfield flight singles use stop-at-first');
+assert.match(html,/kind==='outfieldError'\?'hit1Outfield'/,'outfield errors stop at first');
+assert.match(html,/kind==='linerHit'\?'hit1Outfield'/,'outfield liner singles stop at first');
+assert.match(html,/kind==='single'\?'hit1Outfield'/,'ordinary outfield singles stop at first');
+console.log('OUTFIELD SINGLE FIRST BASE ARRIVAL REGRESSIONS PASS');
