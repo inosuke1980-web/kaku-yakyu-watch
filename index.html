@@ -1748,6 +1748,16 @@ function outfieldVisualPlan(kind,info,point,duration){
  return {dropped,caught,untouched,gap,contactAt,approach,reach,deflect,
   phase:dropped?'bobble':caught?'catch':gap?'chase':'pickup'};
 }
+// A single continuous clock for glove contact, miss and ball deflection.
+function outfieldBallMotion(kind,info,start,target,progress){
+ const t=clamp(progress,0,1),dropped=kind==='outfieldError'||!!info?.dropped;
+ const contact=.82,travel=Math.min(1,t/contact);
+ const contactPoint=[start[0]+(target[0]-start[0])*travel,start[1]+(target[1]-start[1])*travel];
+ if(!dropped)return [start[0]+(target[0]-start[0])*t,start[1]+(target[1]-start[1])*t];
+ if(t<=contact)return contactPoint;
+ const after=(t-contact)/(1-contact);
+ return [target[0]+23*after,target[1]+26*after];
+}
 function animate(kind,targetInfo=null,runnerSpeed=55,hitBases=null){
  const runnerType=targetInfo?.flight?(hitBases===1?'hit1Outfield':hitBases===2?'hit2':hitBases===3?'hit3':'homeRun'):kind==='outfieldError'?'hit1Outfield':kind==='linerHit'?'hit1Outfield':kind==='linerHit2'?'hit2':kind==='single'?'hit1Outfield':kind==='double'?'hit2':kind==='home'?'homeRun':kind==='fly'?'fly':null;
  if(runnerType)animateBatterRun(runnerType,runnerSpeed);
@@ -1838,15 +1848,12 @@ function animate(kind,targetInfo=null,runnerSpeed=55,hitBases=null){
   const wallT=rebounding?Math.min(1,t/wallAt):0;
   const bounceT=rebounding?Math.max(0,(t-wallAt)/(1-wallAt)):0;
   const drop=kind==='outfieldError'||!!targetInfo?.dropped;
-  const dropAt=.82,dropProgress=clamp((t-dropAt)/(1-dropAt),0,1);
-  const dropApproach=clamp(t/dropAt,0,1);
-  const dropX=start[0]+(target[0]-start[0])*dropApproach+23*dropProgress;
-  const dropY=start[1]+(target[1]-start[1])*dropApproach+26*dropProgress;
-  const x=drop&&t>=dropAt?dropX:rebounding?(t<wallAt?start[0]+(target[0]-start[0])*wallT:target[0]+(targetInfo.rebound[0]-target[0])*bounceT):
+  const dropPosition=drop?outfieldBallMotion(kind,targetInfo,start,target,t):null;
+  const x=drop?dropPosition[0]:rebounding?(t<wallAt?start[0]+(target[0]-start[0])*wallT:target[0]+(targetInfo.rebound[0]-target[0])*bounceT):
    rolling?groundPosition[0]:start[0]+(target[0]-start[0])*t;
-  const y=drop&&t>=dropAt?dropY:rebounding?(t<wallAt?start[1]+(target[1]-start[1])*wallT:target[1]+(targetInfo.rebound[1]-target[1])*bounceT):
+  const y=drop?dropPosition[1]:rebounding?(t<wallAt?start[1]+(target[1]-start[1])*wallT:target[1]+(targetInfo.rebound[1]-target[1])*bounceT):
    rolling?groundPosition[1]:start[1]+(target[1]-start[1])*t;
-  const lift=rebounding?(t<wallAt?Math.sin(Math.PI*wallT)*65:Math.sin(Math.PI*bounceT)*9):isFly?90*Math.sin(Math.PI*t):isLiner?16*Math.sin(Math.PI*t):0;
+  const lift=drop?(t<.82?90*Math.sin(Math.PI*t/.82):0):rebounding?(t<wallAt?Math.sin(Math.PI*wallT)*65:Math.sin(Math.PI*bounceT)*9):isFly?90*Math.sin(Math.PI*t):isLiner?16*Math.sin(Math.PI*t):0;
   const visibleY=(kind==='homeRun'||kind==='home')?y-lift:Math.max(y-lift,outfieldFenceY(x)+8);
   ball.setAttribute('cx',x.toFixed(1));ball.setAttribute('cy',visibleY.toFixed(1));
   ball.setAttribute('r',String(isFly?4.5+2*Math.sin(Math.PI*t):isLiner?4.2:4));
