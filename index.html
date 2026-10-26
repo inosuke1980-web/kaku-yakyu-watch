@@ -33,7 +33,7 @@
 .scoreboard-scroll td.attack-team{background:#1f382f}
 .scoreboard-hint{font-size:11px;color:#a7c6b5;margin:5px 0 0}
 @media(max-width:750px){.scoreboard-scroll th:first-child,.scoreboard-scroll td:first-child{min-width:102px;width:112px;max-width:112px}.scoreboard-scroll th,.scoreboard-scroll td{padding:6px 4px}}
-.current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.6.4 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
+.current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.6.5 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
 <section class="card"><h2>試合生成の条件</h2><div class="flex" style="gap:12px">
 <label>カテゴリー <select id="category"><option value="random">ランダム（現在は高校のみ）</option><option value="high">高校野球</option><option value="university" disabled>大学野球（今後追加）</option><option value="corporate" disabled>社会人野球（今後追加）</option><option value="pro" disabled>プロ野球（今後追加）</option></select></label>
 <label>試合種別 <select id="matchType"><option value="random">ランダム</option><option value="official">公式戦</option><option value="practice">練習試合</option></select></label>
@@ -65,13 +65,23 @@
 </g>
 <circle cx="200" cy="203" r="19" fill="#ae855a"/><rect x="195" y="200" width="10" height="4" fill="#fff5dd"/>
 <g fill="white"><rect x="195" y="288" width="10" height="10" transform="rotate(45 200 293)"/><rect x="318" y="164" width="10" height="10" transform="rotate(45 323 169)"/><rect x="195" y="42" width="10" height="10" transform="rotate(45 200 47)"/><rect x="72" y="164" width="10" height="10" transform="rotate(45 77 169)"/></g>
-<g id="fielders" fill="#e4eef7" stroke="#1c3552" stroke-width="2"></g><g id="firstBaseCoverLayer" pointer-events="none"></g><g id="runners" fill="#f9c64c" stroke="white" stroke-width="2"></g><g id="movingRunners" fill="#ffcf57" stroke="white" stroke-width="2"></g><g id="firstBaseCoverForeground" pointer-events="none"></g>
+<g id="fielders" fill="#e4eef7" stroke="#1c3552" stroke-width="2"></g>
+<g id="pitcherMotion" pointer-events="none">
+ <path id="pitcherLeg" d="M 200 207 L 209 212" fill="none" stroke="#d5e6f2" stroke-width="3" stroke-linecap="round" visibility="hidden"/>
+ <circle id="pitcherArm" cx="200" cy="202" r="4.5" fill="#a6c0d8" stroke="#264054" stroke-width="1" visibility="hidden"/>
+</g>
+<g id="catcherMotion" pointer-events="none">
+ <path id="catcherCrouch" d="M 193 320 Q 200 328 207 320" fill="none" stroke="#d5e6f2" stroke-width="3" stroke-linecap="round"/>
+ <circle id="catcherGlove" cx="207" cy="302" r="5" fill="#b57943" stroke="#51321e" stroke-width="1.5"/>
+ <text id="catcherCall" x="214" y="316" font-size="8" fill="#fff4ce" stroke="#192820" stroke-width="1.6" paint-order="stroke" visibility="hidden">捕球</text>
+</g><g id="firstBaseCoverLayer" pointer-events="none"></g><g id="runners" fill="#f9c64c" stroke="white" stroke-width="2"></g><g id="movingRunners" fill="#ffcf57" stroke="white" stroke-width="2"></g><g id="firstBaseCoverForeground" pointer-events="none"></g>
 <!-- A batter stands on the opposite side of the plate according to his stance.
      Camera points toward center field, so left-side screen = right-handed box. -->
 <g id="battingStance" pointer-events="none" visibility="hidden">
  <ellipse id="batterShadow" cx="0" cy="8" rx="10" ry="4" fill="#1b211d" opacity=".38"/>
  <circle cx="0" cy="-3" r="8" fill="#f6b96b" stroke="#49392a" stroke-width="1.5"/>
  <path id="batterJersey" d="M -7 5 L 7 5 L 8 17 L -8 17 Z" fill="#ffdc7a" stroke="#63491f" stroke-width="1.6"/>
+ <path id="batterKnees" d="M -5 17 L -9 23 M 5 17 L 9 23" fill="none" stroke="#e2cb91" stroke-width="2.5" stroke-linecap="round"/>
  <line id="batterBat" x1="3" y1="2" x2="-10" y2="-20" stroke="#f0e9cf" stroke-width="4" stroke-linecap="round"/>
  <circle cx="0" cy="-12" r="5.8" fill="#273c50" stroke="#a7c8d8" stroke-width="1.5"/>
  <text id="batterHandLabel" x="0" y="-25" font-size="9" font-weight="800" text-anchor="middle" fill="#fff6db" stroke="#13211a" stroke-width="2" paint-order="stroke">右</text>
@@ -212,7 +222,7 @@ function resetOutfieldPositions(){
   if(label){label.setAttribute('x',place[0]);label.setAttribute('y',place[1]+3)}
  }
 }
-function stop(){batterVisualLockedUntil=0;batterRunnerOnField=false;const batting=$('battingStance');if(batting)batting.setAttribute('visibility','hidden');const coverLayer=$('firstBaseCoverForeground');if(coverLayer)coverLayer.replaceChildren();const covering=$('fielders');if(covering&&covering.querySelector){for(const type of ['circle','text']){const el=covering.querySelector(type+'[data-position="1B"]');if(el)el.setAttribute('opacity','1')}}playing=false;clearTimeout(timer);clearTimeout(flightTimer);for(const id of playTimers)clearTimeout(id);playTimers=[];timer=flightTimer=null;animationHoldUntil=0;animationToken++;pendingRunnerArrivals.clear();const moving=$('movingRunners');if(moving)moving.replaceChildren();const runner=$('batterRunner');if(runner){runner.style.transition='none';runner.setAttribute('visibility','hidden')}resetOutfieldPositions()}
+function stop(){for(const id of ['pitcherLeg','pitcherArm','catcherCall']){const el=$(id);if(el)el.setAttribute('visibility','hidden')}const glove=$('catcherGlove');if(glove){glove.setAttribute('r','5');glove.setAttribute('fill','#b57943')}batterVisualLockedUntil=0;batterRunnerOnField=false;const batting=$('battingStance');if(batting)batting.setAttribute('visibility','hidden');const coverLayer=$('firstBaseCoverForeground');if(coverLayer)coverLayer.replaceChildren();const covering=$('fielders');if(covering&&covering.querySelector){for(const type of ['circle','text']){const el=covering.querySelector(type+'[data-position="1B"]');if(el)el.setAttribute('opacity','1')}}playing=false;clearTimeout(timer);clearTimeout(flightTimer);for(const id of playTimers)clearTimeout(id);playTimers=[];timer=flightTimer=null;animationHoldUntil=0;animationToken++;pendingRunnerArrivals.clear();const moving=$('movingRunners');if(moving)moving.replaceChildren();const runner=$('batterRunner');if(runner){runner.style.transition='none';runner.setAttribute('visibility','hidden')}resetOutfieldPositions()}
 function log(msg){if(!game)return;const prefix=game.inning+'回'+(game.half?'裏':'表');game.events.push('【'+prefix+'】 '+msg);if(game.events.length>250)game.events.shift();$('log').replaceChildren(...game.events.slice(-90).reverse().map(s=>{let d=document.createElement('div');d.textContent=s;return d}))}
 function current(){return {bat:game.teams[game.half],def:game.teams[1-game.half]}}
 function addRuns(n,runnerIds=[]){const {bat}=current();bat.runs[game.inning-1]=(bat.runs[game.inning-1]||0)+n;for(const p of runnerIds)p.r++;if(game.half===1&&game.inning>=9&&total(1)>total(0))finish('サヨナラ')}
@@ -943,9 +953,65 @@ const PITCH_TYPES=[
  {name:'フォーク',speed:128,flight:465,side:0,drop:18},
  {name:'チェンジアップ',speed:113,flight:590,side:3,drop:5}
 ];
+// A shared token cancels every visual cue on pause, manual advance or restart.
+function pitchActionVisual(type,token){
+ const leg=$('pitcherLeg'),arm=$('pitcherArm'),glove=$('catcherGlove');
+ if(!leg||!arm||!glove)return;
+ leg.setAttribute('visibility','visible');arm.setAttribute('visibility','visible');
+ leg.setAttribute('d','M 200 207 L 210 213');
+ arm.setAttribute('cx','191');arm.setAttribute('cy','197');
+ glove.setAttribute('cx',String(207+type.side*.25));
+ glove.setAttribute('cy',String(302+type.drop*.25));
+ const later=(ms,fn)=>playTimers.push(setTimeout(()=>{if(token===animationToken)fn()},ms));
+ later(Math.round(type.flight*.20),()=>{
+  leg.setAttribute('d','M 200 207 L 190 213');
+  arm.setAttribute('cx','211');arm.setAttribute('cy','197');
+ });
+ later(Math.round(type.flight*.70),()=>{
+  leg.setAttribute('d','M 200 207 L 204 211');
+  arm.setAttribute('cx','203');arm.setAttribute('cy','203');
+ });
+ later(type.flight+120,()=>{
+  leg.setAttribute('visibility','hidden');arm.setAttribute('visibility','hidden');
+ });
+}
+function catcherReceiveVisual(kind,token){
+ const glove=$('catcherGlove'),call=$('catcherCall');
+ if(!glove||!call)return;
+ const label=kind==='ball'?'ボール':kind==='strike'?'ストライク':kind==='whiff'?'空振り':'捕球';
+ glove.setAttribute('r','7');
+ glove.setAttribute('fill','#f1c674');
+ call.textContent=label;
+ call.setAttribute('visibility','visible');
+ playTimers.push(setTimeout(()=>{
+  if(token!==animationToken)return;
+  glove.setAttribute('r','5');glove.setAttribute('fill','#b57943');
+  call.setAttribute('visibility','hidden');
+ },440));
+}
+function batterReactionVisual(kind,player,token){
+ const group=$('battingStance'),knees=$('batterKnees'),shadow=$('batterShadow');
+ if(!group||!knees)return;
+ group.setAttribute('data-reaction',kind);
+ if(kind==='whiff'||kind==='strikeout'){
+  knees.setAttribute('d','M -5 17 L -12 22 M 5 17 L 13 22');
+  if(shadow)shadow.setAttribute('rx','12');
+ }else if(kind==='foul'){
+  knees.setAttribute('d','M -5 17 L -10 23 M 5 17 L 7 23');
+ }else{
+  knees.setAttribute('d','M -5 17 L -9 23 M 5 17 L 9 23');
+ }
+ playTimers.push(setTimeout(()=>{
+  if(token!==animationToken)return;
+  knees.setAttribute('d','M -5 17 L -9 23 M 5 17 L 9 23');
+  if(shadow)shadow.setAttribute('rx','10');
+  group.setAttribute('data-reaction','ready');
+ },kind==='strikeout'?700:330));
+}
 function drawPitch(type){
  const ball=$('ball'),startX=200,startY=203,endY=278;
  const ballToken=++animationToken;
+ pitchActionVisual(type,ballToken);
  ball.style.transition='none';
  ball.setAttribute('cx',startX);ball.setAttribute('cy',startY);
  const started=performance.now();
@@ -1661,6 +1727,7 @@ function animateBatterTake(player,call){
  const plan=batterStancePlan(player);
  batterVisualLockedUntil=Date.now()+310;
  group.setAttribute('data-visual-phase',call==='ball'?'take-ball':'take-strike');
+ batterReactionVisual(call,player,token);
  bat.setAttribute('y2',plan.batEnd[1]+5);
  playTimers.push(setTimeout(()=>{
   if(token!==animationToken)return;
@@ -1678,6 +1745,7 @@ function animateBatterSwing(player,inPlay=false){
  batterVisualLockedUntil=Date.now()+(inPlay?9000:390);
  group.setAttribute('data-swing','yes');
  group.setAttribute('data-visual-phase',inPlay?'contact':'foul');
+ if(!inPlay)batterReactionVisual('foul',player,token);
  bat.setAttribute('x2',swingSign*15);
  bat.setAttribute('y2','7');
  playTimers.push(setTimeout(()=>{
