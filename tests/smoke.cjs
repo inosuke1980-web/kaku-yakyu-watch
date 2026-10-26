@@ -1372,3 +1372,22 @@ const alignmentAudit=vm.runInContext(`(()=>{
 })()`,ctx);
 for(const {actual,expected} of alignmentAudit)assert.equal(actual,expected,'defensive alignment follows inning and score');
 console.log('SCORE-AWARE INFIELD ALIGNMENT CASES PASS');
+
+// Middle-infield geometry stays balanced in standard alignments.
+const infieldGeometry=vm.runInContext(`(()=>{
+ const cases=[];
+ for(const first of [false,true])for(const third of [false,true])for(const outs of [0,1,2]){
+  const state={inning:2,half:0,outs,ended:false,bases:[first?{id:1}:null,null,third?{id:3}:null],teams:[{runs:[0],players:[],bat:0},{runs:[5],players:[],bat:0}]};
+  const alignment=defensiveAlignment(state);
+  cases.push({first,third,outs,name:alignment.name,ss:alignment.positions.SS,second:alignment.positions['2B']});
+ }
+ return cases;
+})()`,ctx);
+assert.equal(infieldGeometry.length,12);
+for(const p of infieldGeometry){
+ assert.equal(p.name,'通常守備');
+ assert.ok(Math.abs(p.ss[1]-p.second[1])<=2,'shortstop and second baseman at matching depth');
+ assert.ok(p.ss[0]<200&&p.second[0]>200,'middle infielders remain on correct sides');
+ assert.ok(p.second[1]<=112,'second baseman not too shallow');
+}
+console.log('BALANCED MIDDLE INFIELD POSITION CASES PASS');
