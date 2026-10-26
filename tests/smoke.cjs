@@ -1151,3 +1151,12 @@ assert.ok(tacticalCleanupAudit.pickoff.includes('moveGroundFielder(bagCover,cove
 assert.ok(tacticalCleanupAudit.stealGate.includes('game.stealVisual.inning===game.inning'),'stale inning steal animation not shown');
 assert.ok(tacticalCleanupAudit.stealGate.includes('game.stealVisual.half===game.half'),'stale half inning steal animation not shown');
 console.log('TACTICAL OVERLAY CLEANUP, PICKOFF COVER AND INNING GUARDS PASS');
+
+const pickoffOrderingAudit=vm.runInContext(`(()=>{
+ const body=pitch.toString();
+ return {pickoff:body.indexOf('if(pickoff){'),snap:body.indexOf('applyDefensiveAlignment(false)'),normal:body.indexOf('const moveMs=applyDefensiveAlignment(true)'),returnAt:body.indexOf('return;')};
+})()`,ctx);
+assert.ok(pickoffOrderingAudit.pickoff>=0,'pickoff branch present');
+assert.ok(pickoffOrderingAudit.snap>pickoffOrderingAudit.pickoff,'pickoff settles defense without a concurrent walking animation');
+assert.ok(pickoffOrderingAudit.normal>pickoffOrderingAudit.snap,'normal pre-pitch reposition only follows non-pickoff branch');
+console.log('PICKOFF AND DEFENSIVE REPOSITION MUST NOT OVERLAP PASS');
