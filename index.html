@@ -1359,6 +1359,11 @@ function batterFirstRoute(kind,progress){
   const u=(t-.76)/.24;
   return [first[0]+(passed[0]-first[0])*u,first[1]+(passed[1]-first[1])*u];
  }
+ if(kind==='stop'){
+  // An outfield single slows into first instead of sprinting through it.
+  const eased=t<.70?t:(.70+.30*(1-Math.pow(1-(t-.70)/.30,2)));
+  return [home[0]+(first[0]-home[0])*eased,home[1]+(first[1]-home[1])*eased];
+ }
  if(kind==='round'){
   // Approach first from outside the diamond to carry momentum toward second.
   const control=[337,192],u=1-t;
@@ -1402,8 +1407,8 @@ function animateBatterRun(result,speed=55,groundPlan=null){
  const extra=['hit2','hit3','homeRun'].includes(result);
  const single=result==='hit1';
  const outfieldSingle=result==='hit1Outfield';
- const route=single?'through':extra?'round':'straight';
- // Outfield singles are rounded down to first without running through the bag.
+ const route=single?'through':outfieldSingle?'stop':extra?'round':'straight';
+ // Outfield singles decelerate into first; extra-base hits round the bag.
  const firstDuration=result==='fly'?440:finishFirst;
  const runningMs=Math.max(120,firstDuration-departureMs);
  if(result==='fly'){
