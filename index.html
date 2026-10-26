@@ -46,6 +46,16 @@
 <section class="card"><div class="flex between"><span id="event" class="muted">試合開始で大会・学校・選手を生成します</span><span id="status">待機中</span></div><div class="teams"><div class="team" id="away">先攻 —</div><div class="score" id="score">0 - 0<small>1回表</small></div><div class="team" id="home">後攻 —</div></div><div class="scoreboard-scroll" id="lines" tabindex="0" aria-label="イニング別スコアボード。横にスクロールできます"></div><div class="scoreboard-hint">横スクロールで各回を確認できます。チーム名と R・H・E は固定表示。</div></section>
 <div class="layout"><section class="card"><div class="field-header"><h2>グラウンド</h2><div class="field-score-row"><div id="miniScore" class="mini-score" aria-label="球場ミニスコアボード" aria-live="off"><div class="mini-inning">試合待機中</div></div></div></div><div class="field-stage"><svg class="field" viewBox="0 -155 400 485" role="img" aria-label="俯瞰の野球場。外野が奥に広がり、守備位置を表示">
 <defs>
+<!-- Original tiny retro-uniform sprite drawn inside the existing moving fielder circles.
+     Keeps cx/cy, data-position, hit tests and all existing animations unchanged. -->
+<pattern id="retroFielder" patternUnits="objectBoundingBox" width="1" height="1" viewBox="0 0 20 20" preserveAspectRatio="xMidYMid meet">
+ <circle cx="10" cy="10" r="10" fill="#dcecf3"/>
+ <path d="M3 17 L6 12 L14 12 L17 17 Z" fill="#4a83a8"/>
+ <path d="M6 17 L6 20 M14 17 L14 20" stroke="#263e59" stroke-width="2"/>
+ <circle cx="10" cy="8" r="5" fill="#edb88e"/>
+ <path d="M5 7 Q6 1 11 2 Q15 2 16 7 L12 6 L6 8 Z" fill="#294761"/>
+ <path d="M5 6 L16 6" stroke="#142f46" stroke-width="1.4"/>
+</pattern>
 <clipPath id="parkClip"><path d="M12 171 L12 82 Q25 -80 200 -122 Q375 -80 388 82 L388 171 L200 317 Z"/></clipPath>
 <pattern id="grassStripes" width="62" height="62" patternUnits="userSpaceOnUse" patternTransform="rotate(20)"><rect width="62" height="62" fill="transparent"/><rect width="31" height="62" fill="#d3ecc1" opacity=".11"/></pattern>
 <pattern id="dirtTexture" width="29" height="29" patternUnits="userSpaceOnUse"><circle cx="6" cy="8" r="1.1" fill="#7a5032" opacity=".24"/><circle cx="21" cy="20" r="1.4" fill="#e1bb86" opacity=".18"/></pattern>
@@ -68,7 +78,7 @@
 </g>
 <circle cx="200" cy="203" r="19" fill="#ae855a"/><rect x="195" y="200" width="10" height="4" fill="#fff5dd"/>
 <g fill="white"><rect x="195" y="288" width="10" height="10" transform="rotate(45 200 293)"/><rect x="318" y="164" width="10" height="10" transform="rotate(45 323 169)"/><rect x="195" y="42" width="10" height="10" transform="rotate(45 200 47)"/><rect x="72" y="164" width="10" height="10" transform="rotate(45 77 169)"/></g>
-<g id="fielders" fill="#e4eef7" stroke="#1c3552" stroke-width="2"></g>
+<g id="fielders" fill="url(#retroFielder)" stroke="#1c3552" stroke-width="1.5"></g>
 <g id="runnerTacticalLayers" pointer-events="none"><g id="leadRunnerSprites"></g><g id="stealPlaySprites"></g><g id="pickoffSprites"></g></g>
 <g id="pitcherMotion" pointer-events="none">
  <path id="pitcherLeg" d="M 200 207 L 209 212" fill="none" stroke="#d5e6f2" stroke-width="3" stroke-linecap="round" visibility="hidden"/>
@@ -89,14 +99,14 @@
      Camera points toward center field, so left-side screen = right-handed box. -->
 <g id="battingStance" pointer-events="none" visibility="hidden">
  <ellipse id="batterShadow" cx="0" cy="8" rx="10" ry="4" fill="#1b211d" opacity=".38"/>
- <circle cx="0" cy="-3" r="8" fill="#f6b96b" stroke="#49392a" stroke-width="1.5"/>
+ <circle cx="0" cy="-3" r="7" fill="#f6b96b" stroke="#49392a" stroke-width="1.3"/>
  <path id="batterJersey" d="M -7 5 L 7 5 L 8 17 L -8 17 Z" fill="#ffdc7a" stroke="#63491f" stroke-width="1.6"/>
  <path id="batterKnees" d="M -5 17 L -9 23 M 5 17 L 9 23" fill="none" stroke="#e2cb91" stroke-width="2.5" stroke-linecap="round"/>
  <line id="batterBat" x1="3" y1="2" x2="-10" y2="-20" stroke="#f0e9cf" stroke-width="4" stroke-linecap="round"/>
- <circle cx="0" cy="-12" r="5.8" fill="#273c50" stroke="#a7c8d8" stroke-width="1.5"/>
+ <path d="M -7 -12 Q -6 -20 0 -20 Q 7 -20 7 -12 L 5 -9 L -5 -9 Z" fill="#273c50" stroke="#a7c8d8" stroke-width="1.2"/><path d="M -7 -12 L 8 -12" stroke="#172d40" stroke-width="2"/>
  <text id="batterHandLabel" x="0" y="-25" font-size="9" font-weight="800" text-anchor="middle" fill="#fff6db" stroke="#13211a" stroke-width="2" paint-order="stroke">右</text>
 </g>
-<circle id="batterRunner" cx="200" cy="283" r="7" fill="#ffe29b" stroke="#765317" stroke-width="2" visibility="hidden"/>
+<circle id="batterRunner" cx="200" cy="283" r="7" fill="url(#retroFielder)" stroke="#765317" stroke-width="1.5" visibility="hidden"/>
 <ellipse id="ballShadow" cx="200" cy="203" rx="0" ry="0" fill="#08190f" opacity=".4"/><circle id="ball" cx="200" cy="203" r="4" fill="white" stroke="#222" stroke-width="1"/>
 </svg></div><div class="count-panel"><div id="countDots" class="count-dots" aria-label="ボール0、ストライク0、アウト0"><span>B</span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="count-number">0</span><span>S</span><span class="dot"></span><span class="dot"></span><span class="count-number">0</span><span>O</span><span class="dot"></span><span class="dot"></span><span class="count-number">0</span></div><span id="pitchCount" class="muted">球数 0</span></div><div class="muted" id="count">B 0 / S 0 / O 0</div><div class="muted" id="matchup">投手 — / 打者 —</div><div id="pitchResult" class="pitch-result" role="status" aria-live="polite">投球待ち</div><div class="muted" id="pitchMotion" aria-live="off">球種・球速 —</div><div class="flex" style="margin-top:10px"><label for="speed" class="small">演出速度</label><select id="speed"><option value="1">標準（約10〜15分目標）</option><option value="2">2倍速</option><option value="4">4倍速</option></select></div></section><section class="card"><h2>実況ログ</h2><div class="log" id="log" aria-live="polite"></div><h2 style="margin-top:16px">両チームの選手</h2><div class="flex"><button id="rosterAway" class="secondary" disabled>先攻の選手</button><button id="rosterHome" class="secondary" disabled>後攻の選手</button></div><div id="roster" class="tablewrap" style="margin-top:10px"></div></section></div>
 <section class="card"><div class="flex between"><h2>試合結果・保存済み試合</h2><button id="clear" class="secondary">履歴を全削除</button></div><div class="muted">このブラウザ内に保存。別端末との同期はありません。試合終了時に自動保存します。</div><div id="history" style="margin-top:12px"></div></section><dialog id="detail"><div class="flex between"><h2 id="detailTitle">選手情報</h2><button id="closeDetail" class="secondary">閉じる</button></div><div id="detailBody"></div></dialog>
