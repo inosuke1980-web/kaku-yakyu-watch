@@ -154,7 +154,7 @@ function init(){stop();const category=$('category').value;if(!['random','high'].
 // Shift only between pitches, never while a ball is in play.
 // Shortstop normally sets up a little deeper than second base, not as a mirror image.
 // SVG Y grows toward home: smaller Y = farther from the batter.
-const INFIELD_NORMAL={'1B':[282,149],'3B':[118,149],'2B':[257,132],SS:[143,107]};
+const INFIELD_NORMAL={'1B':[282,149],'3B':[118,149],'2B':[257,107],SS:[143,107]};
 function defensiveAlignment(state=game){
  const normal={...INFIELD_NORMAL};
  if(!state||state.ended)return {name:'通常守備',positions:normal};
@@ -167,9 +167,10 @@ function defensiveAlignment(state=game){
  const lefty=hitter?.bats==='左打';
  const middle=(positions)=>{
   const out={...positions},force=!!bases[0]&&outs<2;
-  const pull=lefty?9:-9;
-  out.SS=[positions.SS[0]+(force?13:0)+pull,positions.SS[1]+(force?4:0)];
-  out['2B']=[positions['2B'][0]-(force?13:0)+pull,positions['2B'][1]+(force?4:0)];
+  const pull=lefty?5:-5;
+  // A runner on first prompts only a small double-play shade, not a shift onto second.
+  out.SS=[positions.SS[0]+(force?5:0)+pull,positions.SS[1]+(force?2:0)];
+  out['2B']=[positions['2B'][0]-(force?5:0)+pull,positions['2B'][1]+(force?2:0)];
   return out;
  };
  const defending=state.teams?.[1-state.half];
