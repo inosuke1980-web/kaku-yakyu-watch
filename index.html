@@ -493,11 +493,22 @@ function hit(p,bases,style='normal',targetInfo=null){
  // No run can count on a third out before the batter reaches first, but
  // an out trying for third after a hit does not cancel preceding runs.
  creditRuns(scored,p);
- if(bases===4)showPitchResult('HOMERUN!','homerun');
+ // Home-run announcement waits until the ball has visibly cleared the fence.
  if(homePlay)log(homePlay.wild?'外野からの返球が逸れた！ 失策を記録。'+(homePlay.extraAdvance?' 走者が追加進塁。':''):homePlay.safe?'本塁クロスプレー、セーフ！':'本塁クロスプレー、タッチアウト！');
  if(game.thirdBasePlay)log(game.thirdBasePlay.safe?'一塁走者が三塁を狙ってセーフ！':'一塁走者、三塁でタッチアウト！');
- log(`${p.name} ${targetInfo?.flight?outfieldHitDescription(targetInfo)+' ':style==='liner'?'鋭いライナーが間を抜けた！ ':''}${bases===4?'ホームラン！':bases===3?'三塁打！':bases===2?'二塁打！':'ヒット！'}${scored.length?' '+scored.length+'点追加。':''}`);
+ const hitAnnouncement=`${p.name} ${targetInfo?.flight?outfieldHitDescription(targetInfo)+' ':style==='liner'?'鋭いライナーが間を抜けた！ ':''}${bases===4?'ホームラン！':bases===3?'三塁打！':bases===2?'二塁打！':'ヒット！'}${scored.length?' '+scored.length+'点追加。':''}`;
+ if(bases!==4)log(hitAnnouncement);
  animate(targetInfo?.flight?targetInfo.flight:style==='liner'?(bases===2?'linerHit2':'linerHit'):bases===4?'home':bases===1?'single':'double',targetInfo,p.speed,bases);
+ if(bases===4){
+  // Result is known to the simulation, but never reveal it before the flight ends.
+  const token=animationToken;
+  const fenceCrossMs=Math.max(0,targetInfo?.flightMs??1400);
+  playTimers.push(setTimeout(()=>{
+   if(token!==animationToken)return;
+   showPitchResult('HOMERUN!','homerun');
+   log(hitAnnouncement);
+  },fenceCrossMs+60));
+ }
  if(bases!==4)animateOutfieldReturn(bases===1?'single':bases===2?'double':'triple',scored.length>0,fieldArm,homePlay,targetInfo,game.thirdBasePlay);
 }
 // 内野ゴロ：二塁封殺／併殺／一塁アウトのいずれかを状況から決定する。
