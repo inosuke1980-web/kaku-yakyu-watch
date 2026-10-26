@@ -107,6 +107,7 @@
  <text id="batterHandLabel" x="0" y="-25" font-size="9" font-weight="800" text-anchor="middle" fill="#fff6db" stroke="#13211a" stroke-width="2" paint-order="stroke">右</text>
 </g>
 <circle id="batterRunner" cx="200" cy="283" r="7" fill="url(#retroFielder)" stroke="#765317" stroke-width="1.5" visibility="hidden"/>
+<circle id="outfieldPickupGlove" cx="0" cy="0" r="5.5" fill="#bd8857" stroke="#734923" stroke-width="1.2" visibility="hidden" pointer-events="none"/>
 <ellipse id="ballShadow" cx="200" cy="203" rx="0" ry="0" fill="#08190f" opacity=".4"/><circle id="ball" cx="200" cy="203" r="4" fill="white" stroke="#222" stroke-width="1"/>
 </svg></div><div class="field-score-row" style="display:flex;justify-content:flex-end;margin:8px 0 10px"><div id="miniScore" class="mini-score" aria-label="球場ミニスコアボード" aria-live="off"><div class="mini-inning">試合待機中</div></div></div><div class="muted" id="matchup">投手 — / 打者 —</div><div id="pitchResult" class="pitch-result" role="status" aria-live="polite">投球待ち</div><div class="muted" id="pitchMotion" aria-live="off">球種・球速 —</div><div class="flex" style="margin-top:10px"><label for="speed" class="small">演出速度</label><select id="speed"><option value="1">標準（約10〜15分目標）</option><option value="2">2倍速</option><option value="4">4倍速</option></select></div></section><section class="card"><h2>実況ログ</h2><div class="log" id="log" aria-live="polite"></div><h2 style="margin-top:16px">両チームの選手</h2><div class="flex"><button id="rosterAway" class="secondary" disabled>先攻の選手</button><button id="rosterHome" class="secondary" disabled>後攻の選手</button></div><div id="roster" class="tablewrap" style="margin-top:10px"></div></section></div>
 <section class="card"><div class="flex between"><h2>試合結果・保存済み試合</h2><button id="clear" class="secondary">履歴を全削除</button></div><div class="muted">このブラウザ内に保存。別端末との同期はありません。試合終了時に自動保存します。</div><div id="history" style="margin-top:12px"></div></section><dialog id="detail"><div class="flex between"><h2 id="detailTitle">選手情報</h2><button id="closeDetail" class="secondary">閉じる</button></div><div id="detailBody"></div></dialog>
@@ -292,6 +293,7 @@ function parkOutfieldPositions(shape=game?.parkShape){
  return {LF:[95,45+leftDepth],CF:[200,-76+(p.center-standard.center)],RF:[305,45+rightDepth]};
 }
 function resetOutfieldPositions(){
+ const pickupGlove=$('outfieldPickupGlove');if(pickupGlove)pickupGlove.setAttribute('visibility','hidden');
  for(const id of ['pitcherLeg','pitcherArm','pitcherSet','pitcherGlance']){const el=$(id);if(el)el.setAttribute('visibility','hidden')}
  const ball=$('ball');if(ball)ball.setAttribute('visibility','visible');
  const f=$('fielders');if(!f||!f.querySelectorAll)return;
@@ -1295,14 +1297,14 @@ function pitcherPose(t){
  const a=poses[i-1],b=poses[i],u=(t-a[0])/(b[0]-a[0]),v=u*u*(3-2*u);
  return a.slice(1).map((n,j)=>n+(b[j+1]-n)*v);
 }
-function pitchActionVisual(type,token){
+function pitchActionVisual(type,token,begun=performance.now()){
  const leg=$('pitcherLeg'),arm=$('pitcherArm'),set=$('pitcherSet'),glove=$('catcherGlove');
  const field=$('fielders'),body=field?.querySelector?.('circle[data-position="P"]');
  const label=field?.querySelector?.('text[data-position="P"]');
  if(!leg||!arm||!set||!glove)return;
  glove.setAttribute('cx',String(207+type.side*.25));glove.setAttribute('cy',String(302+type.drop*.25));
  leg.setAttribute('visibility','visible');arm.setAttribute('visibility','visible');set.setAttribute('visibility','visible');
- const begun=performance.now(),total=PITCH_WINDUP_MS+330;
+ const total=PITCH_WINDUP_MS+330;
  function frame(now){
   if(token!==animationToken)return;
   const t=clamp((now-begun)/total,0,1),p=pitcherPose(t);
@@ -1311,8 +1313,11 @@ function pitchActionVisual(type,token){
   set.setAttribute('cx',p[2]);set.setAttribute('cy',p[3]);
   leg.setAttribute('d',`M ${p[4]} ${p[5]} L ${p[6]} ${p[7]}`);
   // Throwing hand moves forward to the release point, then follows through.
-  const phase=clamp((now-begun)/PITCH_WINDUP_MS,0,1);
-  arm.setAttribute('cx',String(197+8*phase));arm.setAttribute('cy',String(196+12*phase));
+  const phase=clamp((now-begun)/PITCH_WINDUP_MS,0,1.6);
+  const armFrames=[[0,197,196],[.35,191,194],[.7,193,197],[1,205,208],[1.2,207,213],[1.6,200,203]];
+  let ai=1;while(ai<armFrames.length-1&&phase>armFrames[ai][0])ai++;
+  const aa=armFrames[ai-1],ab=armFrames[ai],u=clamp((phase-aa[0])/(ab[0]-aa[0]),0,1),v=u*u*(3-2*u);
+  arm.setAttribute('cx',String(aa[1]+(ab[1]-aa[1])*v));arm.setAttribute('cy',String(aa[2]+(ab[2]-aa[2])*v));
   if(t<1)requestAnimationFrame(frame);else{
    leg.setAttribute('visibility','hidden');arm.setAttribute('visibility','hidden');set.setAttribute('visibility','hidden');
   }
@@ -1377,12 +1382,13 @@ function batterReadyMotion(token){
 function drawPitch(type){
  const ball=$('ball'),startX=205,startY=208,endY=278;
  const ballToken=++animationToken;
- pitchActionVisual(type,ballToken);
+ const motionStarted=performance.now();
+ pitchActionVisual(type,ballToken,motionStarted);
  catcherSetTarget(ballToken);
  batterReadyMotion(ballToken);
  ball.style.transition='none';
  ball.setAttribute('cx',startX);ball.setAttribute('cy',startY);ball.setAttribute('visibility','hidden');
- const started=performance.now()+PITCH_WINDUP_MS;
+ const started=motionStarted+PITCH_WINDUP_MS;
  function step(now){
   if(ballToken!==animationToken)return;
   if(now<started){requestAnimationFrame(step);return;}
@@ -1925,7 +1931,7 @@ function animate(kind,targetInfo=null,runnerSpeed=55,hitBases=null){
     // Deep uncaught flies are picked up AFTER they land.
     if(!pursuit.caught){
      const gather=outfieldPickupTiming(targetInfo,targetInfo?.fielder?.field??55).gather;
-     at(duration,()=>{nearest.setAttribute('data-fielding-phase','recover');move(pursuit.destination,Math.max(100,gather-30))});
+     at(duration,()=>{nearest.setAttribute('data-fielding-phase','recover');move(pursuit.destination,Math.max(100,gather-140))});
     }
    }
   }else{
@@ -1956,6 +1962,13 @@ function animate(kind,targetInfo=null,runnerSpeed=55,hitBases=null){
    if(verdict)showPitchResult(verdict.label,verdict.style);
   });
   const releaseAt=targetInfo?.flight?outfieldPickupTiming(targetInfo,targetInfo.fielder?.field??55).release:duration;
+  // At pickup the compact glove encloses the resting ball before the relay.
+  if(hitBases===1&&targetInfo?.flight&&!targetInfo?.caught&&!visual.dropped&&pursuit){
+   const pickupGlove=$('outfieldPickupGlove');
+   const contactAt=releaseAt-100;
+   at(contactAt,()=>{if(!pickupGlove)return;pickupGlove.setAttribute('cx',pursuit.destination[0]);pickupGlove.setAttribute('cy',pursuit.destination[1]);pickupGlove.setAttribute('visibility','visible');nearest.setAttribute('data-fielding-phase','pickup')});
+   at(releaseAt+20,()=>{if(pickupGlove)pickupGlove.setAttribute('visibility','hidden')});
+  }
   const resetAt=Math.max(pursuit?.latePickup?duration+600:duration+430,releaseAt+220,visual.dropped?visual.contactAt+650:0);
   at(resetAt,()=>{
    nearest.setAttribute('r','10');
@@ -1984,7 +1997,9 @@ function animate(kind,targetInfo=null,runnerSpeed=55,hitBases=null){
    rolling?groundPosition[0]:start[0]+(target[0]-start[0])*travel;
   const y=drop?dropPosition[1]:rebounding?(t<wallAt?start[1]+(target[1]-start[1])*wallT:target[1]+(targetInfo.rebound[1]-target[1])*bounceT):
    rolling?groundPosition[1]:start[1]+(target[1]-start[1])*travel;
-  const lift=drop?(t<.82?90*Math.sin(Math.PI*t/.82):0):rebounding?(t<wallAt?Math.sin(Math.PI*wallT)*65:Math.sin(Math.PI*bounceT)*9):isFly?75*Math.sin(Math.PI*t):isLiner?16*Math.sin(Math.PI*t):0;
+  const bounceSingle=hitBases===1&&!targetInfo?.caught&&!drop&&!rolling&&!rebounding&&(isFly||isLiner);
+  const airHeight=isFly?75:isLiner?16:0;
+  const lift=drop?(t<.82?90*Math.sin(Math.PI*t/.82):0):rebounding?(t<wallAt?Math.sin(Math.PI*wallT)*65:Math.sin(Math.PI*bounceT)*9):bounceSingle?(t<.82?airHeight*Math.sin(Math.PI*t/.82):4*Math.sin(Math.PI*(t-.82)/.18)):airHeight*Math.sin(Math.PI*t);
   const visibleY=(kind==='homeRun'||kind==='home')?y-lift:Math.max(y-lift,outfieldFenceY(x)+8);
   ball.setAttribute('cx',x.toFixed(1));ball.setAttribute('cy',visibleY.toFixed(1));
   ball.setAttribute('r',String(isFly?4.5+2*Math.sin(Math.PI*t):isLiner?4.2:4));
@@ -2109,9 +2124,8 @@ function animateOutfieldReturn(kind,scoring=false,arm=55,homePlay=null,targetInf
  if(relayFielder){
   const ox=Number(relayFielder.getAttribute('cx')),oy=Number(relayFielder.getAttribute('cy'));
   const moveRelay=(x,y)=>{relayFielder.setAttribute('cx',x);relayFielder.setAttribute('cy',y);if(relayLabel){relayLabel.setAttribute('x',x);relayLabel.setAttribute('y',y+3)}};
-  relayFielder.style.transition='cx 650ms ease-out,cy 650ms ease-out';
-  requestAnimationFrame(()=>{if(token===animationToken)moveRelay(cutoff[0],cutoff[1])});
-  playTimers.push(setTimeout(()=>{if(token!==animationToken)return;relayFielder.style.transition='cx 350ms ease-out,cy 350ms ease-out';moveRelay(ox,oy)},atGoal+100));
+  moveGroundFielder(relayFielder,relayLabel,cutoff,650,token);
+  playTimers.push(setTimeout(()=>{if(token!==animationToken)return;moveGroundFielder(relayFielder,relayLabel,[ox,oy],350,token)},atGoal+100));
  }
  const later=(time,callback)=>playTimers.push(setTimeout(()=>{if(token===animationToken)callback()},time));
  const move=(target,duration)=>{

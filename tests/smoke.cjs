@@ -7,7 +7,7 @@ const document={getElementById(id){if(!ids.has(id))ids.set(id,mock());return ids
 document.getElementById('category').value='high';
 const ctx={document,Math,Date,console,performance:{now:()=>0},localStorage:{getItem:()=>null,setItem:()=>{},removeItem:()=>{}},setTimeout:()=>1,clearTimeout:()=>{},requestAnimationFrame:()=>{},confirm:()=>true};
 vm.createContext(ctx);vm.runInContext(src,ctx);
-vm.runInContext('render=()=>{};renderRoster=()=>{};animate=()=>{};animateGround=()=>{};animateFieldingError=()=>{};animateOutfieldReturn=()=>{};animateBaseRunners=()=>{};animateFlyLeadAndReturn=()=>{};log=()=>{};historyRender=()=>{};saveGame=()=>{};',ctx);
+vm.runInContext('const originalRender=render;render=()=>{};renderRoster=()=>{};animate=()=>{};animateGround=()=>{};animateFieldingError=()=>{};animateOutfieldReturn=()=>{};animateBaseRunners=()=>{};animateFlyLeadAndReturn=()=>{};log=()=>{};historyRender=()=>{};saveGame=()=>{};',ctx);
 // Stadium calibration: use a deterministic uniform grid to check all eight parks.
 // The counts are per 10,000 hits, not per 10,000 plate appearances.
 const parkHitAudit=vm.runInContext(`(()=>{
@@ -106,6 +106,8 @@ assert.ok(outfield.elite_liner.catches>outfield.average_liner.catches,'elite out
 assert.ok(outfield.average_liner.catches>outfield.weak_liner.catches,'weak outfielders should catch fewer liners');
 console.log('OUTFIELD CHECKS PASS',JSON.stringify(outfield));
 
+// The simulation loop suppresses drawing; restore it before testing the scoreboard.
+vm.runInContext('render=originalRender',ctx);
 const scoreboard=vm.runInContext(`(()=>{
  init();
  const t=game.teams[0];t.runs[0]=null;
@@ -183,10 +185,10 @@ const gameContext=vm.runInContext(`(()=>{
  for(const [label,outs,inning,diff] of cases){
   init();const g=game;g.outs=outs;g.inning=inning;g.half=0;
   g.teams[0].runs[0]=Math.max(0,diff);g.teams[1].runs[0]=Math.max(0,-diff);
-  const runner=g.teams[0].players[6];runner.speed=60;
+  const runner=g.teams[0].players[6];runner.speed=20;
   let attempts=0;
   for(let i=0;i<4000;i++){
-   const decision=decideSingleAdvance(runner,0,[200,-40],60,false);
+   const decision=decideSingleAdvance(runner,0,[200,80],60,false);
    attempts+=Number(!!decision.attempt);
   }
   output[label]=attempts;
@@ -206,7 +208,8 @@ const safeRunning=vm.runInContext(`(()=>{
   const runner=game.teams[0].players[6];runner.speed=speed;
   let attempts=0,retired=0;
   for(let i=0;i<5000;i++){
-   const d=decideSingleAdvance(runner,0,[200,-40],arm,false);
+   // Short pickup timing makes the slow runner's attempt genuinely unsafe.
+   const d=decideSingleAdvance(runner,0,[200,80],arm,false,{flightMs:450});
    attempts+=Number(!!d.attempt);retired+=Number(!!d.thirdOut);
   }
   data[name]={attempts,retired};
@@ -338,7 +341,7 @@ const firstBaseCover=vm.runInContext(`(()=>{
 assert.equal(firstBaseCover.length,16);
 assert.ok(firstBaseCover.every(x=>x.cover==='1B'&&x.needed),'first baseman must cover first on ground balls');
 assert.ok(firstBaseCover.filter(x=>x.position==='1B').every(x=>x.backup==='2B'),'second baseman should be designated backup when first baseman fields ball');
-assert.match(html,/const base=\{LF:\[99,-5\],CF:\[200,-75\],RF:\[301,-5\],\.\.\.defensiveAlignment\(\)\.positions\}/,'first baseman must reset to active alignment');
+assert.match(html,/const base=\{P:\[200,203\],\.\.\.parkOutfieldPositions\(\),\.\.\.defensiveAlignment\(\)\.positions\}/,'first baseman must reset to active alignment');
 console.log('FIRST BASE COVER CHECKS PASS',JSON.stringify(firstBaseCover));
 
 {
@@ -356,9 +359,10 @@ console.log('FIRST BASE COVER CHECKS PASS',JSON.stringify(firstBaseCover));
   const field={querySelector(selector){const position=selector.match(/data-position="([^"]+)"/)?.[1];return selector.startsWith('circle')?circles[position]:labels[position]}};
   const ball=element('ball',200,203);
   const context={
-   animationToken:1,playTimers:[],animationHoldUntil:0,Date,Math,console,
+   animationToken:1,playTimers:[],animationHoldUntil:0,game:{forceOutVisual:null},Date,Math,console,
    performance:{now:()=>now},clamp:(v,min,max)=>Math.max(min,Math.min(max,v)),
-   runnerFirstMs:()=>1550,throwFlightMs:()=>340,
+   runnerFirstMs:()=>1550,throwFlightMs:()=>340, fielderReleaseMs:()=>225,
+   current:()=>({def:{players:Array.from({length:20},()=>({field:55,arm:55}))}}),
    $:id=>id==='fielders'?field:id==='ball'?ball:null,
    requestAnimationFrame:cb=>{frames.push(cb)},
    setTimeout:(cb,delay)=>{timers.push({at:now+delay,cb});return timers.length},
@@ -366,7 +370,7 @@ console.log('FIRST BASE COVER CHECKS PASS',JSON.stringify(firstBaseCover));
   };
   vm.createContext(context);
   vm.runInContext(groundSource,context);
-  vm.runInContext('animateGround('+JSON.stringify(outcome)+','+JSON.stringify({defender:position,point:position==='1B'?[290,182]:[158,156],label:'grounder'})+',55,55,{pickup:650,runnerMs:1550})',context);
+  vm.runInContext('animateGround('+JSON.stringify(outcome)+','+JSON.stringify({defender:position,point:position==='1B'?[290,182]:[158,156],label:'grounder'})+',55,55,{pickup:650,releaseMs:345,runnerMs:1550})',context);
   const advance=target=>{
    while(now<target){
     now=Math.min(now+20,target);
@@ -378,13 +382,17 @@ console.log('FIRST BASE COVER CHECKS PASS',JSON.stringify(firstBaseCover));
   const where=()=>[Number(circles['1B'].getAttribute('cx')),Number(circles['1B'].getAttribute('cy'))];
   advance(1100);const onBag=where();
   advance(1750);const held=where();
-  advance(2500);const restored=where();
+  advance(3100);const restored=where();
   return {onBag,held,restored};
  }
  for(const [position,outcome] of [['SS','out'],['3B','safe'],['2B','double'],['SS','force'],['1B','out']]){
   const frames=exerciseGroundCover(position,outcome);
-  assert.ok(Math.hypot(frames.onBag[0]-323,frames.onBag[1]-169)<1,position+'/'+outcome+': cover first by throw');
-  assert.ok(Math.hypot(frames.held[0]-323,frames.held[1]-169)<1,position+'/'+outcome+': stay on the bag through verdict');
+  if(outcome==='force'){
+   assert.ok(Math.hypot(frames.onBag[0]-286,frames.onBag[1]-189)<1,'force at second: first baseman stays in position');
+  }else{
+   assert.ok(Math.hypot(frames.onBag[0]-323,frames.onBag[1]-169)<1,position+'/'+outcome+': cover first by throw');
+   assert.ok(Math.hypot(frames.held[0]-323,frames.held[1]-169)<1,position+'/'+outcome+': stay on the bag through verdict');
+  }
   assert.ok(Math.hypot(frames.restored[0]-286,frames.restored[1]-189)<1,position+'/'+outcome+': return to fielding position');
  }
  console.log('FIRST-BASE COVER ANIMATION FRAMES CHECKS PASS');
@@ -417,7 +425,7 @@ console.log('FIRST BASE COVER CHECKS PASS',JSON.stringify(firstBaseCover));
     const callbacks=frames;frames=[];for(const c of callbacks)c(now);
    }
   };
-  progress(defender==='1B'?1000:700);
+  progress(defender==='1B'?900:700);
   const sprite=foreground.children[0];
   const onBag=[Number(sprite.getAttribute('cx')),Number(sprite.getAttribute('cy'))];
   const overlay=foreground.children.length===2;
@@ -921,7 +929,7 @@ assert.deepEqual(Array.from(cornerDepthAudit.first),[282,149],'first baseman mus
 assert.deepEqual(Array.from(cornerDepthAudit.third),[118,149],'third baseman must play deeper than the bag');
 assert.ok(cornerDepthAudit.nearFirst.reachable&&cornerDepthAudit.nearThird.reachable,'corner fielders should cover balls near their normal depth');
 assert.match(html,/\.\.\.\['1B','2B','SS','3B'\]\.map\(name=>\[name,\.\.\.defensiveAlignment\(\)\.positions\[name\]\]\)/,'initial infield rendering must use active alignment');
-assert.match(html,/const base=\{LF:\[99,-5\],CF:\[200,-75\],RF:\[301,-5\],\.\.\.defensiveAlignment\(\)\.positions\}/,'fielder reset must use active alignment');
+assert.match(html,/const base=\{P:\[200,203\],\.\.\.parkOutfieldPositions\(\),\.\.\.defensiveAlignment\(\)\.positions\}/,'fielder reset must use active alignment');
 console.log('CORNER INFIELDERS STANDARD DEPTH PASS');
 
 const situationalInfieldAudit=vm.runInContext(`(()=>{

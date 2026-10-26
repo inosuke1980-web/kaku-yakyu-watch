@@ -20,5 +20,5 @@ for(const flight of ['groundThrough','gapLiner','overHead','fenceDouble']){
  assert.ok(p.chaseMs<=1000);
 }
 assert.match(html,/at\(duration,\(\)=>\{nearest\.setAttribute\('data-fielding-phase','recover'\)/);
-assert.match(html,/const started=performance\.now\(\)\+PITCH_WINDUP_MS/);
+assert.match(html,/const started=motionStarted\+PITCH_WINDUP_MS/);
 console.log('ANIMATION MOTION CHECKS PASS');
