@@ -1325,6 +1325,31 @@ for(const {kind,point,duration,plan} of fieldingVisualAudit){
  if(plan.dropped)assert.ok(!plan.caught,'cannot catch and drop simultaneously');
 }
 assert.match(html,/nearest\.setAttribute\('data-fielding-phase',visual\.phase\)/,'fielder visibly changes phase');
-assert.match(html,/const dropX=start\[0\]\+\(target\[0\]-start\[0\]\)\*dropApproach\+23\*dropProgress/,'dropped ball ricochets in frame animation');
+assert.match(html,/const dropPosition=drop\?outfieldBallMotion\(kind,targetInfo,start,target,t\):null/,'dropped ball follows continuous glove contact motion');
 assert.match(html,/nearest\.setAttribute\('data-fielding-phase','miss'\)/,'untouched hit shows miss');
 console.log('THREE HUNDRED FIELDING VISUAL PLANS PASS');
+
+
+// 500 sampled ball positions: five outcomes x ten contact points x ten times.
+const motionAudit=vm.runInContext(`(()=>{
+ const variants=[['outfieldError',{dropped:true}],['fly',{caught:true}],
+  ['single',{nearMiss:true}],['groundThrough',{flight:'groundThrough'}],['linerHit',{nearMiss:true}]];
+ const targets=Array.from({length:10},(_,i)=>[35+i*33,-90+i*10]);
+ const times=Array.from({length:10},(_,i)=>i/9);
+ return variants.flatMap(([kind,info])=>targets.flatMap(target=>times.map(t=>({
+  kind,info,target,t,xy:outfieldBallMotion(kind,info,[200,283],target,t)
+ }))));
+})()`,ctx);
+assert.equal(motionAudit.length,500,'500 ball motion positions');
+for(const {kind,target,t,xy} of motionAudit){
+ assert.ok(xy.every(Number.isFinite),'ball coordinates finite');
+ if(t===0)assert.deepEqual(Array.from(xy),[200,283],'ball begins at contact');
+ if(t===1){
+  const expected=kind==='outfieldError'?[target[0]+23,target[1]+26]:target;
+  assert.deepEqual(Array.from(xy),expected,'ball reaches correct endpoint');
+ }
+}
+const continuity=vm.runInContext(`outfieldBallMotion('outfieldError',{dropped:true},[200,283],[300,-40],.82)`,ctx);
+assert.deepEqual(Array.from(continuity),[300,-40],'ball touches glove before deflection');
+assert.match(html,/const dropPosition=drop\?outfieldBallMotion/,'ball frame uses motion planner');
+console.log('FIVE HUNDRED OUTFIELD BALL MOTION SAMPLES PASS');
