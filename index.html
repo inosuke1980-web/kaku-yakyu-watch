@@ -1839,7 +1839,9 @@ function animate(kind,targetInfo=null,runnerSpeed=55,hitBases=null){
   const bounceT=rebounding?Math.max(0,(t-wallAt)/(1-wallAt)):0;
   const drop=kind==='outfieldError'||!!targetInfo?.dropped;
   const dropAt=.82,dropProgress=clamp((t-dropAt)/(1-dropAt),0,1);
-  const dropX=target[0]+23*dropProgress,dropY=target[1]+26*dropProgress;
+  const dropApproach=clamp(t/dropAt,0,1);
+  const dropX=start[0]+(target[0]-start[0])*dropApproach+23*dropProgress;
+  const dropY=start[1]+(target[1]-start[1])*dropApproach+26*dropProgress;
   const x=drop&&t>=dropAt?dropX:rebounding?(t<wallAt?start[0]+(target[0]-start[0])*wallT:target[0]+(targetInfo.rebound[0]-target[0])*bounceT):
    rolling?groundPosition[0]:start[0]+(target[0]-start[0])*t;
   const y=drop&&t>=dropAt?dropY:rebounding?(t<wallAt?start[1]+(target[1]-start[1])*wallT:target[1]+(targetInfo.rebound[1]-target[1])*bounceT):
