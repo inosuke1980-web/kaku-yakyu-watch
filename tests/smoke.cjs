@@ -8,6 +8,33 @@ document.getElementById('category').value='high';
 const ctx={document,Math,Date,console,performance:{now:()=>0},localStorage:{getItem:()=>null,setItem:()=>{},removeItem:()=>{}},setTimeout:()=>1,clearTimeout:()=>{},requestAnimationFrame:()=>{},confirm:()=>true};
 vm.createContext(ctx);vm.runInContext(src,ctx);
 vm.runInContext('render=()=>{};renderRoster=()=>{};animate=()=>{};animateGround=()=>{};animateFieldingError=()=>{};animateOutfieldReturn=()=>{};animateBaseRunners=()=>{};animateFlyLeadAndReturn=()=>{};log=()=>{};historyRender=()=>{};saveGame=()=>{};',ctx);
+// Stadium calibration: use a deterministic uniform grid to check all eight parks.
+// The counts are per 10,000 hits, not per 10,000 plate appearances.
+const parkHitAudit=vm.runInContext(`(()=>{
+ const result={};
+ for(const shape of Object.keys(PARK_SHAPES)){
+  const counts=[0,0,0,0,0];
+  for(let i=0;i<10000;i++)counts[parkHitBases((i+.5)/10000,shape)]++;
+  result[shape]={single:counts[1],double:counts[2],triple:counts[3],homer:counts[4]};
+ }
+ return result;
+})()`,ctx);
+assert.equal(Object.keys(parkHitAudit).length,8,'all eight stadiums have hit profiles');
+for(const profile of Object.values(parkHitAudit)){
+ assert.equal(profile.single,7500,'single-hit rate preserved');
+ assert.equal(profile.double,1700,'double-hit rate preserved');
+ assert.equal(profile.single+profile.double+profile.triple+profile.homer,10000);
+}
+assert.equal(parkHitAudit.standard.homer,400);
+assert.equal(parkHitAudit.wide.homer,250);
+assert.equal(parkHitAudit.wide.triple,550);
+assert.equal(parkHitAudit.small.homer,600);
+assert.equal(parkHitAudit.small.triple,200);
+assert.ok(parkHitAudit.wide.triple>parkHitAudit.small.triple);
+assert.ok(parkHitAudit.small.homer>parkHitAudit.wide.homer);
+assert.match(html,/bases=parkHitBases\(pow,game\.parkShape\)/,'live pitch outcome uses selected stadium');
+console.log('EIGHT STADIUM HIT-PROBABILITY CALIBRATIONS PASS');
+
 const results={games:0,extraInnings:0,maxInning:0,violations:[],scores:0,tactics:{}};
 for(let n=0;n<1000;n++){
  vm.runInContext('init()',ctx);let steps=0;
@@ -1411,29 +1438,3 @@ assert.match(html,/miniTeamName\(t.name\).*t.profile\?\.rank/s,'mini scoreboard 
 assert.match(html,/t.profile\?\.previousSummer/,'mini scoreboard includes prior tournament result');
 console.log('SCHOOL STRENGTH AND HISTORY PROFILES PASS');
 
-// Stadium calibration: use a deterministic uniform grid to check all eight parks.
-// The counts are per 10,000 hits, not per 10,000 plate appearances.
-const parkHitAudit=vm.runInContext(`(()=>{
- const result={};
- for(const shape of Object.keys(PARK_SHAPES)){
-  const counts=[0,0,0,0,0];
-  for(let i=0;i<10000;i++)counts[parkHitBases((i+.5)/10000,shape)]++;
-  result[shape]={single:counts[1],double:counts[2],triple:counts[3],homer:counts[4]};
- }
- return result;
-})()`,ctx);
-assert.equal(Object.keys(parkHitAudit).length,8,'all eight stadiums have hit profiles');
-for(const profile of Object.values(parkHitAudit)){
- assert.equal(profile.single,7500,'single-hit rate preserved');
- assert.equal(profile.double,1700,'double-hit rate preserved');
- assert.equal(profile.single+profile.double+profile.triple+profile.homer,10000);
-}
-assert.equal(parkHitAudit.standard.homer,400);
-assert.equal(parkHitAudit.wide.homer,250);
-assert.equal(parkHitAudit.wide.triple,550);
-assert.equal(parkHitAudit.small.homer,600);
-assert.equal(parkHitAudit.small.triple,200);
-assert.ok(parkHitAudit.wide.triple>parkHitAudit.small.triple);
-assert.ok(parkHitAudit.small.homer>parkHitAudit.wide.homer);
-assert.match(html,/bases=parkHitBases\(pow,game\.parkShape\)/,'live pitch outcome uses selected stadium');
-console.log('EIGHT STADIUM HIT-PROBABILITY CALIBRATIONS PASS');
