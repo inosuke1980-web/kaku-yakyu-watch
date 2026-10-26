@@ -1297,3 +1297,34 @@ for(const item of verdictAudit){
 }
 assert.match(html,/const verdict=battedBallVerdict\(kind,targetInfo,hitBases\)/,'landing display uses verdict helper');
 console.log('ONE HUNDRED BATTED BALL VERDICT CASES PASS');
+
+
+// 300 distinct visual plans: ten fielding outcomes, six hit locations, five flight times.
+const fieldingVisualAudit=vm.runInContext(`(()=>{
+ const types=[
+  ['outfieldError',{dropped:true}],['fly',{caught:true}],
+  ['fly',{caught:true,diving:true}],['fly',{caught:true,atFence:true}],
+  ['single',{nearMiss:true}],['double',{gapMiss:true}],
+  ['groundThrough',{flight:'groundThrough'}],['linerHit',{nearMiss:true}],
+  ['single',{}],['fenceDouble',{flight:'fenceDouble'}]
+ ];
+ const points=[[55,25],[95,-35],[145,10],[230,-20],[305,-65],[355,5]];
+ const times=[540,800,1100,1450,1900];
+ return types.flatMap(([kind,info])=>points.flatMap(point=>times.map(duration=>({
+  kind,point,duration,plan:outfieldVisualPlan(kind,info,point,duration)
+ }))));
+})()`,ctx);
+assert.equal(fieldingVisualAudit.length,300,'300 visual plans generated');
+for(const {kind,point,duration,plan} of fieldingVisualAudit){
+ assert.ok(plan.contactAt>0&&plan.contactAt<=duration,'contact occurs during ball flight');
+ assert.ok(plan.reach.every(Number.isFinite),'fielder target finite');
+ assert.ok(['bobble','catch','chase','pickup'].includes(plan.phase),'recognized fielding phase');
+ if(kind==='outfieldError'){assert.equal(plan.phase,'bobble');assert.ok(plan.deflect.every(Number.isFinite));}
+ if(kind==='fly')assert.equal(plan.phase,'catch');
+ if(kind==='groundThrough')assert.equal(plan.phase,'chase');
+ if(plan.dropped)assert.ok(!plan.caught,'cannot catch and drop simultaneously');
+}
+assert.match(html,/nearest\.setAttribute\('data-fielding-phase',visual\.phase\)/,'fielder visibly changes phase');
+assert.match(html,/moveGroundFielder\(ball,null,visual\.deflect,210,token\)/,'dropped ball ricochets');
+assert.match(html,/nearest\.setAttribute\('data-fielding-phase','miss'\)/,'untouched hit shows miss');
+console.log('THREE HUNDRED FIELDING VISUAL PLANS PASS');
