@@ -1251,7 +1251,7 @@ assert.ok(html.includes('if(ordinaryForce?.forceOut&&chance('),'ordinary force r
 assert.ok(html.includes('if(quickForce?.forceOut&&quickForce.doubleOut&&chance('),'DP requires both base timing predicates');
 assert.ok(html.includes('runnerAt:ordinaryForce.runnerAt,receiveAt:ordinaryForce.receiveAt'),'actual force timestamps stored for animation');
 assert.ok(html.includes("const arrival=Number.isFinite(visual.runnerAt)?visual.runnerAt"),'forced runner motion uses actual arrival');
-assert.ok(html.includes("later(firstArrival+45,()=>showPitchResult('二塁アウト！'"),'second out appears only after ball arrives');
+assert.ok(html.includes("later(forceCallAt,()=>showPitchResult('二塁アウト！'"),'second out appears only after ball arrives');
 assert.ok(html.includes('.pitch-result.neutral{visibility:hidden'),'neutral status does not appear as a speech bubble');
 assert.ok(html.includes("'インプレー','投球中…','守備位置を調整中…'"),'generic phrases hidden');
 console.log('FORCE TIMELINE AND CALLOUT REGRESSION PASS');

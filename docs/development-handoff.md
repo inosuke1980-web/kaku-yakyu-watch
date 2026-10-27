@@ -58,3 +58,9 @@ JavaScript構文確認・animation-motion 成功。park-comparison は8球場×1
 後続の盗塁表示呼び出しの旧条件を現行の回・攻守ガードに更新。総合スモークはその先の「second out appears only after ball arrives」で失敗、原因・後続は未確認。構文・animation-motion成功、8球場×1000試合完了・得点不一致0。
 
 公開版はブラウザで試合開始を確認したが、投球と外野単打の連続映像・2倍速は確認できていない。次回は当該失敗と実際の連続映像を確認する。ゲーム本体は変更なし。
+
+## 二塁表示の時刻調査
+
+起点 `d8468dcc6a3558220f263bf743a405674c3cfe2e`。旧テストは `firstArrival+45` を文字列で要求していたが、現行は `forceCallAt=max(firstArrival+70,保存されたforceCallAt)` を使い、保存値は `max(receiveAt+70,runnerAt+45)`。併殺・封殺とも同じ時刻を使用。テストの固定文字列を現行に合わせたが、実タイマーを進める検証は未実施であり、時刻の整合性は保証できない。ゲーム本体は変更なし。
+
+総合スモークは後続の「first baseman reaches the bag after a 25ms pickup step」で失敗、原因は未調査。構文・animation-motionは成功、8球場×1000試合は成功、未完了・得点不一致0。公開ページは開けたが投球・外野単打・二塁プレーの連続映像は未確認。次工程は併殺と封殺それぞれでタイマーを進めた到着前後の検証を行い、その後スモークを継続する。
