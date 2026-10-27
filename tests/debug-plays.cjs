@@ -17,4 +17,7 @@ const before=vm.runInContext('JSON.stringify(game.teams.map(t=>[t.runs,t.hits,t.
 n.get('debugStart').onclick();debug.advance(540);assert.equal(n.get('ball').getAttribute('visibility'),'visible');
 n.get('debugRestart').onclick();debug.advance(540);assert.equal(n.get('ball').getAttribute('visibility'),'visible');debug.advance(1200);
 assert.equal(debug.saved,0);assert.equal(vm.runInContext('JSON.stringify(game.teams.map(t=>[t.runs,t.hits,t.errors]))',debug.c),before);
-assert.equal(debug.timers.size,0);console.log('DEBUG PITCH REPLAY PASS');
+assert.equal(debug.timers.size,0);
+n.get('debugPlay').value='single';n.get('debugStart').onclick();debug.advance(1000);assert.equal(n.get('battingStance').getAttribute('data-swing'),'yes');debug.advance(400);assert.notEqual(n.get('ball').getAttribute('cx'),'205');
+n.get('debugRestart').onclick();debug.advance(200);n.get('debugPlay').value='pitch';n.get('debugStart').onclick();debug.advance(1100);assert.equal(n.get('battingStance').getAttribute('data-swing'),'no');
+assert.equal(debug.saved,0);console.log('DEBUG PITCH AND SINGLE REPLAY PASS');
