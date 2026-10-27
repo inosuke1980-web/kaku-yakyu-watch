@@ -1585,17 +1585,18 @@ function animateBatterRun(result,speed=55,groundPlan=null){
 // the grounder himself, he runs to the bag; the 2B backs up the throw.
 // Interpolate SVG fielder positions with animation frames: CSS transitions on
 // the SVG cx/cy attributes are unreliable on some mobile browsers (notably iOS).
-function moveGroundFielder(circle,label,destination,duration,token){
+function moveGroundFielder(circle,label,destination,duration,token,options={}){
  if(!circle)return;
  const start=[Number(circle.getAttribute('cx')),Number(circle.getAttribute('cy'))],begin=performance.now();
  circle.style.transition='none';
  function update(now){
   if(token!==animationToken)return;
   const t=clamp((now-begin)/Math.max(1,duration),0,1);
-  const ease=1-(1-t)*(1-t);
+  const ease=options.carry? t*t*(3-2*t):1-(1-t)*(1-t);
   const x=start[0]+(destination[0]-start[0])*ease;
   const y=start[1]+(destination[1]-start[1])*ease;
   circle.setAttribute('cx',x.toFixed(1));circle.setAttribute('cy',y.toFixed(1));
+  if(options.ball){options.ball.setAttribute('cx',x.toFixed(1));options.ball.setAttribute('cy',y.toFixed(1))}
   if(label){label.setAttribute('x',x.toFixed(1));label.setAttribute('y',(y+3).toFixed(1))}
   if(t<1)requestAnimationFrame(update);
  }
@@ -1793,7 +1794,11 @@ function animateGround(outcome,direction,batterSpeed=55,arm=55,timing=null){
   // Same player: only leave the ball after it has been fielded.
   later(fieldMs,()=>{
    defender.setAttribute('data-first-phase','carry');
-   moveGroundFielder(defender,label,first,225,token);
+   // The final incoming frame may still be queued at pickup. Start the carry
+   // from the actual pickup point and update the held ball in the same frame.
+   defender.setAttribute('cx',fielded[0]);defender.setAttribute('cy',fielded[1]);
+   ball.setAttribute('cx',fielded[0]);ball.setAttribute('cy',fielded[1]);
+   moveGroundFielder(defender,label,first,225,token,{carry:true,ball});
   });
   later(firstArrival,()=>defender.setAttribute('data-first-phase','bag'));
  }else{
@@ -1802,8 +1807,7 @@ function animateGround(outcome,direction,batterSpeed=55,arm=55,timing=null){
  }
  requestAnimationFrame(()=>{if(token===animationToken)moveBall(fielded[0],fielded[1],fieldMs)});
  later(fieldMs+(player==='1B'?0:releaseMs),()=>{
-  if(player==='1B')moveBall(first[0],first[1],225);
-  else moveBall(atSecond?second[0]:first[0],atSecond?second[1]:first[1],firstLeg);
+  if(player!=='1B')moveBall(atSecond?second[0]:first[0],atSecond?second[1]:first[1],firstLeg);
  });
  if(outcome==='double')later(secondThrowAt,()=>{
   // The relay starts precisely when the pivot finishes transferring the ball.

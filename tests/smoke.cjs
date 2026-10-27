@@ -1287,14 +1287,14 @@ assert.match(html,/const decisionMs=Math\.max\(arrival,runnerMs\)\+110/,'first-b
 console.log('FIRST-BASE ARRIVAL CALLOUT ORDER PASS');
 
 assert.match(html,/const firstLeg=player==='1B'\?225:atSecond\?relay\.pickupToSecond:throwFlightMs/,'first baseman carries ball to first before its arrival clock completes');
-assert.match(html,/if\(player==='1B'\)moveBall\(first\[0\],first\[1\],225\)/,'first baseman ball movement matches its arrival clock');
+assert.match(html,/moveGroundFielder\(defender,label,first,225,token,\{carry:true,ball\}\)/,'first baseman and ball share the carry frame and arrival clock');
 console.log('FIRST BASEMAN FIELD-AND-CARRY TIMELINE PASS');
 
 
 // Ten targeted regression checks for ground-ball/force-play choreography.
 const choreographyChecks=[
  ['1. first baseman arrival follows pickup and carry',/const firstArrival=player==='1B'\?\(timing\?\.arrive\?\?fieldMs\+225\)/],
- ['2. first baseman ball travel starts on the same clock',/later\(fieldMs\+\(player==='1B'\?0:releaseMs\),\(\)=>\{/],
+ ['2. first baseman ball travels with the fielder',/moveGroundFielder\(defender,label,first,225,token,\{carry:true,ball\}\)/],
  ['3. first baseman carries ball for 225ms',/const firstLeg=player==='1B'\?225/],
  ['4. first baseman movement starts after fielding',/later\(fieldMs,\(\)=>\{\s*defender\.setAttribute\('data-first-phase','carry'\)/],
  ['5. first-base decision waits for runner',/const decisionMs=Math\.max\(arrival,runnerMs\)\+110/],
