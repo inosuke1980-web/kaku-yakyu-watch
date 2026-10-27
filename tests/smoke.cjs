@@ -1131,7 +1131,29 @@ assert.ok(tenVisualImprovementsAudit.flight>0);
 for(const id of ['pitcherLeg','pitcherArm','catcherCrouch','catcherGlove','catcherCall','batterKnees']){
  assert.ok(html.includes('id="'+id+'"'),'visual element missing: '+id);
 }
-assert.match(html,/pitchActionVisual\(type,ballToken\)/,'pitcher leg and arm animate during the flight');
+{
+ // Advance the actual frame callbacks through windup, release and recovery.
+ let now=0,frames=[];const elements=new Map();
+ const element=()=>({style:{},attrs:{},setAttribute(k,v){this.attrs[k]=String(v)},getAttribute(k){return this.attrs[k]}});
+ const field=element(),body=element(),label=element();field.querySelector=s=>s.startsWith('circle')?body:label;
+ const c={Math,performance:{now:()=>now},animationToken:0,requestAnimationFrame:f=>frames.push(f),
+  $:id=>id==='fielders'?field:(elements.has(id)?elements.get(id):(elements.set(id,element()),elements.get(id))),
+  catcherSetTarget:()=>{},batterReadyMotion:()=>{}};
+ vm.createContext(c);
+ const pose=src.slice(src.indexOf('const PITCH_WINDUP_MS='),src.indexOf('function catcherReceiveVisual'));
+ const pitch=src.slice(src.indexOf('function drawPitch('),src.indexOf('function pitch(){'));
+ vm.runInContext('const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));'+pose+pitch,c);
+ vm.runInContext("drawPitch({side:0,drop:0,flight:320})",c);
+ const advance=t=>{now=t;const pending=frames;frames=[];pending.forEach(f=>f(now))};
+ advance(0);const leg0=c.$('pitcherLeg').getAttribute('d'),arm0=c.$('pitcherArm').getAttribute('cx');
+ advance(220);assert.notEqual(c.$('pitcherLeg').getAttribute('d'),leg0);assert.notEqual(c.$('pitcherArm').getAttribute('cx'),arm0);
+ assert.equal(c.$('ball').getAttribute('visibility'),'hidden');
+ advance(540);assert.equal(c.$('ball').getAttribute('visibility'),'visible');
+ assert.equal(Number(c.$('pitcherArm').getAttribute('cx')),Number(c.$('ball').getAttribute('cx')));
+ assert.equal(Number(c.$('pitcherArm').getAttribute('cy')),Number(c.$('ball').getAttribute('cy')));
+ advance(870);assert.equal(c.$('pitcherLeg').getAttribute('visibility'),'hidden');assert.equal(c.$('pitcherArm').getAttribute('visibility'),'hidden');
+}
+
 assert.match(html,/catcherSetTarget\(ballToken\)/,'catcher sets target before the pitch');
 assert.match(html,/batterReadyMotion\(ballToken\)/,'batting stance adjusts before delivery');
 assert.match(html,/catcherReceiveVisual\('ball',animationToken\)/,'catcher receives a ball');
@@ -1172,7 +1194,7 @@ assert.ok(html.includes('data-steal-cover'),'17: second base cover');
 assert.ok(html.includes('data-steal-phase'),'18: steal break/slide');
 assert.ok(html.includes('data-steal-tag'),'19: tag result');
 assert.ok(html.includes("'leadRunnerSprites','stealPlaySprites','pickoffSprites'"),'20: cancel cleanup');
-assert.ok(html.includes('if(game.stealVisual)animateStealPlay(game.stealVisual)'),'steal motion called');
+assert.ok(html.includes('if(game.stealVisual&&game.stealVisual.inning===game.inning&&game.stealVisual.half===game.half)animateStealPlay(game.stealVisual)'),'steal motion called');
 assert.ok(html.includes('if(game.stealVisual?.id===person.id||index===i'),'avoid duplicate runner');
 assert.ok(html.includes('if(pickoff){'),'pickoff optional');
 console.log('TWENTY RUNNER AND PICKOFF VISUAL FEATURES PASS');
