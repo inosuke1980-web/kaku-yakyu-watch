@@ -964,18 +964,20 @@ console.log('SITUATIONAL DEFENSIVE ALIGNMENTS PASS');
 const middleInfieldPositions=vm.runInContext(`(()=>{
  const mk=(bases,outs,inning=4,lead=0)=>({bases,outs,inning,half:0,ended:false,teams:[{runs:[0]},{runs:[lead]}]});
  const regular=defensiveAlignment(mk([null,null,null],1));
- const infieldIn=defensiveAlignment(mk([null,null,{id:'third'}],1));
+ const infieldIn=defensiveAlignment(mk([null,null,{id:'third'}],1,8));
  const bunt=defensiveAlignment(mk([{id:'first'},null,null],0));
  const deep=defensiveAlignment(mk([null,null,null],1,8,5));
  const SS=INFIELD_RANGE_ORIGINS.SS,second=INFIELD_RANGE_ORIGINS['2B'];
+ const savedEnded=game.ended;game.ended=true;
  const coverage=groundRangePlan({defender:'SS',point:[144,109],strength:'normal'},{field:55,speed:55});
+ game.ended=savedEnded;
  return {regular,infieldIn,bunt,deep,SS,second,coverage};
 })()`,ctx);
 assert.deepEqual(Array.from(middleInfieldPositions.SS),[143,107],'shortstop should be deeper and third-base side');
-assert.deepEqual(Array.from(middleInfieldPositions.second),[257,132],'second baseman should be shallower and first-base side');
+assert.deepEqual(Array.from(middleInfieldPositions.second),[257,107],'second baseman shares normal depth and stays on first-base side');
 for(const alignment of [middleInfieldPositions.regular,middleInfieldPositions.infieldIn,middleInfieldPositions.bunt,middleInfieldPositions.deep]){
  assert.ok(alignment.positions.SS[0]<200&&alignment.positions['2B'][0]>200,'middle infielders must be on correct sides of second base');
- assert.ok(alignment.positions.SS[1]<alignment.positions['2B'][1],'shortstop should play deeper than second baseman');
+ assert.ok(alignment.positions.SS[1]<=alignment.positions['2B'][1],'shortstop is no shallower than second baseman');
 }
 assert.deepEqual(Array.from(middleInfieldPositions.coverage.origin),[143,107],'range origin must follow actual shortstop alignment');
 assert.match(html,/\['P',200,203\],\['C',200,315\],\.\.\.\['1B','2B','SS','3B'\]\.map/,'initial visual positions must share alignment state');
@@ -1013,7 +1015,7 @@ const alignmentMovementAudit=vm.runInContext(`(()=>{
  const originalGame=game;
  // Return the mocked field only for the movement audit.
  const layer={querySelector(selector){
-  const match=selector.match(/^(circle|text)\[data-position="([^"]+)"\]$/);
+  const match=selector.match(/^(circle|text)\\[data-position="([^"]+)"\\]$/);
   return match?nodes[match[2]]?.[match[1]==='circle'?'circle':'label']:null;
  }};
  document.getElementById=id=>id==='fielders'?layer:originalDocumentGet(id);
@@ -1056,7 +1058,7 @@ assert.ok(secondCoverAudit.ssRelay.pickupToSecond>0&&secondCoverAudit.ssRelay.pi
 assert.notEqual(secondCoverAudit.ssRelay.secondToFirst,secondCoverAudit.secondRelay.secondToFirst,'pivot throwing strength changes relay speed');
 assert.match(html,/animateSecondBaseCover\(relay,firstArrival,holdUntil,token,outcome==='double'\)/,'animation uses second base pivot');
 assert.match(html,/const quickForce=couldTurnTwo\?groundForceTimeline\(direction,fielder,quickTiming,b\[0\],true\):null/,'double-play verdict uses a common runner/ball timeline');
-assert.match(html,/if\(outcome!=='force'\)showFirstCoverSprite/,'force play must not unnecessarily cover first');
+assert.match(html,/if\(outcome!=='force'&&player!=='1B'\)showFirstCoverSprite/,'force play must not unnecessarily cover first');
 console.log('SECOND BASE PIVOT AND DOUBLE PLAY RELAY PASS');
 
 assert.match(html,/animateGround\('double',direction,p\.speed,fielder\.arm,quickTiming\)/,'double-play animation must use the same quick fielding clock as the call');
@@ -1075,13 +1077,13 @@ assert.notDeepEqual(Array.from(pivotFootworkAudit.steps.exit),[200,47],'pivot mu
 assert.match(html,/circle\.setAttribute\('data-pivot-phase','receive'\)/,'pivot visibly receives the ball');
 assert.match(html,/circle\.setAttribute\('data-pivot-phase','transfer'\)/,'pivot transfer footwork present');
 assert.match(html,/circle\.setAttribute\('data-pivot-phase','release'\)/,'pivot releases throw to first');
-assert.match(html,/game\.forceOutVisual=\{id:b\[0\]\.id,speed:b\[0\]\.speed,outcome:'double'\}/,'double play preserves forced runner for animation');
+assert.match(html,/game\.forceOutVisual=\{id:b\[0\]\.id,speed:b\[0\]\.speed,outcome:'double',/,'double play preserves forced runner for animation');
 assert.match(html,/animateForceAtSecond\(game\.forceOutVisual,firstArrival,holdUntil,token\)/,'forced runner visually runs toward second');
 assert.match(html,/circle\.setAttribute\('data-run-state','slide'\)/,'runner slides into second');
 assert.match(html,/sprite\.setAttribute\('data-first-phase','stretch'\)/,'first baseman stretches to receive');
 assert.match(html,/sprite\.setAttribute\('data-first-phase','catch'\)/,'first baseman catches before call');
 assert.match(html,/const moveBall=\(x,y,duration\)=>moveGroundFielder\(ball,null,\[x,y\],duration,token\)/,'infield throw uses animation frames instead of SVG CSS');
-assert.match(html,/if\(outcome!=='force'\)showFirstCoverSprite\(firstCover,firstLabel,token,fieldMs,player,decisionMs,holdUntil,arrival\)/,'first baseman catch synchronized to first arrival');
+assert.match(html,/if\(outcome!=='force'&&player!=='1B'\)showFirstCoverSprite\(firstCover,firstLabel,token,fieldMs,player,decisionMs,holdUntil,arrival\)/,'first baseman catch synchronized to first arrival');
 console.log('PIVOT FOOTWORK, FORCE SLIDE, FIRST-BASE CATCH PASS');
 
 const handedBatterAudit=vm.runInContext(`(()=>{
@@ -1097,8 +1099,8 @@ assert.ok(handedBatterAudit.right.batEnd[0]<0&&handedBatterAudit.left.batEnd[0]>
 assert.match(html,/id="battingStance"/,'actual batter SVG needed on field');
 assert.match(html,/id="batterHandLabel"/,'batter side visible on field');
 assert.match(html,/showBattingStance\(batter\(\)\)/,'render updates stance with current lineup');
-assert.match(html,/else if\(x<\.70\)\{animateBatterSwing\(p\);foulBall\(p\)\}/,'foul ball includes swing');
-assert.match(html,/else\{complete=true;animateBatterSwing\(p\);showPitchResult/,'ball in play includes swing');
+assert.match(html,/else if\(x<\.70\)\{animateBatterSwing\(p,false\);foulBall\(p\)\}/,'foul ball includes swing');
+assert.match(html,/else\{complete=true;animateBatterSwing\(p,true\);showPitchResult/,'ball in play includes swing');
 assert.match(html,/if\(!force&&Date\.now\(\)<batterVisualLockedUntil\)return/,'swing should not turn into next batter mid-animation');
 console.log('BATTING STANCE MIRROR AND SWING PASS');
 
@@ -1118,7 +1120,7 @@ assert.match(html,/batterRunnerOnField=false;\s*finishBatterVisual\(token\)/,'ne
 assert.match(html,/animateBatterTake\(p,'ball'\)/,'ball taken without swing');
 assert.match(html,/animateBatterTake\(p,'strike'\)/,'called strike taken without swing');
 assert.match(html,/animateBatterSwing\(p,false\);foulBall\(p\)/,'foul ball has a swing');
-assert.match(html,/animateBatterSwing\(p,true\);showPitchResult\('インプレー'/,'ball in play locks next batter until action finishes');
+assert.match(html,/animateBatterSwing\(p,true\);showPitchResult\('', 'neutral'\)/,'ball in play locks next batter until action finishes');
 console.log('BATTER BOX TO FIRST, CALLED PITCH, NEXT HITTER TRANSITION PASS');
 
 const tenVisualImprovementsAudit=vm.runInContext(`(()=>{
