@@ -64,3 +64,11 @@ JavaScript構文確認・animation-motion 成功。park-comparison は8球場×1
 起点 `d8468dcc6a3558220f263bf743a405674c3cfe2e`。旧テストは `firstArrival+45` を文字列で要求していたが、現行は `forceCallAt=max(firstArrival+70,保存されたforceCallAt)` を使い、保存値は `max(receiveAt+70,runnerAt+45)`。併殺・封殺とも同じ時刻を使用。テストの固定文字列を現行に合わせたが、実タイマーを進める検証は未実施であり、時刻の整合性は保証できない。ゲーム本体は変更なし。
 
 総合スモークは後続の「first baseman reaches the bag after a 25ms pickup step」で失敗、原因は未調査。構文・animation-motionは成功、8球場×1000試合は成功、未完了・得点不一致0。公開ページは開けたが投球・外野単打・二塁プレーの連続映像は未確認。次工程は併殺と封殺それぞれでタイマーを進めた到着前後の検証を行い、その後スモークを継続する。
+
+## 二塁・一塁の実タイマー確認
+
+起点 main `28bc58b2c38c800818253f1066471b4e652c203d`。`tests/ground-timing.cjs` は実際の animateGround のタイマー・フレームを5ms刻みで進め、封殺と併殺の送球開始995ms、二塁到着・カバー捕球1335ms、走者到着1400ms、判定1445msを確認。到着・表示条件前に判定がないこと、併殺で転送が始まることを検証。実ブラウザのフレーム遅延や映像の自然さは対象外。
+
+一塁手の旧テストは廃止済みの25ms待機を要求していた。現在は捕球650ms後に野手・ボールが225msで一塁へ移動。既存フレーム検証に捕球前・運搬開始・一塁到達時の選手とボールの位置確認を追加。ゲーム本体変更なし。
+
+構文、animation-motion、ground-timing成功。park-comparison 8×1000試合完走、未完了・得点不一致0。smokeは一塁テストを通過後、1415行「ball reaches correct endpoint」で失敗。見た目の値は実際・期待とも [35,-90] だが別VMの配列比較の可能性があり原因未確認。後続未確認。次工程はこの失敗を調査する。SHAはgit HEAD参照。

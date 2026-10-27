@@ -380,6 +380,12 @@ console.log('FIRST BASE COVER CHECKS PASS',JSON.stringify(firstBaseCover));
    }
   };
   const where=()=>[Number(circles['1B'].getAttribute('cx')),Number(circles['1B'].getAttribute('cy'))];
+  if(position==='1B'){
+   advance(640);assert.ok(Math.hypot(where()[0]-323,where()[1]-169)>1,'fielder does not reach first before pickup');
+   advance(660);assert.equal(circles['1B'].getAttribute('data-first-phase'),'carry','fielder begins carry at pickup');
+   advance(900);assert.ok(Math.hypot(where()[0]-323,where()[1]-169)<1,'fielder reaches first after carrying');
+   assert.ok(Math.hypot(Number(ball.getAttribute('cx'))-323,Number(ball.getAttribute('cy'))-169)<1,'ball reaches first with fielder');
+  }
   advance(1100);const onBag=where();
   advance(1750);const held=where();
   advance(3100);const restored=where();
@@ -1287,10 +1293,10 @@ console.log('FIRST BASEMAN FIELD-AND-CARRY TIMELINE PASS');
 
 // Ten targeted regression checks for ground-ball/force-play choreography.
 const choreographyChecks=[
- ['1. first baseman reaches the bag after a 25ms pickup step',/const firstArrival=fieldMs\+\(player==='1B'\?25:releaseMs\)\+firstLeg/],
- ['2. first baseman ball travel starts on the same clock',/later\(fieldMs\+\(player==='1B'\?25:releaseMs\),\(\)=>\{/],
+ ['1. first baseman arrival follows pickup and carry',/const firstArrival=player==='1B'\?\(timing\?\.arrive\?\?fieldMs\+225\)/],
+ ['2. first baseman ball travel starts on the same clock',/later\(fieldMs\+\(player==='1B'\?0:releaseMs\),\(\)=>\{/],
  ['3. first baseman carries ball for 225ms',/const firstLeg=player==='1B'\?225/],
- ['4. first baseman movement starts after fielding',/later\(fieldMs\+25,\(\)=>moveGroundFielder\(firstCover/],
+ ['4. first baseman movement starts after fielding',/later\(fieldMs,\(\)=>\{\s*defender\.setAttribute\('data-first-phase','carry'\)/],
  ['5. first-base decision waits for runner',/const decisionMs=Math\.max\(arrival,runnerMs\)\+110/],
  ['6. force call waits for slide',/const forceCallAt=atSecond\?Math\.max\(firstArrival\+70,game\.forceOutVisual\?\.forceCallAt\|\|0\):0/],
  ['7. double-play second throw waits for pivot',/const secondThrowAt=firstArrival\+\(relay\?\.pivotRelease\|\|0\)/],
