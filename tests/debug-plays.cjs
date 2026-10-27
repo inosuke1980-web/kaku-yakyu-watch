@@ -20,4 +20,17 @@ assert.equal(debug.saved,0);assert.equal(vm.runInContext('JSON.stringify(game.te
 assert.equal(debug.timers.size,0);
 n.get('debugPlay').value='single';n.get('debugStart').onclick();debug.advance(1000);assert.equal(n.get('battingStance').getAttribute('data-swing'),'yes');debug.advance(400);assert.notEqual(n.get('ball').getAttribute('cx'),'205');
 n.get('debugRestart').onclick();debug.advance(200);n.get('debugPlay').value='pitch';n.get('debugStart').onclick();debug.advance(1100);assert.equal(n.get('battingStance').getAttribute('data-swing'),'no');
-assert.equal(debug.saved,0);console.log('DEBUG PITCH AND SINGLE REPLAY PASS');
+let heights={};
+for(const play of ['flyHit','linerHit','flyHit','linerHit']){
+ n.get('debugPlay').value=play;
+ for(let i=0;i<3;i++){
+  n.get(i%2?'debugRestart':'debugStart').onclick();debug.advance(1380);
+  const ball=n.get('ball'),shadow=n.get('ballShadow');
+  const height=Number(shadow.getAttribute('cy'))-Number(ball.getAttribute('cy'));
+  assert.ok(height>0,play+' is airborne');heights[play]=height;
+ }
+}
+assert.ok(heights.flyHit>heights.linerHit+20,'fly rises higher than liner');
+debug.advance(5000);assert.equal(debug.timers.size,0);
+assert.equal(debug.saved,0);assert.equal(vm.runInContext('JSON.stringify(game.teams.map(t=>[t.runs,t.hits,t.errors]))',debug.c),before);
+console.log('DEBUG PITCH AND OUTFIELD REPLAY PASS');
