@@ -21,4 +21,14 @@ for(const flight of ['groundThrough','gapLiner','overHead','fenceDouble']){
 }
 assert.match(html,/at\(duration,\(\)=>\{nearest\.setAttribute\('data-fielding-phase','recover'\)/);
 assert.match(html,/const started=motionStarted\+PITCH_WINDUP_MS/);
+vm.runInContext(section('function outfieldVisualType(','function animate('),ctx);
+for(const [kind,info,fly,liner] of [
+ ['fly',{type:'fly',caught:true},true,false],['single',{type:'fly',caught:false},true,false],
+ ['linerOut',{type:'liner',caught:true},false,true],['linerHit',{type:'liner',caught:false},false,true],
+ ['groundThrough',{flight:'groundThrough'},false,false],['gapLiner',{flight:'gapLiner'},false,true],
+ ['overHead',{flight:'overHead'},true,false]]){
+ ctx.kind=kind;ctx.visualInfo=info;
+ const visual=vm.runInContext('outfieldVisualType(kind,visualInfo)',ctx);
+ assert.equal(visual.fly,fly);assert.equal(visual.liner,liner);
+}
 console.log('ANIMATION MOTION CHECKS PASS');

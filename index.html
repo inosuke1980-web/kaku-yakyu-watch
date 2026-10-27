@@ -1891,6 +1891,11 @@ function outfieldBallMotion(kind,info,start,target,progress){
  const after=(t-contact)/(1-contact);
  return [target[0]+23*after,target[1]+26*after];
 }
+function outfieldVisualType(kind,info){
+ if(info?.flight)return {fly:['overHead','homeRun','fenceDouble'].includes(info.flight),liner:info.flight==='gapLiner'};
+ if(info?.type==='fly'||info?.type==='liner')return {fly:info.type==='fly',liner:info.type==='liner'};
+ return {fly:['fly','home','double','outfieldError'].includes(kind),liner:['linerHit','linerHit2','linerOut'].includes(kind)};
+}
 function animate(kind,targetInfo=null,runnerSpeed=55,hitBases=null){
  const runnerType=targetInfo?.flight?(hitBases===1?'hit1Outfield':hitBases===2?'hit2':hitBases===3?'hit3':'homeRun'):kind==='outfieldError'?'hit1Outfield':kind==='linerHit'?'hit1Outfield':kind==='linerHit2'?'hit2':kind==='single'?'hit1Outfield':kind==='double'?'hit2':kind==='home'?'homeRun':kind==='fly'?'fly':null;
  if(runnerType)animateBatterRun(runnerType,runnerSpeed);
@@ -1899,7 +1904,7 @@ function animate(kind,targetInfo=null,runnerSpeed=55,hitBases=null){
  const targets={out:[152,152],fly:[96,-36],home:[326,-117],single:[277,138],double:[311,-33],linerHit:[245,-104],linerHit2:[165,-112]};
  const target=targetInfo?targetInfo.point:targets[kind]||targets.single;
  const start=[200,283],duration=targetInfo?.flight?targetInfo.flightMs:(kind==='linerHit'||kind==='linerHit2')?540:kind==='linerOut'?460:kind==='fly'||kind==='outfieldError'?1150:kind==='home'?1250:830;
- const isFly=targetInfo?.flight?(kind==='overHead'||kind==='homeRun'||kind==='fenceDouble'):['fly','home','double','outfieldError'].includes(kind),isLiner=targetInfo?.flight?kind==='gapLiner':kind==='linerHit'||kind==='linerHit2'||kind==='linerOut';
+ const visualType=outfieldVisualType(kind,targetInfo),isFly=visualType.fly,isLiner=visualType.liner;
  animationHoldUntil=Math.max(animationHoldUntil,Date.now()+duration+300);
  if(shadow){shadow.setAttribute('rx','0');shadow.setAttribute('ry','0')}
  ball.style.transition='none';ball.setAttribute('cx',start[0]);ball.setAttribute('cy',start[1]);ball.setAttribute('r','4');
