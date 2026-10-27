@@ -31,6 +31,14 @@ for(const play of ['flyHit','linerHit','flyHit','linerHit']){
  }
 }
 assert.ok(heights.flyHit>heights.linerHit+20,'fly rises higher than liner');
+for(const t of [0,.25,.5,.75,1]){
+ debug.c.progress=t;
+ const pair=vm.runInContext("[outfieldFrame('single',{type:'fly',caught:false},[200,283],[245,-25],1,progress),outfieldFrame('gapLiner',{flight:'gapLiner',caught:false},[200,283],[245,-25],1,progress)]",debug.c);
+ for(const f of pair)assert.ok([f.x,f.y,f.visibleY,f.lift].every(Number.isFinite));
+ if(t===0||t===1){assert.ok(Math.abs(pair[0].x-pair[1].x)<1e-9);assert.ok(Math.abs(pair[0].y-pair[1].y)<1e-9);assert.ok(Math.abs(pair[0].lift)<1e-9)}
+ if(t===.25||t===.5||t===.75)assert.ok(pair[0].lift>pair[1].lift);
+}
+vm.runInContext("$('frameType');$('frameProgress');$('frameInfo')",debug.c);n.get('frameType').value='fly';n.get('frameProgress').value='.5';n.get('showFrame').onclick();assert.match(n.get('frameInfo').textContent,/フライ 50%/);
 debug.advance(5000);assert.equal(debug.timers.size,0);
 assert.equal(debug.saved,0);assert.equal(vm.runInContext('JSON.stringify(game.teams.map(t=>[t.runs,t.hits,t.errors]))',debug.c),before);
 console.log('DEBUG PITCH AND OUTFIELD REPLAY PASS');
