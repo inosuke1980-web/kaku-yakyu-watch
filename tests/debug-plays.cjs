@@ -11,7 +11,9 @@ function scenario(query){
  return {c,nodes,advance,get saved(){return saved},timers};
 }
 const normal=scenario('');assert.equal(normal.nodes.get('playDebug')?.hidden??true,true);
+assert.match(html,/<div id="framePanel" hidden/);
 const debug=scenario('?debug=plays'),n=debug.nodes;assert.equal(n.get('playDebug').hidden,false);
+assert.equal(n.get('framePanel').hidden,false);
 assert.ok(['start','pause','next'].every(id=>n.get(id).disabled));
 const before=vm.runInContext('JSON.stringify(game.teams.map(t=>[t.runs,t.hits,t.errors]))',debug.c);
 n.get('debugStart').onclick();debug.advance(540);assert.equal(n.get('ball').getAttribute('visibility'),'visible');
