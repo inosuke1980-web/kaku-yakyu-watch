@@ -1418,7 +1418,8 @@ for(const {kind,target,t,xy} of motionAudit){
  if(t===0)assert.deepEqual(Array.from(xy),[200,283],'ball begins at contact');
  if(t===1){
   const expected=kind==='outfieldError'?[target[0]+23,target[1]+26]:target;
-  assert.deepEqual(Array.from(xy),expected,'ball reaches correct endpoint');
+  assert.equal(xy[0],expected[0],'endpoint x');assert.equal(xy[1],expected[1],'endpoint y');
+  assert.deepEqual(Array.from(xy),Array.from(expected),'ball reaches correct endpoint');
  }
 }
 const continuity=vm.runInContext(`outfieldBallMotion('outfieldError',{dropped:true},[200,283],[300,-40],.82)`,ctx);
@@ -1457,7 +1458,7 @@ const infieldGeometry=vm.runInContext(`(()=>{
 })()`,ctx);
 assert.equal(infieldGeometry.length,12);
 for(const p of infieldGeometry){
- assert.equal(p.name,'通常守備');
+ assert.equal(p.name,p.first&&!p.third&&p.outs===0?'バント警戒':'通常守備');
  assert.ok(Math.abs(p.ss[1]-p.second[1])<=2,'shortstop and second baseman at matching depth');
  assert.ok(p.ss[0]<200&&p.second[0]>200,'middle infielders remain on correct sides');
  assert.ok(p.second[1]<=112,'second baseman not too shallow');
