@@ -80,3 +80,9 @@ JavaScript構文確認・animation-motion 成功。park-comparison は8球場×1
 後続の内野位置テストが、一塁走者・無死・三塁走者なしのバント警戒を通常守備と誤認していたため、状態別に期待値を修正。総合スモークは最後まで成功。ゲーム本体は変更なし。
 
 JavaScript構文、animation-motion、ground-timing、smoke、8球場×1000試合の park-comparison は成功。未完了・得点不一致0。ブラウザ映像確認は未実施。次工程は実映像の確認。最終SHAと作業状態はgit HEAD・statusで確認。
+
+## 開発用投球再生 第1段階
+
+起点 main `3fad41f06acd2b8e4a5daf8ed70af2ef07c4c808`。`?debug=plays` の開発パネルで投球を選び「再生」「最初から再生」を押すと、既存 drawPitch と固定ストレートを再生。各回 stop でタイマーとトークンを破棄し、守備・ボール位置を戻す。開発中の試合は一時的な状態で通常試合ボタンを無効化、試合履歴を書き込まない。URLからパラメータを外すと通常モード。
+
+変更: index.html、tests/debug-plays.cjs、本書。投球以外、一時停止、速度変更、コマ送りは未実装。外野単打の固定再生が次工程。debug-playsのDOMモックは再生・再開始・古いタイマー取消・スコア不変・保存なしを確認。構文、animation-motion、smoke、8球場×1000試合成功、未完了・得点不一致0。ブラウザでの連続映像と実機は未確認。最終SHA・未コミット状態は git HEAD/status で確認。

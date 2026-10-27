@@ -37,6 +37,7 @@
 .scoreboard-hint{font-size:11px;color:#a7c6b5;margin:5px 0 0}
 @media(max-width:750px){.scoreboard-scroll th:first-child,.scoreboard-scroll td:first-child{min-width:102px;width:112px;max-width:112px}.scoreboard-scroll th,.scoreboard-scroll td{padding:6px 4px}}
 .current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.6.9 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
+<section id="playDebug" class="card" hidden><h2>開発用プレー再生</h2><label>プレー <select id="debugPlay"><option value="pitch">投手の投球</option></select></label> <button id="debugStart">再生</button> <button id="debugRestart">最初から再生</button><p class="muted">投球を固定条件で再生します。</p></section>
 <section class="card"><h2>試合生成の条件</h2><div class="flex" style="gap:12px">
 <label>カテゴリー <select id="category"><option value="random">ランダム（現在は高校のみ）</option><option value="high">高校野球</option><option value="university" disabled>大学野球（今後追加）</option><option value="corporate" disabled>社会人野球（今後追加）</option><option value="pro" disabled>プロ野球（今後追加）</option></select></label>
 <label>試合種別 <select id="matchType"><option value="random">ランダム</option><option value="official">公式戦</option><option value="practice">練習試合</option></select></label>
@@ -2276,5 +2277,20 @@ function saveGame(){try{let h=getHistory();h.unshift({id:Date.now(),date:new Dat
 function historyRender(){let h=getHistory();$('history').replaceChildren();if(!h.length){$('history').textContent='保存済みの試合はありません。';return}h.forEach(g=>{let b=document.createElement('button');b.className='secondary';b.style.cssText='display:block;width:100%;text-align:left;margin-bottom:8px';b.textContent=`${g.date}｜${g.t.title}｜${g.teams[0].name} ${g.teams[0].runs.reduce((a,v)=>a+(v||0),0)} - ${g.teams[1].runs.reduce((a,v)=>a+(v||0),0)} ${g.teams[1].name}`;b.onclick=()=>showSaved(g);$('history').append(b)})}
 function showSaved(g){$('detailTitle').textContent=`${g.teams[0].name} 対 ${g.teams[1].name}`;let body=`<p>${esc(g.t.title)}｜${g.date}｜${g.pitches}球</p>`;for(let t of g.teams){body+=`<h3>${esc(t.name)}　${t.runs.reduce((a,v)=>a+(v||0),0)}点 / ${t.hits}安打</h3><div class="tablewrap"><table><tr><th>選手</th><th>出身中学校</th><th>打数</th><th>安打</th><th>打点</th><th>投球数</th></tr>${t.players.map(p=>`<tr><td>${esc(p.name)}</td><td>${esc(p.middle)}</td><td>${p.ab}</td><td>${p.h}</td><td>${p.rbi}</td><td>${p.pitches}</td></tr>`).join('')}</table></div>`}$('detailBody').innerHTML=body;$('detail').showModal()}
 function schedule(){clearTimeout(timer);if(!playing||!game||game.ended)return;/* The completed pitch call stays visible before the next windup. */timer=setTimeout(()=>{timer=null;pitch()},Math.max(450,1650/Number($('speed').value),animationHoldUntil-Date.now()+200))}
+// Debug rehearsal uses the ordinary renderer and pitch animation, with its own
+// disposable game state and no live match scheduler or history writes.
+const debugPlays=typeof location!=='undefined'&&new URLSearchParams(location.search).get('debug')==='plays';
+if(debugPlays){
+ $('playDebug').hidden=false;
+ $('category').value='high';$('parkShape').value='standard';$('parkType').value='grass';$('matchType').value='official';$('dayNight').value='day';
+ init();stop();render();
+ for(const id of ['start','pause','next'])$(id).disabled=true;
+ const replayPitch=()=>{
+  stop();resetOutfieldPositions();render();
+  const ball=$('ball');ball.style.transition='none';ball.setAttribute('cx','205');ball.setAttribute('cy','208');ball.setAttribute('visibility','hidden');
+  showPitchResult('投球中…','');drawPitch(PITCH_TYPES[0]);
+ };
+ $('debugStart').onclick=replayPitch;$('debugRestart').onclick=replayPitch;
+}
 $('start').onclick=()=>{if(game&&!game.ended&&!confirm('進行中の試合を破棄して新しい試合を始めますか？'))return;try{init()}catch(e){console.error(e);$('status').textContent='開始エラー';$('event').textContent='開始できません: '+(e&&e.message?e.message:String(e));}};$('pause').onclick=()=>{if(!game||game.ended)return;playing=!playing;$('pause').textContent=playing?'一時停止':'再開';render();if(playing)schedule();else {clearTimeout(timer);clearTimeout(flightTimer);flightTimer=null;animationToken++;clearTacticalVisuals();resetOutfieldPositions()}};$('next').onclick=()=>{if(!game||game.ended)return;stop();$('pause').textContent='再開';pitch()};$('speed').onchange=()=>{if(playing)schedule()};$('rosterAway').onclick=()=>renderRoster(0);$('rosterHome').onclick=()=>renderRoster(1);$('closeDetail').onclick=()=>$('detail').close();$('clear').onclick=()=>{if(confirm('保存済みの試合履歴をすべて削除しますか？')){localStorage.removeItem(KEY);historyRender()}};historyRender();
 </script></body></html>
