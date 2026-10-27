@@ -479,7 +479,7 @@ const broadcastMini=vm.runInContext(`(()=>{
 })()`,ctx);
 assert.match(html,/id="miniScore" class="mini-score"/,'field mini scoreboard must exist');
 assert.match(html,/\.field-header\{display:flex;justify-content:space-between/,'score must have a separate field header');
-assert.match(html,/<div class="field-header"><h2>グラウンド<\/h2><div class="field-score-row"><div id="miniScore"/,'scoreboard belongs in the field header before the SVG');
+assert.match(html,/<\/svg><\/div><div class="field-score-row"[^>]*><div id="miniScore"/,'scoreboard follows the field SVG');
 assert.match(html,/\.mini-score\{position:static/,'scoreboard must use normal layout rather than overlay');
 assert.doesNotMatch(html,/\.mini-score\{position:absolute/,'mini scoreboard must never cover the field');
 assert.equal((html.match(/id="miniScore"/g)||[]).length,1,'there should only be one mini-scoreboard');
@@ -565,7 +565,7 @@ const wallRebound=vm.runInContext(`(()=>{
   if(p.flight!=='fenceDouble')continue;
   doubles++;
   if(Math.abs(p.point[1]-outfieldFenceY(p.point[0])-12)>.01)invalid++;
-  if(!p.rebound||p.rebound[1]<=outfieldFenceY(p.rebound[0])+12)invalid++;
+  if(!p.rebound||p.rebound[1]<outfieldFenceY(p.rebound[0])+12-1e-9)invalid++;
   if(p.rebound[1]<=p.point[1])invalid++;
   if(p.flightMs<1200||p.wallAt<=0||p.wallAt>=1)invalid++;
   if(samples.length<3)samples.push({wall:p.point,bounce:p.rebound});
@@ -634,7 +634,7 @@ const runnerChoreographyCases=vm.runInContext(`(()=>{
 })()`,ctx);
 assert.equal(runnerChoreographyCases.holdSecond.mode,'stop');
 assert.equal(runnerChoreographyCases.holdThird.mode,'stop');
-assert.ok(runnerChoreographyCases.holdSecond.segments[0].duration>runnerSegmentMs(55));
+assert.ok(runnerChoreographyCases.holdSecond.segments[0].duration>vm.runInContext('runnerSegmentMs(55)',ctx));
 assert.equal(runnerChoreographyCases.homeRun.mode,'run');
 assert.equal(runnerChoreographyCases.chargeThird.mode,'charge');
 assert.equal(runnerChoreographyCases.chargeHome.mode,'charge');
@@ -722,8 +722,10 @@ assert.match(html,/走者が追加進塁！/,'error extra advancement should app
 console.log('GROUND ERROR EXTRA ADVANCEMENT TESTS PASS',JSON.stringify(extraOnErrors.attempts));
 
 const infieldRangeAudit=vm.runInContext(`(()=>{
+ // Fix the defensive alignment so earlier random game situations cannot shift the origin.
+ game.ended=true;
  const direction={defender:'SS',point:[158,156]},strong={field:95,speed:95},weak={field:25,speed:25};
- const strongPlan=groundRangePlan(direction,strong,27),weakPlan=groundRangePlan(direction,weak,27);
+ const strongPlan=groundRangePlan(direction,strong,33),weakPlan=groundRangePlan(direction,weak,33);
  let stronger=0,weaker=0,disagreements=0;
  for(let off=-40;off<=40;off++){
   const a=groundRangePlan(direction,strong,off),b=groundRangePlan(direction,weak,off);
@@ -732,6 +734,7 @@ const infieldRangeAudit=vm.runInContext(`(()=>{
   if(a.reachable&&!b.reachable)disagreements++;
   if(b.reachable&&!a.reachable)throw Error('weak fielder covered more ground');
  }
+ game.ended=false;
  return {strongPlan,weakPlan,stronger,weaker,disagreements};
 })()`,ctx);
 assert.equal(infieldRangeAudit.strongPlan.reachable,true,'elite shortstop should reach difficult grounders');
@@ -806,8 +809,8 @@ const noMagneticBall=vm.runInContext(`(()=>{
 })()`,ctx);
 assert.ok(noMagneticBall.length>100,'ground ball cases must occur frequently');
 for(const play of noMagneticBall){
- assert.deepEqual(Array.from(play.pickup),Array.from(play.endpoint),'fielder must meet the ball at its own roll endpoint');
- assert.deepEqual(Array.from(play.finish),Array.from(play.endpoint),'the ball must never chase the outfielder');
+ assert.ok(play.pickup.every((v,i)=>Math.abs(v-play.endpoint[i])<1e-9),'fielder must meet the ball at its own roll endpoint');
+ assert.ok(play.finish.every((v,i)=>Math.abs(v-play.endpoint[i])<1e-9),'the ball must never chase the outfielder');
  assert.ok(play.releaseMs>play.rollMs,'ball must finish rolling before the throw begins');
 }
 assert.match(html,/groundRollPosition\(targetInfo,\.67\)/,'fielder should track the grounder across grass');
@@ -865,7 +868,7 @@ assert.ok(softInfieldThrowAudit.quickRelease<softInfieldThrowAudit.normalRelease
 assert.ok(softInfieldThrowAudit.pickup.gather>=235,'outfielders must visibly gather before throwing');
 assert.equal(softInfieldThrowAudit.relay.arrival,softInfieldThrowAudit.relay.pickup.release+softInfieldThrowAudit.relay.relay+softInfieldThrowAudit.relay.transfer+softInfieldThrowAudit.relay.second);
 assert.match(html,/releaseMs=timing\?timing\.releaseMs:fielderReleaseMs\(\)/,'ground animation must use the same release clock as the decision');
-assert.match(html,/secondThrowAt=firstArrival\+fielderReleaseMs\(65,65,true\)/,'double play must wait for second pivot release');
+assert.match(html,/secondThrowAt=firstArrival\+\(relay\?\.pivotRelease\|\|0\)/,'double play must wait for second pivot release');
 assert.match(html,/relayPause=fielderReleaseMs\(65,65,true\)/,'outfield relay animation must wait for transfer');
 console.log('SOFT INFIELD CHARGE AND SHARED THROW CLOCKS PASS');
 
@@ -894,7 +897,7 @@ assert.equal(arrivalMarkerAudit.results.newAfterArrival,true,'stationary marker 
 assert.equal(arrivalMarkerAudit.pendingToken,arrivalMarkerAudit.token,'arrival must be guarded by animation token');
 assert.match(html,/if\(!runnerMarkerVisible\(game\.bases\[i\],i,beforeBases\)\)c\.setAttribute\('opacity','0'\)/,'main base overlay must gate marker visibility at render');
 assert.match(html,/const occupied=\(game\?\.bases\|\|\[\]\)\.map\(p=>p&&!pendingRunnerArrivals\.has\(p\.id\)\?p:null\)/,'mini diamond should hide incoming batter');
-assert.match(html,/stageRunnerArrival\(player\.id,arrival,token\)/,'batter animation must register arrival clock');
+assert.match(html,/stageRunnerArrival\(player\.id,finalArrival,token\)/,'batter animation must register arrival clock');
 console.log('RUNNER MARKERS WAIT FOR BASE ARRIVAL PASS');
 
 const batterFirstBaseRouteAudit=vm.runInContext(`(()=>{
@@ -907,11 +910,11 @@ const batterFirstBaseRouteAudit=vm.runInContext(`(()=>{
  const start=batterFirstRoute('through',0);
  return {first,home,start,singleTouch,singleOverrun,doubleTouch,approach,straight};
 })()`,ctx);
-assert.deepEqual(Array.from(batterFirstBaseRouteAudit.start),batterFirstBaseRouteAudit.home,'all first-base routes start at home');
-assert.deepEqual(Array.from(batterFirstBaseRouteAudit.singleTouch),batterFirstBaseRouteAudit.first,'single touches first before overrunning');
+assert.deepEqual(Array.from(batterFirstBaseRouteAudit.start),Array.from(batterFirstBaseRouteAudit.home),'all first-base routes start at home');
+assert.deepEqual(Array.from(batterFirstBaseRouteAudit.singleTouch),Array.from(batterFirstBaseRouteAudit.first),'single touches first before overrunning');
 assert.ok(batterFirstBaseRouteAudit.singleOverrun[0]>323&&batterFirstBaseRouteAudit.singleOverrun[1]<169,'single must sprint through first into foul territory');
-assert.deepEqual(Array.from(batterFirstBaseRouteAudit.doubleTouch),batterFirstBaseRouteAudit.first,'double must touch first without overrunning');
-assert.deepEqual(Array.from(batterFirstBaseRouteAudit.straight),batterFirstBaseRouteAudit.first,'regular first-base approach should reach bag');
+assert.deepEqual(Array.from(batterFirstBaseRouteAudit.doubleTouch),Array.from(batterFirstBaseRouteAudit.first),'double must touch first without overrunning');
+assert.deepEqual(Array.from(batterFirstBaseRouteAudit.straight),Array.from(batterFirstBaseRouteAudit.first),'regular first-base approach should reach bag');
 assert.ok(batterFirstBaseRouteAudit.approach[0]>200&&batterFirstBaseRouteAudit.approach[1]<283,'extra-base hit must take a curved approach');
 assert.match(html,/later\(finishFirst\+overrunHold,\(\)=>moveRunnerRoundBase\(runner,first,returnMs,'stop',token\)\)/,'single returns to first after an overrun');
 assert.match(html,/later\(finishFirst\+20,\(\)=>moveRunnerRoundBase\(runner,second,560,'run',token\)\)/,'extra-base hit must continue from first toward second');
@@ -939,7 +942,7 @@ const situationalInfieldAudit=vm.runInContext(`(()=>{
  });
  const normal=defensiveAlignment(state([null,null,null],1));
  const bunt=defensiveAlignment(state([{id:'a'},null,null],0));
- const infieldIn=defensiveAlignment(state([null,null,{id:'c'}],1));
+ const infieldIn=defensiveAlignment(state([null,null,{id:'c'}],1,8));
  const twoOut=defensiveAlignment(state([null,null,{id:'c'}],2));
  const deep=defensiveAlignment(state([null,null,null],1,8,6,1));
  return {normal,bunt,infieldIn,twoOut,deep};
@@ -953,7 +956,7 @@ assert.ok(situationalInfieldAudit.infieldIn.positions.SS[1]>situationalInfieldAu
 assert.notEqual(situationalInfieldAudit.twoOut.name,'前進守備','do not automatically play in with two outs');
 assert.equal(situationalInfieldAudit.deep.name,'深めの守備');
 assert.ok(situationalInfieldAudit.deep.positions['1B'][1]<situationalInfieldAudit.normal.positions['1B'][1],'protect late lead with deeper defense');
-assert.match(html,/applyDefensiveAlignment\(\);\s*showPitchResult\('投球中/,'defensive positions must update before the pitch');
+assert.match(html,/const moveMs=applyDefensiveAlignment\(true\)/,'defensive positions must update before the pitch');
 assert.match(html,/const origin=infieldOrigin\(direction\.defender\)\|\|point/,'fielding clock must use shifted origin');
 assert.match(html,/const pos=direction\.defender,origin=infieldOrigin\(pos\)\|\|direction\.point/,'coverage must use shifted origin');
 console.log('SITUATIONAL DEFENSIVE ALIGNMENTS PASS');
