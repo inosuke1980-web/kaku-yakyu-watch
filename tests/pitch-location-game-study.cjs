@@ -26,21 +26,21 @@ function study(seed,games,variant,shape){
  const from=proto.indexOf('function zoneAt('),to=proto.indexOf('function pitchLegacy(');assert.ok(from>=0&&to>from);
  vm.runInContext(proto.slice(from,to)+'\nlet lastC1=null;',ctx);
  vm.runInContext(`render=()=>{};renderRoster=()=>{};animate=()=>{};animateGround=()=>{};animateFieldingError=()=>{};animateOutfieldReturn=()=>{};animateBaseRunners=()=>{};animateFlyLeadAndReturn=()=>{};log=()=>{};historyRender=()=>{};saveGame=()=>{};
- let observed=null,fairDispatch=null;
+ let observed=null,fairDispatch=null,hitBases=null;
  const hit0=hit,line0=lineBall,fly0=flyBall,ground0=groundBall;
- hit=function(...a){if(!fairDispatch)fairDispatch='hit';return hit0(...a)};lineBall=function(...a){if(!fairDispatch)fairDispatch='liner';return line0(...a)};flyBall=function(...a){if(!fairDispatch)fairDispatch='fly';return fly0(...a)};groundBall=function(...a){if(!fairDispatch)fairDispatch='ground';return ground0(...a)};
+ hit=function(...a){hitBases=a[1];if(!fairDispatch)fairDispatch='hit';return hit0(...a)};lineBall=function(...a){if(!fairDispatch)fairDispatch='liner';return line0(...a)};flyBall=function(...a){if(!fairDispatch)fairDispatch='fly';return fly0(...a)};groundBall=function(...a){if(!fairDispatch)fairDispatch='ground';return ground0(...a)};
  const take0=animateBatterTake,swing0=animateBatterSwing,foul0=foulBall;
  animateBatterTake=function(p,c){observed=c==='ball'?'ball':'called';return take0(p,c)};
  animateBatterSwing=function(p,inPlay){observed=inPlay?'fair':'swing';return swing0(p,inPlay)};
  foulBall=function(p){observed='foul';const prior=game.strikes;const r=foul0(p);if(prior===2&&game.strikes!==2)throw Error('two-strike foul changed count');return r};`,ctx);
- const sum={seed,games:0,pa:0,pitchedPA:0,zeroPitchPA:0,allPitches:0,completedPitches:0,abandonedPitches:0,abandonedPA:0,distribution:{},first:{ball:0,called:0,whiff:0,foul:0,fair:0,other:0},second:{ball:0,called:0,whiff:0,foul:0,fair:0,other:0},pitchResults:{ball:0,called:0,whiff:0,foul:0,fair:0,other:0},outcomes:{k:0,bb:0,h:0,hr:0,ab:0,sh:0,sf:0},abandonedResults:{ball:0,called:0,whiff:0,foul:0,fair:0,other:0},fouls:0,max:0,enginePA:0,enginePitches:0,runs:0,c1:{zone:0,outside:0,far:0,chase:0,chance:0,errorsLow:0,countLow:0,errorsHigh:0,countHigh:0,transitions:0,eyeLowN:0,eyeLowChase:0,eyeHighN:0,eyeHighChase:0,dispatch:{hit:0,liner:0,fly:0,ground:0}},groups:{contactLow:{},contactHigh:{},eyeLow:{},eyeHigh:{},controlLow:{},controlHigh:{}},twoStrike:{completedPA:0,pitches:0,fouls:0,abandonedPitches:0,abandonedFouls:0},engineOutcomes:{k:0,bb:0,h:0,hr:0,ab:0,sh:0,sf:0}};
+ const sum={seed,shape,games:0,hitTypes:{single:0,double:0,triple:0,hr:0},situations:{on:{pa:0,ab:0,h:0,bb:0,k:0},risp:{pa:0,ab:0,h:0,bb:0,k:0}},innings:0,pa:0,pitchedPA:0,zeroPitchPA:0,allPitches:0,completedPitches:0,abandonedPitches:0,abandonedPA:0,distribution:{},first:{ball:0,called:0,whiff:0,foul:0,fair:0,other:0},second:{ball:0,called:0,whiff:0,foul:0,fair:0,other:0},pitchResults:{ball:0,called:0,whiff:0,foul:0,fair:0,other:0},outcomes:{k:0,bb:0,h:0,hr:0,ab:0,sh:0,sf:0},abandonedResults:{ball:0,called:0,whiff:0,foul:0,fair:0,other:0},fouls:0,max:0,enginePA:0,enginePitches:0,runs:0,c1:{zone:0,outside:0,far:0,chase:0,chance:0,errorsLow:0,countLow:0,errorsHigh:0,countHigh:0,transitions:0,eyeLowN:0,eyeLowChase:0,eyeHighN:0,eyeHighChase:0,dispatch:{hit:0,liner:0,fly:0,ground:0}},groups:{contactLow:{},contactHigh:{},eyeLow:{},eyeHigh:{},controlLow:{},controlHigh:{}},twoStrike:{completedPA:0,pitches:0,fouls:0,abandonedPitches:0,abandonedFouls:0},engineOutcomes:{k:0,bb:0,h:0,hr:0,ab:0,sh:0,sf:0}};
  for(let g=0;g<games;g++){
-  vm.runInContext('init()',ctx);let pending=[],steps=0,twoPitches=0,twoFouls=0,ability=null;
+  vm.runInContext('init()',ctx);assert.equal(vm.runInContext('game.parkShape',ctx),shape);let pending=[],steps=0,twoPitches=0,twoFouls=0,ability=null;
   while(vm.runInContext('!game.ended',ctx)){
    assert.ok(++steps<10000,'game did not finish');
-   const before=vm.runInContext(`(()=>{let p=batter(),t=current().bat;return {p,t,bat:t.bat,inning:game.inning,half:game.half,pitches:game.totalPitches,balls:game.balls,strikes:game.strikes,ability:{contact:p.contact,eye:p.eye,control:pitcher().control},stats:{ab:p.ab,h:p.h,hr:p.hr,bb:p.bb,k:p.k,sh:p.sh||0,sf:p.sf||0}}})()`,ctx);
-   ctx.experimentPitchNo=pending.length+1;vm.runInContext('observed=null;lastC1=null;fairDispatch=null;resolvePitch()',ctx);
-   const after=vm.runInContext('({observed,lastC1,fairDispatch,pitches:game.totalPitches,balls:game.balls,strikes:game.strikes,inning:game.inning,half:game.half,ended:game.ended})',ctx);
+   const before=vm.runInContext(`(()=>{let p=batter(),t=current().bat;return {p,t,bat:t.bat,inning:game.inning,half:game.half,bases:game.bases.map(Boolean),pitches:game.totalPitches,balls:game.balls,strikes:game.strikes,ability:{contact:p.contact,eye:p.eye,control:pitcher().control},stats:{ab:p.ab,h:p.h,hr:p.hr,bb:p.bb,k:p.k,sh:p.sh||0,sf:p.sf||0}}})()`,ctx);
+   ctx.experimentPitchNo=pending.length+1;vm.runInContext('observed=null;lastC1=null;fairDispatch=null;hitBases=null;resolvePitch()',ctx);
+   const after=vm.runInContext('({observed,lastC1,fairDispatch,hitBases,pitches:game.totalPitches,balls:game.balls,strikes:game.strikes,inning:game.inning,half:game.half,ended:game.ended})',ctx);
    if(!after.ended)assert.ok(vm.runInContext('game.balls>=0&&game.balls<4&&game.strikes>=0&&game.strikes<3&&game.outs>=0&&game.outs<3&&new Set(game.bases.filter(Boolean).map(p=>p.id)).size===game.bases.filter(Boolean).length',ctx),'invalid live count, outs, or duplicate runner');
    const delta=after.pitches-before.pitches;assert.ok(delta===0||delta===1);
    if(delta){let kind=after.observed==='swing'?'whiff':after.observed;assert.ok(Object.hasOwn(sum.pitchResults,kind),`unknown pitch: ${kind}`);if(!pending.length)ability=before.ability;pending.push(kind);sum.allPitches++;if(before.strikes===2){twoPitches++;if(kind==='foul')twoFouls++;}}
@@ -54,6 +54,8 @@ function study(seed,games,variant,shape){
      if(last==='ball')assert.equal(before.p.bb-before.stats.bb,1,'ball-ended plate appearance must be a walk');
      if(last==='called'||last==='whiff')assert.equal(before.p.k-before.stats.k,1,'strike-ended plate appearance must be a strikeout');
     }
+    if(before.p.h-before.stats.h){const base=after.hitBases||1;sum.hitTypes[({1:'single',2:'double',3:'triple',4:'hr'})[base]]++;}
+    for(const [name,flag] of [['on',before.bases.some(Boolean)],['risp',before.bases[1]||before.bases[2]]])if(flag){let q=sum.situations[name];q.pa++;for(const k of ['ab','h','bb','k'])q[k]+=(before.p[k]||0)-before.stats[k];}
     sum.pa++;if(pending.length)sum.pitchedPA++;else sum.zeroPitchPA++;
     sum.distribution[pending.length]=(sum.distribution[pending.length]||0)+1;
     sum.max=Math.max(sum.max,pending.length);sum.completedPitches+=pending.length;
@@ -77,7 +79,7 @@ function study(seed,games,variant,shape){
   const totals=vm.runInContext(`({pitcherPitches:game.teams.flatMap(t=>t.players).reduce((a,p)=>a+p.pitches,0),pa:game.teams.reduce((s,t)=>s+t.bat,0),pitches:game.totalPitches,runs:game.teams.reduce((s,t)=>s+t.runs.reduce((a,b)=>a+(b||0),0),0),teamRuns:game.teams.map(t=>[t.runs.reduce((a,b)=>a+(b||0),0),t.players.reduce((a,p)=>a+p.r,0)]),stats:game.teams.flatMap(t=>t.players).reduce((a,p)=>{for(const k of Object.keys(a))a[k]+=p[k]||0;return a},{k:0,bb:0,h:0,hr:0,ab:0,sh:0,sf:0})})`,ctx);
   assert.equal(totals.pitcherPitches,totals.pitches,'pitcher totals equal game total');
   for(const [score,playerRuns] of totals.teamRuns)assert.equal(score,playerRuns,'team score must match player runs');
-  sum.enginePA+=totals.pa;sum.enginePitches+=totals.pitches;sum.games++;sum.runs+=totals.runs;
+  sum.innings+=vm.runInContext('game.teams.reduce((n,t)=>n+t.runs.filter(x=>x!==null&&x!==undefined).length,0)',ctx);sum.enginePA+=totals.pa;sum.enginePitches+=totals.pitches;sum.games++;sum.runs+=totals.runs;
   for(const k of Object.keys(sum.engineOutcomes))sum.engineOutcomes[k]+=totals.stats[k];
  }
  const total=o=>Object.values(o).reduce((a,b)=>a+b,0);
@@ -86,11 +88,11 @@ function study(seed,games,variant,shape){
  assert.equal(Object.entries(sum.distribution).reduce((s,[n,c])=>s+Number(n)*c,0),sum.completedPitches);
  assert.equal(total(sum.second),sum.pitchedPA-(sum.distribution[1]||0));
  assert.ok(sum.outcomes.ab<=sum.pa&&sum.outcomes.h<=sum.outcomes.ab&&sum.outcomes.hr<=sum.outcomes.h);
- assert.deepStrictEqual(sum.outcomes,sum.engineOutcomes,'per-PA totals must equal player records');
+ assert.equal(total(sum.hitTypes),sum.outcomes.h);assert.equal(sum.hitTypes.hr,sum.outcomes.hr);assert.deepStrictEqual(sum.outcomes,sum.engineOutcomes,'per-PA totals must equal player records');
  assert.equal(sum.pitchResults.fair+sum.outcomes.k+sum.outcomes.bb+sum.zeroPitchPA,sum.pa,'fair, walks, strikeouts and no-pitch tactics account for completed PAs');
  for(const group of Object.values(sum.groups))if(group.pa){assert.ok(group.pa<=sum.pitchedPA);assert.ok(group.first+group.second<=group.pa);assert.ok(group.h<=group.ab&&group.ab<=group.pa);}
  return sum;
 }
 const seeds=[0x5c9d4a71,0x20310523,0x19390417],games=Number(process.env.STUDY_GAMES||100);assert.ok(Number.isInteger(games)&&games>0&&games<=500);
-for(const variant of ['A','C1'])for(const seed of seeds){const result=study(seed,games,variant,'standard');assert.deepStrictEqual(result,study(seed,games,variant,'standard'),'reproducibility');console.log(JSON.stringify({variant,...result}));}
+for(const shape of ['standard','wide','small'])for(const variant of ['A','C1'])for(const seed of seeds){const result=study(seed,games,variant,shape);if(seed===seeds[0])assert.deepStrictEqual(result,study(seed,games,variant,shape),'reproducibility');console.log(JSON.stringify({variant,...result}));}
 console.log('C1 ENGINE INTEGRATION AND ACCOUNTING PASS');
