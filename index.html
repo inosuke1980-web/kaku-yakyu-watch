@@ -1036,7 +1036,7 @@ function animateStealPlay(visual){
   circle.setAttribute('stroke-width','4');
   ball.setAttribute('visibility','hidden');
   if(covering)covering.setAttribute('data-steal-tag',visual.safe?'late':'out');
-  showPitchResult(visual.safe?'盗塁成功！':'盗塁阻止！',visual.safe?'ball':'strike');
+  showPitchResult(visual.safe?'盗塁成功！':'アウト',visual.safe?'ball':'strike');
  });
  const end=Math.max(plan.runnerMs,plan.catchAt)+530;
  later(end,()=>{
