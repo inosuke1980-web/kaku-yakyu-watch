@@ -37,7 +37,7 @@
 .scoreboard-hint{font-size:11px;color:#a7c6b5;margin:5px 0 0}
 @media(max-width:750px){.scoreboard-scroll th:first-child,.scoreboard-scroll td:first-child{min-width:102px;width:112px;max-width:112px}.scoreboard-scroll th,.scoreboard-scroll td{padding:6px 4px}}
 .current-inning{background:#345c46;color:#fff;font-weight:800}.attack-team{position:relative;font-weight:800}.attack-team:after{content:"";position:absolute;bottom:3px;left:7px;right:7px;height:3px;background:#ef6565;border-radius:3px}.live-score{background:#20372f;color:#fff;font-weight:800} </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.6.9 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button></div></header>
-<section id="playDebug" class="card" hidden><h2>開発用プレー再生</h2><label>プレー <select id="debugPlay"><option value="pitch">投手の投球</option><option value="single">外野への単打</option><option value="flyHit">外野フライのヒット</option><option value="linerHit">外野ライナーのヒット</option></select></label> <button id="debugStart">再生</button> <button id="debugRestart">最初から再生</button><p class="muted">投球と外野打球を固定条件で再生します。</p></section>
+<section id="playDebug" class="card" hidden><h2>開発用プレー再生</h2><label>プレー <select id="debugPlay"><option value="pitch">投手の投球</option><option value="single">外野への単打</option><option value="flyHit">外野フライのヒット</option><option value="linerHit">外野ライナーのヒット</option><option value="shortstop">遊撃手の二塁カバー・牽制</option></select></label> <button id="debugStart">再生</button> <button id="debugRestart">最初から再生</button><p class="muted">投球・外野打球・遊撃手の動作を固定条件で再生します。</p></section>
 <section class="card"><h2>試合生成の条件</h2><div class="flex" style="gap:12px">
 <label>カテゴリー <select id="category"><option value="random">ランダム（現在は高校のみ）</option><option value="high">高校野球</option><option value="university" disabled>大学野球（今後追加）</option><option value="corporate" disabled>社会人野球（今後追加）</option><option value="pro" disabled>プロ野球（今後追加）</option></select></label>
 <label>試合種別 <select id="matchType"><option value="random">ランダム</option><option value="official">公式戦</option><option value="practice">練習試合</option></select></label>
@@ -2300,13 +2300,35 @@ if(debugPlays){
  init();stop();render();
  for(const id of ['start','pause','next'])$(id).disabled=true;
  const replayPitch=()=>{
-  stop();resetOutfieldPositions();render();
+  stop();game.bases=[null,null,null];resetOutfieldPositions();render();
   $('battingStance').setAttribute('data-swing','no');$('battingStance').setAttribute('data-visual-phase','ready');
   const field=$('fielders');
   if(field?.querySelectorAll)for(const el of field.querySelectorAll('circle[data-position]')){el.setAttribute('stroke','#1c3552');el.setAttribute('stroke-width','2');el.setAttribute('data-fielding-phase','')}
   const shadow=$('ballShadow');if(shadow){shadow.setAttribute('rx','0');shadow.setAttribute('ry','0')}
   const ball=$('ball');ball.style.transition='none';ball.setAttribute('cx','205');ball.setAttribute('cy','208');ball.setAttribute('visibility','hidden');
   const play=$('debugPlay').value;
+  if(play==='shortstop'){
+   // Fixed, disposable scenario using the normal steal and pickoff visuals.
+   const runner=current().bat.players[5];game.bases=[null,runner,null];render();
+   const token=animationToken;
+   animateStealPlay({id:runner.id,speed:55,safe:true});
+   // The normal scheduler waits for both the visual hold and the pitch interval.
+   const wait=Math.max(450,1650,animationHoldUntil-Date.now()+200);
+   playTimers.push(setTimeout(()=>{
+    if(token!==animationToken)return;
+    applyDefensiveAlignment(false);showPitchResult('牽制球！','play');
+    const duration=animatePickoffReturn(1,token);
+    playTimers.push(setTimeout(()=>{
+     if(token!==animationToken)return;
+     showPitchResult('帰塁セーフ','ball');
+     playTimers.push(setTimeout(()=>{
+      if(token!==animationToken)return;
+      showPitchResult('投球中…','');drawPitch(PITCH_TYPES[0]);
+     },1650));
+    },duration+110));
+   },wait));
+   return;
+  }
   showPitchResult('投球中…','');drawPitch(PITCH_TYPES[0]);
   if(['single','flyHit','linerHit'].includes(play)){
    const token=animationToken;

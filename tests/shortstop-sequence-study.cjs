@@ -20,3 +20,15 @@ function run(forceEarly){let now=0,timers=[],frames=[],events=[],max=0,prev=[143
  tick(4500);status.finalSS=[+ss.a.cx,+ss.a.cy];status.events=events;return status;
 }
 const normal=run(false),early=run(true);assert.ok(early.jump>80);console.log('NORMAL '+JSON.stringify(normal));console.log('FORCED '+JSON.stringify(early));console.log('SHORTSTOP SCHEDULER STUDY PASS');
+// Fault-injection control: two simultaneous movement requests on the same SS
+// share one animationToken; instrument actual writes, not a normal-play claim.
+{
+ let now=0,frames=[],writes=[],owner='';
+ const circle={style:{},a:{cx:'143',cy:'107'},getAttribute(k){return this.a[k]||'0'},setAttribute(k,v){this.a[k]=String(v);if(k==='cx')writes.push({at:now,owner,x:+v})}};
+ const c={Math,performance:{now:()=>now},animationToken:1,clamp:(x,a,b)=>Math.max(a,Math.min(b,x)),requestAnimationFrame:f=>frames.push(f)};
+ vm.createContext(c);vm.runInContext(sec('function moveGroundFielder(', 'function groundFirstCover('),c);c.circle=circle;
+ vm.runInContext('moveGroundFielder(circle,null,[200,47],400,animationToken)',c);now=100;owner='old';let batch=frames.splice(0);batch.forEach(f=>f(now));
+ vm.runInContext('moveGroundFielder(circle,null,[143,107],300,animationToken)',c);now=150;batch=frames.splice(0);batch.forEach((f,i)=>{owner=i===0?'old':'new';f(now)});
+ const w=writes.filter(x=>x.at===150);assert.equal(w.length,2);assert.notEqual(w[0].x,w[1].x);
+ console.log('OVERLAPPING FRAME CONTROL '+JSON.stringify(w));
+}

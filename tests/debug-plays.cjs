@@ -43,4 +43,15 @@ for(const t of [0,.25,.5,.75,1]){
 vm.runInContext("$('frameType');$('frameProgress');$('frameInfo')",debug.c);n.get('frameType').value='fly';n.get('frameProgress').value='.5';n.get('showFrame').onclick();assert.match(n.get('frameInfo').textContent,/フライ 50%/);
 debug.advance(5000);assert.equal(debug.timers.size,0);
 assert.equal(debug.saved,0);assert.equal(vm.runInContext('JSON.stringify(game.teams.map(t=>[t.runs,t.hits,t.errors]))',debug.c),before);
+n.get('debugPlay').value='shortstop';
+for(let i=0;i<3;i++){
+ n.get(i===1?'debugRestart':'debugStart').onclick();debug.advance(400);
+ assert.equal(n.get('stealPlaySprites').children.length,2,'steal visual created');
+ debug.advance(6200);assert.equal(debug.timers.size,0,'shortstop replay timers complete');
+ assert.equal(debug.saved,0);assert.equal(vm.runInContext('JSON.stringify(game.teams.map(t=>[t.runs,t.hits,t.errors]))',debug.c),before);
+}
+n.get('debugPlay').value='shortstop';n.get('debugStart').onclick();debug.advance(200);
+n.get('debugPlay').value='pitch';n.get('debugStart').onclick();debug.advance(6500);
+assert.equal(debug.timers.size,0,'old shortstop timers cancelled');assert.equal(debug.saved,0);
+console.log('SHORTSTOP DEBUG REPLAY PASS');
 console.log('DEBUG PITCH AND OUTFIELD REPLAY PASS');
