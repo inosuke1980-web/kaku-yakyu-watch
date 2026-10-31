@@ -1210,7 +1210,7 @@ const tacticalCleanupAudit=vm.runInContext(`(()=>{
  const pause=$('pause').onclick.toString();
  const stopCode=stop.toString();
  const pickoff=animatePickoffReturn.toString();
- const stealGate=resolvePitch.toString();
+ const stealGate=resolvePitchCore.toString();
  return {before,pause,stopCode,pickoff,stealGate};
 })()`,ctx);
 assert.ok(tacticalCleanupAudit.stopCode.includes('clearTacticalVisuals()'),'stop clears all tactical overlays');
