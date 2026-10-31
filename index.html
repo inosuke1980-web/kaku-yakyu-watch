@@ -110,7 +110,7 @@
 </g>
 <circle id="batterRunner" cx="200" cy="283" r="7" fill="url(#retroFielder)" stroke="#765317" stroke-width="1.5" visibility="hidden"/>
 <circle id="outfieldPickupGlove" cx="0" cy="0" r="5.5" fill="#bd8857" stroke="#734923" stroke-width="1.2" visibility="hidden" pointer-events="none"/>
-<ellipse id="ballShadow" cx="200" cy="203" rx="0" ry="0" fill="#08190f" opacity=".4"/><circle id="ball" cx="200" cy="203" r="4" fill="white" stroke="#222" stroke-width="1"/>
+<path id="foulTrail" fill="none" stroke="#b2d7ff" stroke-width="1.8" stroke-dasharray="4 3" opacity=".75" pointer-events="none"/><ellipse id="ballShadow" cx="200" cy="203" rx="0" ry="0" fill="#08190f" opacity=".4"/><circle id="ball" cx="200" cy="203" r="4" fill="white" stroke="#222" stroke-width="1"/>
 </svg></div><div class="field-score-row" style="display:flex;justify-content:flex-end;margin:8px 0 10px"><div id="miniScore" class="mini-score" aria-label="球場ミニスコアボード" aria-live="off"><div class="mini-inning">試合待機中</div></div></div><div class="muted" id="matchup">投手 — / 打者 —</div><div id="batterToday" class="batter-today" aria-live="off"></div><div id="pitchResult" class="pitch-result" role="status" aria-live="polite">投球待ち</div><div class="muted" id="pitchMotion" aria-live="off">球種・球速 —</div><div class="flex" style="margin-top:10px"><label for="speed" class="small">演出速度</label><select id="speed"><option value="1">標準（約10〜15分目標）</option><option value="2">2倍速</option><option value="4">4倍速</option></select></div></section><section class="card"><h2>実況ログ</h2><div class="log" id="log" aria-live="polite"></div><h2 style="margin-top:16px">両チームの選手</h2><div class="flex"><button id="rosterAway" class="secondary" disabled>先攻の選手</button><button id="rosterHome" class="secondary" disabled>後攻の選手</button></div><div id="roster" class="tablewrap" style="margin-top:10px"></div></section></div>
 <section class="card"><div class="flex between"><h2>試合結果・保存済み試合</h2><button id="clear" class="secondary">履歴を全削除</button></div><div class="muted">このブラウザ内に保存。別端末との同期はありません。試合終了時に自動保存します。</div><div id="history" style="margin-top:12px"></div></section><dialog id="detail"><div class="flex between"><h2 id="detailTitle">選手情報</h2><button id="closeDetail" class="secondary">閉じる</button></div><div id="detailBody"></div></dialog>
 </main><script>
@@ -325,7 +325,7 @@ function clearTacticalVisuals(){
  const catcher=$('catcherThrowSprite');if(catcher)catcher.setAttribute('visibility','hidden');
  const glove=$('catcherGlove');if(glove){glove.setAttribute('cy','302');glove.setAttribute('cx','207')}
 }
-function stop(){clearTacticalVisuals();const set=$('pitcherSet'),glance=$('pitcherGlance'),thrower=$('catcherThrowSprite');for(const el of [set,glance,thrower])if(el)el.setAttribute('visibility','hidden');for(const id of ['pitcherLeg','pitcherArm','catcherCall']){const el=$(id);if(el)el.setAttribute('visibility','hidden')}const glove=$('catcherGlove');if(glove){glove.setAttribute('r','5');glove.setAttribute('fill','#b57943');glove.setAttribute('cx','207');glove.setAttribute('cy','302')}const crouch=$('catcherCrouch');if(crouch)crouch.setAttribute('d','M 193 320 Q 200 328 207 320');const knees=$('batterKnees');if(knees)knees.setAttribute('d','M -5 17 L -9 23 M 5 17 L 9 23');batterVisualLockedUntil=0;batterRunnerOnField=false;const batting=$('battingStance');if(batting)batting.setAttribute('visibility','hidden');const coverLayer=$('firstBaseCoverForeground');if(coverLayer)coverLayer.replaceChildren();const covering=$('fielders');if(covering&&covering.querySelector){for(const type of ['circle','text']){const el=covering.querySelector(type+'[data-position="1B"]');if(el)el.setAttribute('opacity','1')}}playing=false;clearTimeout(timer);clearTimeout(flightTimer);for(const id of playTimers)clearTimeout(id);playTimers=[];timer=flightTimer=null;animationHoldUntil=0;animationToken++;pendingRunnerArrivals.clear();const moving=$('movingRunners');if(moving)moving.replaceChildren();const runner=$('batterRunner');if(runner){runner.style.transition='none';runner.setAttribute('visibility','hidden')}resetOutfieldPositions()}
+function stop(){const trail=$('foulTrail');if(trail)trail.setAttribute('d','');clearTacticalVisuals();const set=$('pitcherSet'),glance=$('pitcherGlance'),thrower=$('catcherThrowSprite');for(const el of [set,glance,thrower])if(el)el.setAttribute('visibility','hidden');for(const id of ['pitcherLeg','pitcherArm','catcherCall']){const el=$(id);if(el)el.setAttribute('visibility','hidden')}const glove=$('catcherGlove');if(glove){glove.setAttribute('r','5');glove.setAttribute('fill','#b57943');glove.setAttribute('cx','207');glove.setAttribute('cy','302')}const crouch=$('catcherCrouch');if(crouch)crouch.setAttribute('d','M 193 320 Q 200 328 207 320');const knees=$('batterKnees');if(knees)knees.setAttribute('d','M -5 17 L -9 23 M 5 17 L 9 23');batterVisualLockedUntil=0;batterRunnerOnField=false;const batting=$('battingStance');if(batting)batting.setAttribute('visibility','hidden');const coverLayer=$('firstBaseCoverForeground');if(coverLayer)coverLayer.replaceChildren();const covering=$('fielders');if(covering&&covering.querySelector){for(const type of ['circle','text']){const el=covering.querySelector(type+'[data-position="1B"]');if(el)el.setAttribute('opacity','1')}}playing=false;clearTimeout(timer);clearTimeout(flightTimer);for(const id of playTimers)clearTimeout(id);playTimers=[];timer=flightTimer=null;animationHoldUntil=0;animationToken++;pendingRunnerArrivals.clear();const moving=$('movingRunners');if(moving)moving.replaceChildren();const runner=$('batterRunner');if(runner){runner.style.transition='none';runner.setAttribute('visibility','hidden')}resetOutfieldPositions()}
 function log(msg){if(!game)return;const prefix=game.inning+'回'+(game.half?'裏':'表');game.events.push('【'+prefix+'】 '+msg);if(game.events.length>250)game.events.shift();$('log').replaceChildren(...game.events.slice(-90).reverse().map(s=>{let d=document.createElement('div');d.textContent=s;return d}))}
 function current(){return {bat:game.teams[game.half],def:game.teams[1-game.half]}}
 function addRuns(n,runnerIds=[]){const {bat}=current();bat.runs[game.inning-1]=(bat.runs[game.inning-1]||0)+n;for(const p of runnerIds)p.r++;if(game.half===1&&game.inning>=9&&total(1)>total(0))finish('サヨナラ')}
@@ -662,6 +662,18 @@ function groundForceTimeline(direction,thrower,timing,runner,quick=false){
  return {relay,receiveAt,runnerAt,firstAt,forceCallAt,forceOut,
   doubleOut:firstAt+25<timing.runnerMs,quick};
 }
+// A force at home is an alternative only while all runners are forced.
+// Share the contact-time race with its runner/ball presentation; no new draw.
+function groundHomeForcePlan(direction,fielder,timing,runner,outs,loaded){
+ const home=[200,293],throwMs=throwFlightMs(fielder.arm,direction.point,home);
+ const receiveAt=timing.pickup+timing.releaseMs+throwMs;
+ // A runner on third has a lead; use the existing speed clock with that lead.
+ const runnerAt=Math.round(clamp(runnerFirstMs(runner?.speed??55)-180,1000,1700));
+ const callAt=Math.max(receiveAt+70,runnerAt+45);
+ const decisionMs=Math.max(timing.arrive,timing.runnerMs)+110;
+ return {receiveAt,runnerAt,callAt,throwMs,decisionMs,
+  forceOut:!!loaded&&outs<2&&receiveAt+25<runnerAt&&callAt<=decisionMs};
+}
 function groundBall(p){
  const b=game.bases,pi=pitcher(),baseDirection=choose(GROUND_DIRECTIONS),fielder=groundDefender(baseDirection);
  // Most balls are near the fielder; some test the gap and reward quick gloves.
@@ -703,6 +715,16 @@ function groundBall(p){
   const errorText=errorType==='tunnel'?'正面のゴロをトンネル！':errorType==='bobble'?'グラブに当てたが横にはじいた！':'一塁へ悪送球！';
   log(`${p.name} ${direction.label}、${errorText} 失策で出塁。${extra?' 走者が追加進塁！':''}${scored.length?' '+scored.length+'点追加。':''}`);
   animateFieldingError(errorType,p.speed,errorPlan,direction);return;
+ }
+ const homeForce=groundHomeForcePlan(direction,fielder,timing,b[2],game.outs,b.every(Boolean));
+ if(homeForce.forceOut){
+  const forced=b[2];
+  game.homePlayOutId=forced.id;
+  game.forceOutVisual={id:forced.id,outcome:'home',...homeForce};
+  b[2]=b[1];b[1]=b[0];b[0]=p;
+  game.outs++;pi.outsPitched++;
+  log(`${p.name} ${direction.label}、本塁封殺。一塁セーフ。`);
+  animateGround('homeForce',direction,p.speed,fielder.arm,{...timing,homeForce});return;
  }
  // A near-simultaneous throw and arrival is decided by the measured times.
  const batterSafe=timing.runnerMs+25<timing.arrive;
@@ -1165,7 +1187,8 @@ function animateBaseRunners(beforeBases,beforeRuns,halfAtStart,inningAtStart){
    const marker=staticLayer.querySelector('circle[data-runner="'+person.id+'"]');
    if(marker)marker.setAttribute('opacity','0');
   }
-  const close=game.crossPlayVisual&&game.crossPlayVisual.id===person.id?game.crossPlayVisual:null;
+  const homeForce=game.forceOutVisual?.outcome==='home'&&game.forceOutVisual.id===person.id?game.forceOutVisual:null;
+  const close=homeForce?{runnerArrival:homeForce.runnerAt}:game.crossPlayVisual&&game.crossPlayVisual.id===person.id?game.crossPlayVisual:null;
   const plan=runnerChoreography(from,to,person.speed,close);
   const finish=plan.arrival;
   longest=Math.max(longest,finish+(close?350:0));
@@ -1203,7 +1226,8 @@ function foulDestination(side,kind){
 function animateFoulBall(plan){
  const ball=$('ball'),shadow=$('ballShadow');
  if(!ball)return;
- const token=animationToken,start=[200,283],end=plan.point;
+ const token=animationToken,start=[200,283],end=plan.point,trail=$('foulTrail');
+ const trace=[start];ball.setAttribute('visibility','visible');if(trail)trail.setAttribute('d','');
  const duration=plan.kind==='ground'?680:1080;
  const begun=performance.now();
  ball.style.transition='none';
@@ -1215,7 +1239,8 @@ function animateFoulBall(plan){
   const x=start[0]+(end[0]-start[0])*t;
   const y=start[1]+(end[1]-start[1])*t;
   const lift=plan.kind==='fly'?45*Math.sin(Math.PI*t):0;
-  const actualY=(kind==='homeRun'||kind==='home')?y-lift:Math.max(y-lift,outfieldFenceY(x)+8);
+  const actualY=y-lift;
+  trace.push([x,actualY]);if(trail)trail.setAttribute('d',trace.map((p,i)=>(i?'L':'M')+p.map(n=>n.toFixed(1)).join(' ')).join(' '));
   ball.setAttribute('cx',x.toFixed(1));ball.setAttribute('cy',actualY.toFixed(1));
   ball.setAttribute('r',String(plan.kind==='fly'?4+1.5*Math.sin(Math.PI*t):3.7));
   if(shadow){
@@ -1401,6 +1426,7 @@ function batterReadyMotion(token){
  },200));
 }
 function drawPitch(type){
+ const trail=$('foulTrail');if(trail)trail.setAttribute('d','');
  const ball=$('ball'),startX=205,startY=208,endY=278;
  const ballToken=++animationToken;
  const motionStarted=performance.now();
@@ -1415,7 +1441,9 @@ function drawPitch(type){
   if(now<started){requestAnimationFrame(step);return;}
   ball.setAttribute('visibility','visible');
   const t=Math.min(1,(now-started)/type.flight),late=t*t;
-  const x=startX+type.side*late;
+  // Keep the projected ball between the two body silhouettes. This is
+  // a presentation corridor, not a new strike zone or pitch verdict.
+  const x=startX+(200+clamp(type.side*.18,-3,3)-startX)*late;
   const y=startY+(endY-startY)*t+type.drop*late;
   ball.setAttribute('cx',x.toFixed(1));ball.setAttribute('cy',y.toFixed(1));
   ball.setAttribute('r',String(3.7+1.6*t));
@@ -1766,7 +1794,37 @@ function animateForceAtSecond(visual,receiveAt,holdUntil,token){
  later(Math.max(holdUntil,arrival+400),()=>{circle.setAttribute('visibility','hidden');if(circle.remove)circle.remove()});
  animationHoldUntil=Math.max(animationHoldUntil,Date.now()+Math.max(holdUntil,arrival+400)+120);
 }
+function animateHomeForce(direction,batterSpeed,timing){
+ const field=$('fielders'),ball=$('ball'),token=animationToken;
+ if(!field?.querySelector||!ball)return;
+ const defender=field.querySelector('circle[data-position="'+direction.defender+'"]');
+ const label=field.querySelector('text[data-position="'+direction.defender+'"]');
+ const catcher=field.querySelector('circle[data-position="C"]'),catchLabel=field.querySelector('text[data-position="C"]');
+ if(!defender||!catcher)return;
+ const origin=[+defender.getAttribute('cx'),+defender.getAttribute('cy')];
+ const catchOrigin=[+catcher.getAttribute('cx'),+catcher.getAttribute('cy')];
+ const plan=timing.homeForce,home=[200,293];
+ const later=(ms,fn)=>playTimers.push(setTimeout(()=>{if(token===animationToken)fn()},ms));
+ const holdUntil=timing.homeForce.decisionMs+290;
+ animationHoldUntil=Math.max(animationHoldUntil,Date.now()+holdUntil+330);
+ ball.style.transition='none';ball.setAttribute('visibility','visible');
+ ball.setAttribute('cx',200);ball.setAttribute('cy',283);ball.setAttribute('r',4);
+ showPitchResult('','neutral');
+ animateBatterRun('forceSafe',batterSpeed,{runnerMs:timing.runnerMs,decisionMs:plan.decisionMs});
+ moveGroundFielder(defender,label,direction.point,timing.pickup,token);
+ moveGroundFielder(catcher,catchLabel,home,Math.min(timing.pickup,400),token);
+ moveGroundFielder($('catcherGlove'),null,home,Math.min(timing.pickup,400),token);
+ moveGroundFielder(ball,null,direction.point,timing.pickup,token);
+ later(timing.pickup+timing.releaseMs,()=>moveGroundFielder(ball,null,home,plan.throwMs,token));
+ later(plan.callAt,()=>showPitchResult('本塁封殺！','out'));
+ later(holdUntil,()=>{
+  moveGroundFielder(defender,label,origin,350,token);
+  moveGroundFielder(catcher,catchLabel,catchOrigin,350,token);
+  moveGroundFielder($('catcherGlove'),null,[207,302],350,token);
+ });
+}
 function animateGround(outcome,direction,batterSpeed=55,arm=55,timing=null){
+ if(outcome==='homeForce'){animateHomeForce(direction,batterSpeed,timing);return;}
  const field=$('fielders'),ball=$('ball');
  if(!field||typeof field.querySelector!=='function'||!ball)return;
  const token=animationToken,player=direction.defender;
