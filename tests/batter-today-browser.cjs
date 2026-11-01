@@ -4,10 +4,12 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),{pat
  for(const width of [1280,390]){
   const page=await browser.newPage({viewport:{width,height:1000}}),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(pathToFileURL(path.resolve(__dirname,'../index.html')).href);await page.click('#start');await page.click('#pause');
   await page.evaluate(()=>{stop();game.bases=[null,null,null];game.balls=game.strikes=game.outs=0;game.teams[0].bat=0;game.half=0;game.inning=1;render()});
+  if(width<=600)await page.click('#watchInfo');
   for(const shape of ['standard','wide','small','leftWide','rightWide','dome','grassPark','grassDome']){
    await page.selectOption('#parkShape',shape);await page.evaluate(()=>applyParkShape(document.querySelector('#parkShape').value));
    assert.equal(await page.locator('#homePlate').getAttribute('points'),'195,288 205,288 205,293 200,298 195,293');assert.ok(await page.locator('#homePlate').isVisible());
   }
+  if(width<=600)await page.click('#watchInfo');
   // Complete 9 actual walk branches to reach the same batter again. Tactics and
   // pitching changes are suppressed only in this browser fixture, not the app.
   await page.evaluate(()=>{const r=Math.random,t=tactics,m=maybeChangePitcher;try{Math.random=()=>0;tactics=()=>false;maybeChangePitcher=()=>{};for(let i=0;i<9;i++){game.balls=3;resolvePitch()}stop();render()}finally{Math.random=r;tactics=t;maybeChangePitcher=m}});
