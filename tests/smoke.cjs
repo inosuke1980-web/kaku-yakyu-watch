@@ -536,7 +536,7 @@ assert.deepEqual(Array.from(outfieldPursuit.roller.destination),[111,-55],'outfi
 assert.equal(outfieldPursuit.shortFly.type,'forward');
 assert.equal(outfieldPursuit.shortFly.caught,true);
 assert.equal(outfieldPursuit.sideways.type,'lateral');
-assert.match(html,/moveGroundFielder\(nearest,label,point,ms,token\)/,'outfield chases should use frame-based movement');
+assert.match(html,/moveGroundFielder\(nearest,label,point,ms,token(?:,\{[^}]+\})?\)/,'outfield chases should use frame-based movement');
 console.log('OUTFIELD PURSUIT DIRECTION AND PICKUP CHECKS PASS');
 
 const fenceIntegrity=vm.runInContext(`(()=>{
@@ -625,7 +625,8 @@ assert.ok(linkedRelay.slow.arrival>linkedRelay.fast.arrival,'slow fielder pickup
 assert.ok(linkedRelay.weak.arrival>linkedRelay.strong.arrival,'strong arm should deter extra bases');
 assert.ok(linkedRelay.deep.arrival>linkedRelay.shallow.arrival,'deep ball should take longer to return');
 assert.equal(linkedRelay.slow.pickup.release,linkedRelay.slow.pickup.flightMs+linkedRelay.slow.pickup.gather);
-assert.match(html,/const pickup=outfieldPickupTiming\(targetInfo,targetInfo\?\.fielder\?\.field\?\?55\),release=pickup\.release/,'animation must share the timing model');
+assert.match(html,/release:pickup\.release,relayMs/,'route must retain the shared pickup timing');
+assert.match(html,/const route=outfieldRelayVisualRoute\(kind,targetInfo,landed,arm,relay\)/,'animation must share the timing model');
 assert.match(html,/decideSingleAdvance\(r,0,landing,fieldArm,thirdBlocked,targetInfo,fieldSkill\)/,'runner choices must use fielding capability');
 console.log('EXTRA-BASE / OUTFIELD RETURN LINKAGE CHECKS PASS');
 
@@ -1396,7 +1397,7 @@ for(const {kind,point,duration,plan} of fieldingVisualAudit){
  if(kind==='groundThrough')assert.equal(plan.phase,'chase');
  if(plan.dropped)assert.ok(!plan.caught,'cannot catch and drop simultaneously');
 }
-assert.match(html,/nearest\.setAttribute\('data-fielding-phase',visual\.phase\)/,'fielder visibly changes phase');
+assert.match(html,/nearest\.setAttribute\('data-fielding-phase',recoveringSingle\?'chase':visual\.phase\)/,'fielder visibly changes phase');
 assert.match(html,/const dropPosition=drop\?outfieldBallMotion\(kind,targetInfo,start,target,t\):null/,'dropped ball follows continuous glove contact motion');
 assert.match(html,/nearest\.setAttribute\('data-fielding-phase','miss'\)/,'untouched hit shows miss');
 console.log('THREE HUNDRED FIELDING VISUAL PLANS PASS');

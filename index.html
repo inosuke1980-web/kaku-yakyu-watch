@@ -75,7 +75,7 @@
  body.watching .pitch-result small{font-size:12px}
 }
 </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.6.9 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button><label class="watch-speed"><span>速度</span><select id="speed" aria-label="再生速度"><option value="1">標準</option><option value="2">2倍速</option><option value="4">4倍速</option></select></label><button id="watchInfo" class="secondary" hidden>試合情報</button></div></header>
-<section id="playDebug" class="card" hidden><h2>開発用プレー再生</h2><label>プレー <select id="debugPlay"><option value="pitch">投手の投球</option><option value="single">外野への単打</option><option value="flyHit">外野フライのヒット</option><option value="linerHit">外野ライナーのヒット</option><option value="shortstop">遊撃手の二塁カバー・牽制</option></select></label> <button id="debugStart">再生</button> <button id="debugRestart">最初から再生</button><p class="muted">投球・外野打球・遊撃手の動作を固定条件で再生します。</p></section>
+<section id="playDebug" class="card" hidden><h2>開発用プレー再生</h2><label>プレー <select id="debugPlay"><option value="pitch">投手の投球</option><option value="single">外野への単打</option><option value="flyHit">外野フライのヒット</option><option value="linerHit">外野ライナーのヒット</option><option value="relayLF">左翼前単打・中継</option><option value="relayCF">中堅前単打・中継</option><option value="relayRF">右翼前単打・中継</option><option value="relayHome">二塁走者・本塁返球（アウト固定）</option><option value="relayThird">一塁走者・三塁返球（セーフ固定）</option><option value="shortstop">遊撃手の二塁カバー・牽制</option></select></label> <button id="debugStart">再生</button> <button id="debugRestart">最初から再生</button><p class="muted">投球・外野打球・遊撃手の動作を固定条件で再生します。成績は更新しません。</p></section>
 <section class="card"><h2>試合生成の条件</h2><div class="flex" style="gap:12px">
 <label>カテゴリー <select id="category"><option value="random">ランダム（現在は高校のみ）</option><option value="high">高校野球</option><option value="university" disabled>大学野球（今後追加）</option><option value="corporate" disabled>社会人野球（今後追加）</option><option value="pro" disabled>プロ野球（今後追加）</option></select></label>
 <label>試合種別 <select id="matchType"><option value="random">ランダム</option><option value="official">公式戦</option><option value="practice">練習試合</option></select></label>
@@ -1673,10 +1673,15 @@ function animateBatterRun(result,speed=55,groundPlan=null){
 // the SVG cx/cy attributes are unreliable on some mobile browsers (notably iOS).
 function moveGroundFielder(circle,label,destination,duration,token,options={}){
  if(!circle)return;
+ // Only actors used by the outfield relay opt into ownership. A later
+ // move then retires their earlier frames, even under the same global token.
+ const owners=moveGroundFielder.relayOwners||(moveGroundFielder.relayOwners=new WeakMap());
+ if(options.relayOwner||owners.has(circle))owners.set(circle,{});
+ const owner=owners.get(circle);
  const start=[Number(circle.getAttribute('cx')),Number(circle.getAttribute('cy'))],begin=performance.now();
  circle.style.transition='none';
  function update(now){
-  if(token!==animationToken)return;
+  if(token!==animationToken||owners.get(circle)!==owner)return;
   const t=clamp((now-begin)/Math.max(1,duration),0,1);
   const ease=options.carry? t*t*(3-2*t):1-(1-t)*(1-t);
   const x=start[0]+(destination[0]-start[0])*ease;
@@ -1687,6 +1692,7 @@ function moveGroundFielder(circle,label,destination,duration,token,options={}){
   if(t<1)requestAnimationFrame(update);
  }
  requestAnimationFrame(update);
+ return owner;
 }
 function groundFirstCover(defenderPosition,outcome){
  return {cover:'1B',backup:defenderPosition==='1B'?'2B':null,needed:true};
@@ -2057,8 +2063,10 @@ function animate(kind,targetInfo=null,runnerSpeed=55,hitBases=null){
   const x=Number(nearest.getAttribute('cx')),y=Number(nearest.getAttribute('cy'));
   const label=field.querySelector('text[data-position="'+nearest.getAttribute('data-position')+'"]');
   const pursuit=outfieldPursuitPlan(kind,targetInfo,[x,y],duration);
-  const move=(point,ms)=>moveGroundFielder(nearest,label,point,ms,token);
-  const at=(ms,callback)=>playTimers.push(setTimeout(()=>{if(token===animationToken)callback()},ms));
+  const recoveringSingle=hitBases===1&&!targetInfo?.caught&&kind!=='outfieldError'&&!targetInfo?.dropped;
+  let chaseOwner;
+  const move=(point,ms)=>{chaseOwner=moveGroundFielder(nearest,label,point,ms,token,{relayOwner:recoveringSingle?'outfield-pickup':null})};
+  const at=(ms,callback)=>playTimers.push(setTimeout(()=>{if(token===animationToken&&(!recoveringSingle||!chaseOwner||moveGroundFielder.relayOwners?.get(nearest)===chaseOwner))callback()},ms));
   const visual=outfieldVisualPlan(kind,targetInfo,target,duration);
   const diving=visual.caught&&!!targetInfo?.diving;
   const missed=visual.gap;
@@ -2090,7 +2098,7 @@ function animate(kind,targetInfo=null,runnerSpeed=55,hitBases=null){
   }
   nearest.setAttribute('data-fielding-phase','pursuit');
   at(visual.contactAt,()=>{
-   nearest.setAttribute('data-fielding-phase',visual.phase);
+   nearest.setAttribute('data-fielding-phase',recoveringSingle?'chase':visual.phase);
    if(visual.dropped){
     nearest.setAttribute('r','13');
     nearest.setAttribute('stroke','#f58b8b');
@@ -2109,13 +2117,13 @@ function animate(kind,targetInfo=null,runnerSpeed=55,hitBases=null){
    const verdict=battedBallVerdict(kind,targetInfo,hitBases);
    if(verdict)showPitchResult(verdict.label,verdict.style);
   });
-  const releaseAt=targetInfo?.flight?outfieldPickupTiming(targetInfo,targetInfo.fielder?.field??55).release:duration;
+  const releaseAt=recoveringSingle?Math.max(duration,outfieldPickupTiming(targetInfo,targetInfo?.fielder?.field??55).release):targetInfo?.flight?outfieldPickupTiming(targetInfo,targetInfo.fielder?.field??55).release:duration;
   // At pickup the compact glove encloses the resting ball before the relay.
-  if(hitBases===1&&targetInfo?.flight&&!targetInfo?.caught&&!visual.dropped&&pursuit){
-   const pickupGlove=$('outfieldPickupGlove');
+  if(recoveringSingle&&pursuit){
+   const pickupGlove=$('outfieldPickupGlove'),pickupOwner={};
    const contactAt=releaseAt-100;
-   at(contactAt,()=>{if(!pickupGlove)return;pickupGlove.setAttribute('cx',pursuit.destination[0]);pickupGlove.setAttribute('cy',pursuit.destination[1]);pickupGlove.setAttribute('visibility','visible');nearest.setAttribute('data-fielding-phase','pickup')});
-   at(releaseAt+20,()=>{if(pickupGlove)pickupGlove.setAttribute('visibility','hidden')});
+   at(contactAt,()=>{if(!pickupGlove)return;pickupGlove.relayPickupOwner=pickupOwner;pickupGlove.setAttribute('cx',pursuit.destination[0]);pickupGlove.setAttribute('cy',pursuit.destination[1]);pickupGlove.setAttribute('visibility','visible');nearest.setAttribute('data-fielding-phase','pickup')});
+   playTimers.push(setTimeout(()=>{if(token===animationToken&&pickupGlove?.relayPickupOwner===pickupOwner)pickupGlove.setAttribute('visibility','hidden')},releaseAt+20));
   }
   const resetAt=Math.max(pursuit?.latePickup?duration+600:duration+430,releaseAt+220,visual.dropped?visual.contactAt+650:0);
   at(resetAt,()=>{
@@ -2228,11 +2236,24 @@ function outfieldRelayDecision(scoring=false,homePlay=null,thirdBasePlay=null,ki
  if(scoring&&kind==='fly')return {throwAgain:true,goal:[200,293],label:'ホームへ返球！',reason:'sacrifice'};
  return {throwAgain:false,goal:null,label:'中継でボールを保持',reason:'hold'};
 }
+// A presentation route inside the already-resolved race. Keep the legacy
+// arrival deadlines (and thus runner/out calls) while moving the receiving
+// infielder onto the line between pickup and the real destination.
+function outfieldRelayVisualRoute(kind,info,landed,arm,decision){
+ const timedCutoff=[200,116],pickup=outfieldPickupTiming(info,info?.fielder?.field??55);
+ const directional=kind==='single'&&!info?.caught;
+ const aim=decision.goal||[200,47];
+ const cutoff=directional?[landed[0]+(aim[0]-landed[0])*.52,landed[1]+(aim[1]-landed[1])*.52]:timedCutoff;
+ const relayMs=throwFlightMs(arm,landed,timedCutoff),relayPause=fielderReleaseMs(65,65,true);
+ const finalMs=decision.throwAgain?throwFlightMs(65,timedCutoff,decision.goal):0;
+ const atRelay=pickup.release+relayMs,atGoal=decision.throwAgain?atRelay+relayPause+finalMs:atRelay;
+ return {cutoff,timedCutoff,release:pickup.release,relayMs,relayPause,finalMs,atRelay,atGoal,directional};
+}
 function animateOutfieldReturn(kind,scoring=false,arm=55,homePlay=null,targetInfo=null,thirdBasePlay=null){
  const token=animationToken,ball=$('ball'),field=$('fielders');
  if(!ball||!field||typeof field.querySelectorAll!=='function')return;
  const targets={single:[277,138],double:[311,-33],triple:[311,-33],fly:[96,-36]};
- const landed=targetInfo?(targetInfo.rebound||targetInfo.rollEnd||targetInfo.point):(targets[kind]||targets.single),cutoff=[200,116];
+ const landed=targetInfo?(targetInfo.rebound||targetInfo.rollEnd||targetInfo.point):(targets[kind]||targets.single);
  const relay=outfieldRelayDecision(scoring,homePlay,thirdBasePlay,kind),goal=relay.goal;
  const outfielders=[...field.querySelectorAll('circle')].filter(el=>['LF','CF','RF'].includes(el.getAttribute('data-position')));
  if(!outfielders.length)return;
@@ -2242,23 +2263,40 @@ function animateOutfieldReturn(kind,scoring=false,arm=55,homePlay=null,targetInf
  },{el:null,dist:Infinity}).el;
  const fielder=targetInfo?.defender||chosen?.getAttribute('data-position')||'CF';
  const flightMs=targetInfo?.flightMs??(kind==='fly'?1150:kind==='single'?830:kind==='triple'||kind==='double'?1430:540);
- const pickup=outfieldPickupTiming(targetInfo,targetInfo?.fielder?.field??55),release=pickup.release;
- const relayMs=throwFlightMs(arm,landed,cutoff),relayPause=fielderReleaseMs(65,65,true),finalMs=relay.throwAgain?throwFlightMs(65,cutoff,goal):0;
- // The release and onward throw use the same estimates as baserunner decisions.
- const atRelay=release+relayMs,atGoal=relay.throwAgain?atRelay+relayPause+finalMs:atRelay;
+ const route=outfieldRelayVisualRoute(kind,targetInfo,landed,arm,relay);
+ const {cutoff,release,relayMs,relayPause,finalMs,atRelay,atGoal}=route;
  const closePlay=homePlay?{...homePlay,base:'home'}:thirdBasePlay?{...thirdBasePlay,base:'third'}:null;
  if(closePlay)game.crossPlayVisual=crossPlayClock(closePlay,atGoal);
  // The middle infielder runs out to receive the relay and returns after the play.
  const relayPosition=(fielder==='LF'?'SS':'2B');
  const relayFielder=field.querySelector&&field.querySelector('circle[data-position="'+relayPosition+'"]');
  const relayLabel=field.querySelector&&field.querySelector('text[data-position="'+relayPosition+'"]');
+ let relayOwner;
+ const routeLive=()=>token===animationToken&&(!route.directional||!relayFielder||!relayOwner||moveGroundFielder.relayOwners?.get(relayFielder)===relayOwner);
+ const later=(time,callback)=>playTimers.push(setTimeout(()=>{if(routeLive())callback()},time));
  if(relayFielder){
-  const ox=Number(relayFielder.getAttribute('cx')),oy=Number(relayFielder.getAttribute('cy'));
-  const moveRelay=(x,y)=>{relayFielder.setAttribute('cx',x);relayFielder.setAttribute('cy',y);if(relayLabel){relayLabel.setAttribute('x',x);relayLabel.setAttribute('y',y+3)}};
-  moveGroundFielder(relayFielder,relayLabel,cutoff,650,token);
-  playTimers.push(setTimeout(()=>{if(token!==animationToken)return;moveGroundFielder(relayFielder,relayLabel,[ox,oy],350,token)},atGoal+100));
+  const origin=[Number(relayFielder.getAttribute('cx')),Number(relayFielder.getAttribute('cy'))];
+  relayOwner=moveGroundFielder(relayFielder,relayLabel,cutoff,650,token,{relayOwner:route.directional?'outfield-relay':null});
+  relayFielder.setAttribute('data-relay-phase','approach');
+  later(atRelay,()=>relayFielder.setAttribute('data-relay-phase','receive'));
+  later(atGoal+100,()=>{
+   relayFielder.setAttribute('data-relay-phase','return');
+   relayOwner=moveGroundFielder(relayFielder,relayLabel,origin,350,token,{ball:route.directional&&!relay.throwAgain?ball:null});
+  });
  }
- const later=(time,callback)=>playTimers.push(setTimeout(()=>{if(token===animationToken)callback()},time));
+ // The destination is covered before the onward throw arrives. Use the
+ // existing end-of-play window; no extra wait is introduced.
+ if(route.directional&&relay.throwAgain){
+  const pos=relay.reason==='third'?'3B':'C';
+  const cover=field.querySelector('circle[data-position="'+pos+'"]'),label=field.querySelector('text[data-position="'+pos+'"]');
+  if(cover){
+   const origin=[+cover.getAttribute('cx'),+cover.getAttribute('cy')];
+   const coverOwner=moveGroundFielder(cover,label,goal,Math.min(650,atGoal),token,{relayOwner:'outfield-cover'});
+   later(Math.max(atGoal,closePlay?game.crossPlayVisual.runnerArrival:atGoal)+120,()=>{
+    if(moveGroundFielder.relayOwners?.get(cover)===coverOwner)moveGroundFielder(cover,label,origin,300,token,{ball:!homePlay?.wild?ball:null});
+   });
+  }
+ }
  const move=(target,duration)=>{
   // A frame-based throw starts at the actual, stationary pickup point.
   // Never snap the ball onto the fielder or rely on SVG CSS cx transitions.
@@ -2266,7 +2304,7 @@ function animateOutfieldReturn(kind,scoring=false,arm=55,homePlay=null,targetInf
   const begun=performance.now();
   ball.style.transition='none';ball.setAttribute('r','3.5');
   function throwFrame(now){
-   if(token!==animationToken)return;
+   if(!routeLive())return;
    const t=clamp((now-begun)/Math.max(1,duration),0,1);
    ball.setAttribute('cx',(from[0]+(target[0]-from[0])*t).toFixed(1));
    ball.setAttribute('cy',(from[1]+(target[1]-from[1])*t).toFixed(1));
@@ -2277,10 +2315,12 @@ function animateOutfieldReturn(kind,scoring=false,arm=55,homePlay=null,targetInf
  later(release,()=>{
   // Ground balls have finished their roll; outfielder has arrived to pick up.
   showPitchResult(fielder+' が中継へ返球','play');
+  const sender=field.querySelector('circle[data-position="'+fielder+'"]');if(sender)sender.setAttribute('data-fielding-phase','throw');
   move(cutoff,relayMs);
  });
  if(relay.throwAgain)later(atRelay+relayPause,()=>{
   showPitchResult(relay.label,'play');
+  if(relayFielder)relayFielder.setAttribute('data-relay-phase','throw');
   move(homePlay&&homePlay.wild?[goal[0]+25,goal[1]+16]:goal,finalMs);
  });
  later(Math.max(atGoal,closePlay?game.crossPlayVisual.runnerArrival:atGoal)+115,()=>{
@@ -2416,10 +2456,10 @@ if(debugPlays){
  init();stop();render();
  for(const id of ['start','pause','next'])$(id).disabled=true;
  const replayPitch=()=>{
-  stop();game.bases=[null,null,null];resetOutfieldPositions();render();
+  stop();game.bases=[null,null,null];game.crossPlayVisual=null;game.homePlayOutId=null;game.thirdBasePlay=null;resetOutfieldPositions();render();
   $('battingStance').setAttribute('data-swing','no');$('battingStance').setAttribute('data-visual-phase','ready');
   const field=$('fielders');
-  if(field?.querySelectorAll)for(const el of field.querySelectorAll('circle[data-position]')){el.setAttribute('stroke','#1c3552');el.setAttribute('stroke-width','2');el.setAttribute('data-fielding-phase','')}
+  if(field?.querySelectorAll)for(const el of field.querySelectorAll('circle[data-position]')){el.setAttribute('stroke','#1c3552');el.setAttribute('stroke-width','2');el.setAttribute('data-fielding-phase','');el.setAttribute('data-relay-phase','')}
   const shadow=$('ballShadow');if(shadow){shadow.setAttribute('rx','0');shadow.setAttribute('ry','0')}
   const ball=$('ball');ball.style.transition='none';ball.setAttribute('cx','205');ball.setAttribute('cy','208');ball.setAttribute('visibility','hidden');
   const play=$('debugPlay').value;
@@ -2445,11 +2485,26 @@ if(debugPlays){
    },wait));
    return;
   }
+  if(play==='relayHome'||play==='relayThird'){game.bases[play==='relayHome'?1:0]=current().bat.players[6];render()}
   showPitchResult('投球中…','');drawPitch(PITCH_TYPES[0]);
-  if(['single','flyHit','linerHit'].includes(play)){
+  if(['single','flyHit','linerHit','relayLF','relayCF','relayRF','relayHome','relayThird'].includes(play)){
    const token=animationToken;
    playTimers.push(setTimeout(()=>{
     if(token!==animationToken)return;
+    if(play.startsWith('relay')){
+     const defender=play==='relayLF'?'LF':play==='relayCF'?'CF':'RF';
+     const point=defender==='LF'?[90,15]:defender==='CF'?[200,-25]:[310,15];
+     const info={flight:'gapLiner',point,defender,fielder:{field:55,arm:55},flightMs:850,nearMiss:true};
+     const runner=current().bat.players[6],before=[null,null,null];
+     game.bases=[null,null,null];
+     let home=null,third=null;
+     if(play==='relayHome'){before[1]=runner;game.homePlayOutId=runner.id;home={id:runner.id,safe:false,wild:false,origin:1};}
+     if(play==='relayThird'){before[0]=runner;game.bases[2]=runner;third={id:runner.id,safe:true};}
+     render();animateBatterSwing(batter(),true);animate(info.flight,info,55,1);
+     animateOutfieldReturn('single',false,55,home,info,third);
+     if(home||third){animateBaseRunners(before,new Map(before.filter(Boolean).map(p=>[p.id,p.r])),game.half,game.inning);animateClosePlayGestures(game.crossPlayVisual)}
+     return;
+    }
     const fly=play==='flyHit';
     const info=fly?{type:'fly',point:[245,-25],defender:'RF',fielder:{field:55,arm:55},nearMiss:true,caught:false}:{flight:'gapLiner',point:[245,-25],defender:'RF',fielder:{field:55,arm:55},flightMs:850,nearMiss:true};
     animateBatterSwing(batter(),true);animate(fly?'single':info.flight,info,55,1);animateOutfieldReturn('single',false,55,null,info);
