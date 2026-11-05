@@ -1227,8 +1227,10 @@ function animateFirstGroundReturn(beforeBases,halfAtStart,inningAtStart){
  runner.setAttribute('cx','323');runner.setAttribute('cy','169');runner.setAttribute('r','8');runner.setAttribute('data-ground-return-runner',p.id);layer.append(runner);
  const token=animationToken,start=70,bagAt=Math.max(start+1,plan.bagAt),turn=[289,135],returnMs=350;
  const later=(ms,fn)=>playTimers.push(setTimeout(()=>{if(token===animationToken)fn()},ms));
- later(start,()=>moveRunnerRoundBase(runner,turn,bagAt-start,'run',token));
- later(bagAt,()=>moveRunnerRoundBase(runner,[323,169],returnMs,'stop',token));
+ // A short straight break avoids the wide base-rounding curve, which first
+ // pushed the runner away from second. Ownership retires the outgoing frames.
+ later(start,()=>moveGroundFielder(runner,null,turn,bagAt-start,token,{relayOwner:'ground-runner'}));
+ later(bagAt,()=>moveGroundFielder(runner,null,[323,169],returnMs,token,{relayOwner:'ground-runner'}));
  later(bagAt+returnMs+30,()=>{runner.setAttribute('visibility','hidden');if(marker)marker.setAttribute('opacity','1')});
 }
 function animateBaseRunners(beforeBases,beforeRuns,halfAtStart,inningAtStart){
@@ -1247,7 +1249,7 @@ function animateBaseRunners(beforeBases,beforeRuns,halfAtStart,inningAtStart){
  }
  if(!moves.length)return;
  layer.replaceChildren();
- let longest=0;
+ let longest=0,cleanupAt=0;
  for(const {person,from,to} of moves){
   const circle=document.createElementNS('http://www.w3.org/2000/svg','circle');
   circle.setAttribute('cx',bases[from][0]);circle.setAttribute('cy',bases[from][1]);
@@ -1263,6 +1265,7 @@ function animateBaseRunners(beforeBases,beforeRuns,halfAtStart,inningAtStart){
   const plan=runnerChoreography(from,to,person.speed,close);
   const finish=plan.arrival;
   longest=Math.max(longest,finish+(close?350:0));
+  cleanupAt=Math.max(cleanupAt,finish+(close?340:plan.mode==='stop'?200:70));
   const later=(ms,fn)=>playTimers.push(setTimeout(()=>{if(token===animationToken)fn()},ms));
   plan.segments.forEach((leg,i)=>{
    const destination=bases[from+i+1];
@@ -1285,7 +1288,7 @@ function animateBaseRunners(beforeBases,beforeRuns,halfAtStart,inningAtStart){
   });
  }
  animationHoldUntil=Math.max(animationHoldUntil,Date.now()+longest+170);
- const later=playTimers.push(setTimeout(()=>{if(token===animationToken)layer.replaceChildren()},longest+145));
+ const later=playTimers.push(setTimeout(()=>{if(token===animationToken)layer.replaceChildren()},Math.max(longest+145,cleanupAt+1)));
 }
 // Foul-ball destinations lie outside the two foul lines from home
 // (200,293) towards the left/right fence endpoints (12/388,105).
