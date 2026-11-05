@@ -755,3 +755,15 @@ Chromiumの375px・390px相当で実SVG座標を連続取得し、大きなフ�
 構文、infield-ground-browser、ground-force-browser、first-ground-sequence-browser、runner-score-browser、animation-motion、debug-plays、shortstop-sequence-study、ground-timing、scoring-arrival-browser、batter-today、smoke、mobile-watch-layout PASS。変更前後各8球場×1000試合は未完了0・得点不一致0、固定seedの球場別集計全項目一致。集計ログは完全な全試合・全投球の逐次一致を意味しない。生成JSON・画像・大量ログ・セーブデータは保存しない。
 
 次工程の1B→二塁送球は `groundBall` の1B除外、`groundSecondRelayPlan`／`groundForceTimeline`、二塁カバー（現行1Bなら2B）、1Bまたは投手の一塁カバー、走者・打者の到達時刻、二塁と一塁のアウト、二者目・三者目の得点処理、`animateGround` の送球・保持・同一選手移動競合、記録・RNG消費順序を一つの計画で設計・別工程で検証する。二遊間初期位置、外野中継、サヨナラ得点、ショート瞬間移動、死球、外野打球軌道は未解決。C1・B2m未採用。最終SHA・remote一致・作業ツリーはコミット後の履歴と完了報告を参照。
+
+## 外野視認性・球種球速表示（検証途中）
+
+起点 0357eaf4925f474f33278eae7b626311954b4186。既存の ball は白色・細い輪郭、拾球と中継の表示は短時間で、モバイルでは既存 pitchMotion が非表示だった。視認性の原因は実画面未観察につき仮説。球の輪郭と白い光彩を強め、既存の単打拾球タイマーで「左翼手／中堅手／右翼手が拾球」、返球タイマーで同じ日本語名を表示。捕球アウトは既存の「捕球！ アウト」。軌道や時刻、判定は未変更。固定再生にフライアウトを追加。
+
+球種は投球アニメーションの PITCH_TYPES から選択し、球速は各球種の固定速度に既存 rnd(-7,7) を加える表示用値。投手の持ち球・球速能力や resolvePitch の判定と結び付いておらず、実際の判定値ではない。既存乱数呼び出しの順序を変えず、投球リリース時に球場上へ表示する。投球前・新試合で消去し、中断時の古いタイマーは animationToken で無効化。固定再生は固定ストレート140 km/h。C1・B2m未採用。
+
+構文、animation-motion、debug-plays、outfield-relay-motion、smoke、outfield-pitch-display は PASS。park-comparison は変更前後それぞれ8球場×1000試合、未完了・得点不一致とも0で、集計結果が全項目一致。ブラウザ6試験は Chromium 本体不在で起動不可。Playwright の Chromium ダウンロードも失敗。実画面、固定再生の連続フレーム、自然進行、375・390幅、WebKitは未確認。よって公開保存前にブラウザ検証が必要。
+
+未解決：二遊間初期位置、外野中継位置・送球時刻の再校正、1B→二塁送球、ショート瞬間移動、サヨナラ得点、死球、投球コースと判定の共有。過去の表示改善とC1・B2m未採用を維持する。
+
+再開確認：前工程の3ファイルは作業ツリーに残存。構文・animation-motion・debug-plays・outfield-relay-motion・outfield-pitch-display・smokeは再実行PASS。park-comparisonは現行と起点をそれぞれ8球場×1000試合実行し、未完了・得点不一致とも0、球場別固定seed集計は一致（逐次の全試合一致を意味しない）。ブラウザ6試験はいずれもChromium実行ファイル欠如で起動不可。別のクラウドブラウザもローカル検証ページへの接続を拒否され、実画面・375/390幅は引き続き未確認。検証前の変更はmainへ反映しない。
