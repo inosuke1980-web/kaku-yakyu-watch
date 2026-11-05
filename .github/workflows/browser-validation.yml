@@ -1,0 +1,44 @@
+name: Outfield browser validation
+on:
+  push:
+    branches: [backup/outfield-display-unverified]
+    paths:
+      - '.github/workflows/browser-validation.yml'
+      - 'tests/outfield-display-browser.cjs'
+      - 'index.html'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Run browser and regression tests
+        run: |
+          mkdir -p artifacts/screenshots artifacts/logs
+          failed=0
+          for t in outfield-relay-browser first-ground-sequence-browser infield-ground-browser ground-force-browser runner-score-browser scoring-arrival-browser mobile-watch-layout outfield-display-browser animation-motion debug-plays outfield-relay-motion outfield-pitch-display smoke park-comparison; do
+            echo "$(date -u +%FT%TZ) START $t" | tee -a artifacts/logs/status.txt
+            FIXTURE_SCREENSHOT_DIR="$PWD/artifacts/screenshots" node "tests/$t.cjs" > "artifacts/logs/$t.log" 2>&1 || { echo "$(date -u +%FT%TZ) FAIL $t" | tee -a artifacts/logs/status.txt; failed=1; continue; }
+            echo "$(date -u +%FT%TZ) PASS $t" | tee -a artifacts/logs/status.txt
+          done
+          [ "$failed" -eq 0 ]
+      - name: Upload diagnostic artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: outfield-browser-diagnostics
+          path: |
+            artifacts/
+            tests/park-comparison-results.json
+          if-no-files-found: warn
+          retention-days: 14

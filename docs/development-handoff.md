@@ -755,3 +755,34 @@ Chromiumの375px・390px相当で実SVG座標を連続取得し、大きなフ�
 構文、infield-ground-browser、ground-force-browser、first-ground-sequence-browser、runner-score-browser、animation-motion、debug-plays、shortstop-sequence-study、ground-timing、scoring-arrival-browser、batter-today、smoke、mobile-watch-layout PASS。変更前後各8球場×1000試合は未完了0・得点不一致0、固定seedの球場別集計全項目一致。集計ログは完全な全試合・全投球の逐次一致を意味しない。生成JSON・画像・大量ログ・セーブデータは保存しない。
 
 次工程の1B→二塁送球は `groundBall` の1B除外、`groundSecondRelayPlan`／`groundForceTimeline`、二塁カバー（現行1Bなら2B）、1Bまたは投手の一塁カバー、走者・打者の到達時刻、二塁と一塁のアウト、二者目・三者目の得点処理、`animateGround` の送球・保持・同一選手移動競合、記録・RNG消費順序を一つの計画で設計・別工程で検証する。二遊間初期位置、外野中継、サヨナラ得点、ショート瞬間移動、死球、外野打球軌道は未解決。C1・B2m未採用。最終SHA・remote一致・作業ツリーはコミット後の履歴と完了報告を参照。
+
+## 外野視認性・球種球速表示（検証途中）
+
+起点 0357eaf4925f474f33278eae7b626311954b4186。既存の ball は白色・細い輪郭、拾球と中継の表示は短時間で、モバイルでは既存 pitchMotion が非表示だった。視認性の原因は実画面未観察につき仮説。球の輪郭と白い光彩を強め、既存の単打拾球タイマーで「左翼手／中堅手／右翼手が拾球」、返球タイマーで同じ日本語名を表示。捕球アウトは既存の「捕球！ アウト」。軌道や時刻、判定は未変更。固定再生にフライアウトを追加。
+
+球種は投球アニメーションの PITCH_TYPES から選択し、球速は各球種の固定速度に既存 rnd(-7,7) を加える表示用値。投手の持ち球・球速能力や resolvePitch の判定と結び付いておらず、実際の判定値ではない。既存乱数呼び出しの順序を変えず、投球リリース時に球場上へ表示する。投球前・新試合で消去し、中断時の古いタイマーは animationToken で無効化。固定再生は固定ストレート140 km/h。C1・B2m未採用。
+
+構文、animation-motion、debug-plays、outfield-relay-motion、smoke、outfield-pitch-display は PASS。park-comparison は変更前後それぞれ8球場×1000試合、未完了・得点不一致とも0で、集計結果が全項目一致。ブラウザ6試験は Chromium 本体不在で起動不可。Playwright の Chromium ダウンロードも失敗。実画面、固定再生の連続フレーム、自然進行、375・390幅、WebKitは未確認。よって公開保存前にブラウザ検証が必要。
+
+未解決：二遊間初期位置、外野中継位置・送球時刻の再校正、1B→二塁送球、ショート瞬間移動、サヨナラ得点、死球、投球コースと判定の共有。過去の表示改善とC1・B2m未採用を維持する。
+
+再開確認：前工程の3ファイルは作業ツリーに残存。構文・animation-motion・debug-plays・outfield-relay-motion・outfield-pitch-display・smokeは再実行PASS。park-comparisonは現行と起点をそれぞれ8球場×1000試合実行し、未完了・得点不一致とも0、球場別固定seed集計は一致（逐次の全試合一致を意味しない）。ブラウザ6試験はいずれもChromium実行ファイル欠如で起動不可。別のクラウドブラウザもローカル検証ページへの接続を拒否され、実画面・375/390幅は引き続き未確認。検証前の変更はmainへ反映しない。
+
+### ブラウザ検証環境（準備中）
+
+退避ブランチ用の GitHub Actions `Outfield browser validation` を追加。Node 22、Playwright 1.56.1、Chromium を用い、既存6ブラウザテスト、375・390pxレイアウト、外野固定再生、通常投球表示、回帰試験と8球場比較を実行する。失敗ケース・UTC時刻、スクリーンショット、ログを失敗時も14日間成果物として保存する設計。実際のActions実行と画像確認の結果は別途確認する。球種・球速は判定から独立した演出用。C1・B2mは未採用。未解決の二遊間、中継時刻、ショート、死球、投球位置と判定の共有、およびベスプレライク’27映像観察を引き継ぐ。
+
+初回Actions run 42054285522：Chromium導入成功。既存ブラウザ6試験は全件PASS、smokeと8球場比較もPASS。mobile-watch-layoutは375×667の12回拡張時にスコア欄の文字切れ検査で失敗。通常初期表示では同幅に収まった。追加試験は新試合確認ダイアログをテストが承認せず失敗したため、テスト側で承認を明示。これはゲーム側の不具合と未確定。スクリーンショットの対象を球場まで拡充。main公開は保留し再検証する。
+
+再実行 run 42055281013：既存6ブラウザ・smoke・8球場は再びPASS。延長12回の375px文字切れ検査は再び失敗。新設検証はPC幅を通過し375pxの固定再生まで到達したが、新試合操作では観戦中に隠れる「新しい試合」ボタンを直接クリックしてタイムアウトした。通常UIに合わせ「試合情報」から開くよう検証を修正。ゲーム本体は変更しない。390pxの新設検証は未到達。
+
+三度目 run 42056255587（検証対象 0c2f469194e4e59f448ea06484442ce7447252b0）：GitHub Actions上で Playwright 1.56.1・Chromium 141 の起動に成功。既存6ブラウザテストおよび新設 outfield-display-browser、animation-motion、debug-plays、outfield-relay-motion、outfield-pitch-display、smoke、park-comparisonはPASS。8球場×1000試合は未完了0・得点不一致0。新設試験はPC・375×667・390×844のフライアウト、ライナー、左右中、三塁・本塁返球の画像と通常投球、停止・再開、速度変更、新試合初期化を実行。画像の一部を目視し375・390通常画面の球速・球種表示を確認した。打球の全段階の自然さについて連続動画による確認は未了。mobile-watch-layoutは375×667の12回拡張表示で数値文字切れ判定に失敗、原因と元版との比較は未確認。仕様上、main公開を保留。結果・画像はActions成果物 outfield-browser-diagnostics、artifact ID 13428628503、14日保持。参考動画の動作確認は引き続き未了。
+
+
+### 延長12回のスコア表示修正と公開検証
+
+同一ランナー・Chromium 141・375×667で公開起点0357eafと退避300ab9を比較。両方で10〜12回のthがclientWidth 17px、scrollWidth 20px、overflow hidden／ellipsisとなり、画像でも省略表示を確認。390幅では両方問題なし。比較ランナーでは日本語フォントが不足していたため、日本語表示は別のChromium回帰ランナー画像でも確認した。2桁の回見出しに21pxを割り当てる表示限定修正で、375・390幅の幅不足は解消。球場サイズ・判定・RNG・試合時間は変更していない。
+
+GitHub Actions run 42116123147、検証SHA 08e30408ce44b7fb56e01c4b9d89f7eba8953899：既存ブラウザ6件、mobile-watch-layout、outfield-display-browser、animation-motion、debug-plays、outfield-relay-motion、outfield-pitch-display、smoke、park-comparisonすべてPASS。8球場×1000試合、未完了0・得点不一致0。375幅12回と390幅の画像を目視。固定再生の拾球・中継は自動テストで座標と時刻を確認したが、全プレーの連続動画で自然さを保証していない。球種・球速は演出用で判定・能力とは独立。C1・B2m未採用。比較結果 run 42115736684、修正後の同条件比較 run 42116123295。
+
+未解決：ベスプレライク’27動画の動作研究、二遊間初期位置、中継時刻、ショート瞬間移動、死球、投球位置と判定の共有。公開前の元のローカル作業ツリーの3変更は上書きしない。
