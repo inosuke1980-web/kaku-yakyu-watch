@@ -705,3 +705,15 @@ Chromium固定試験：走者2人のホーム到達後に1–0→2–0となり�
 構文、scoring-arrival-browser、runner-score-browser、animation-motion、debug-plays、ground-timing、outfield-relay-motion、shortstop-sequence-study、home-force-foul、first-base-carry、batter-today、smoke、mobile-watch-layout、outfield-relay-browser PASS。park-comparisonは8球場×1,000試合で未完了0・得点不一致0。今回の変更はindex.html、tests/scoring-arrival-browser.cjs、tests/runner-score-browser.cjs、本書。生成JSON・画像・試合ログ・セーブデータは保存しない。
 
 次工程：サヨナラと途中停止後の走者・得点演出を、試合テンポと判定を変えずに完了できる条件の設計。通常観戦で一塁ゴロが動かない実例を動画または連続フレームで再現。中継位置の野球上の妥当性と送球時刻の再校正、二遊間の判定との依存を別途検証。外野打球軌道、投球位置と判定共有、死球、ショート瞬間移動は未解決。C1・B2mは本番未採用。
+
+### PC版ベスプレ’00を参考にした守備動作の調査・改善設計
+
+起点 main / 09a87db9e7f03304dafd9ca5ec39bbb0478eb78e。開始時にremote HEAD一致、ローカル作業ツリーcleanを確認。ゲーム本体、判定、RNG、走者、成績、保存、テンポは変更していない。設計資料は `docs/bestplay00-fielding-motion-study.md`。
+
+PC WatchのWindows版製品記事と実画像で球場全体・小さい選手・カウント配置を確認。試合動画候補は見つかったが、この環境では0:00から進まず、実際の守備動作・時刻は観察できていない。静止画から速度や中継位置の仕様を推測していない。
+
+一塁手による二塁送球は現行 `groundBall` が除外。前回の走者の反応は一塁自踏アウト・一塁残留等に限られ、ユーザー目撃の場面は未再現。二遊間の初期位置は捕球範囲・追球時間と共用。外野中継は方向と送球先に応じた表示点を使うが、判定時刻は旧固定点を参照し、52%という比率の野球上の妥当性は未保証。サヨナラと到達前の停止では走者描画が中断され、得点補助表示が出ない場合がある。
+
+次工程は、まず一塁ゴロを通常の試合入口から固定条件で再現し、走者・球・一塁手と判定の連続座標・時刻を比較する。通常試合での目撃条件が特定できた場合のみ描画を限定修正。1Bから二塁送球・併殺の導入は判定と結果に影響するため、別工程で明示的に扱う。中継位置・時刻と二遊間の座標は、見た目の改善と試合結果への影響を分離して検討。得点中断・サヨナラ、外野打球軌道、ショート瞬間移動、投球位置と判定共有、死球・H/Eは未解決。C1・B2mは本番未採用を維持。
+
+検証：first-base-carry、ground-timing、outfield-relay-motion、shortstop-sequence-study、relay-route-studyはPASS。最後の試験は旧固定中継点の研究として扱う。設計・文書のみのため全試合回帰は未実行。変更ファイルは上記設計資料と本書のみ。mainに保存し、最終フルSHA・remote一致・作業ツリー状態はコミット後の履歴と完了報告を参照。秘密情報・セーブ・大量ログ・参考画像はコミットしない。
