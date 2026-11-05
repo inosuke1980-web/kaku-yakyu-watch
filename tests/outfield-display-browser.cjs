@@ -22,6 +22,7 @@ const {chromium}=require('playwright'),path=require('node:path'),{pathToFileURL}
   if(width<600){const d=await page.evaluate(()=>({w:document.documentElement.scrollWidth,h:document.documentElement.scrollHeight,iw:innerWidth,ih:innerHeight}));assert.ok(d.w<=d.iw&&d.h<=d.ih+1,JSON.stringify(d));}
   if(output)await page.screenshot({path:path.join(output,`${width}-normal.png`)});
   await page.click('#pause');await page.selectOption('#speed','2');await page.click('#pause');await page.waitForFunction(()=>document.querySelector('#pitchMotion').textContent.includes('km/h'),null,{timeout:15000});
+  if(width<600)await page.click('#watchInfo');
   page.once('dialog',dialog=>dialog.accept());await page.click('#start');assert.equal(await page.locator('#pitchMotion').textContent(),'');
   console.log(new Date().toISOString(),width,'normal pitch controls PASS');await page.close();page=null;
  }
