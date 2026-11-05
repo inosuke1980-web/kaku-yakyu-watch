@@ -1,0 +1,9 @@
+'use strict';
+const {chromium}=require('playwright'),path=require('path'),fs=require('fs'),{pathToFileURL}=require('url');
+(async()=>{const browser=await chromium.launch({headless:true,args:['--no-sandbox']});try{
+for(const variant of ['baseline','candidate'])for(const [width,height] of [[375,667],[390,844]]){
+const page=await browser.newPage({viewport:{width,height}});await page.goto(pathToFileURL(path.resolve(variant,'index.html')).href);await page.click('#start');await page.click('#pause');await page.evaluate(()=>{stop();render()});await page.evaluate(()=>document.fonts.ready);
+await page.evaluate(()=>{plateResults.set(batter(),['三振','四球','単打','遊ゴロ','二塁打','左飛','本塁打','犠飛','見逃し三振','三塁打','併殺打','失策出塁']);game.inning=12;for(const t of game.teams)t.runs=Array.from({length:12},(_,i)=>i%4===0?1:0);render()});
+const data=await page.evaluate(()=>({width:innerWidth,height:innerHeight,scroll:[document.documentElement.scrollWidth,document.documentElement.scrollHeight],fonts:document.fonts.status,devicePixelRatio,rows:[...document.querySelectorAll('#mobileLines tr>*:not(:first-child)')].map(e=>{const s=getComputedStyle(e),r=e.getBoundingClientRect(),p=e.parentElement.getBoundingClientRect();return {text:e.textContent,tag:e.tagName,clientWidth:e.clientWidth,scrollWidth:e.scrollWidth,rectWidth:r.width,parentWidth:p.width,font:s.font,fontFamily:s.fontFamily,fontSize:s.fontSize,paddingLeft:s.paddingLeft,paddingRight:s.paddingRight,overflow:s.overflow,whiteSpace:s.whiteSpace,boxSizing:s.boxSizing,outer:e.outerHTML}})}));
+fs.mkdirSync('diagnostics',{recursive:true});fs.writeFileSync(`diagnostics/${variant}-${width}.json`,JSON.stringify(data,null,2));await page.screenshot({path:`diagnostics/${variant}-${width}.png`,fullPage:true});console.log(variant,width,'overflow',JSON.stringify(data.rows.filter(e=>e.scrollWidth>e.clientWidth+1)));await page.close();
+}}finally{await browser.close()}})().catch(e=>{console.error(e);process.exitCode=1});
