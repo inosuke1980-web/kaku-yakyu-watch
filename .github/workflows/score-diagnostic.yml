@@ -23,7 +23,7 @@ jobs:
       - name: Install same browser
         run: |
           npm install --no-save --no-package-lock playwright@1.56.1
-          npx playwright install --with-deps chromium
+          npx playwright install chromium
       - name: Compare scoreboard
         run: node candidate/tests/score-diagnostic.cjs
       - name: Upload diagnostics
