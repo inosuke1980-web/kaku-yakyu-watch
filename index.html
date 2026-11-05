@@ -74,6 +74,7 @@
  body.watching .pitch-result{flex:0 0 auto;min-height:24px;padding:2px 6px;margin:0;font-size:15px;line-height:1.3}
  body.watching .pitch-result small{font-size:12px}
 }
+.field-stage{position:relative}.score-flash{position:absolute;left:50%;top:49%;transform:translate(-50%,-50%);padding:5px 14px;border-radius:9px;background:rgba(10,25,18,.83);color:#fff6d6;font-size:clamp(22px,5vw,34px);font-weight:800;line-height:1.2;white-space:nowrap;pointer-events:none;z-index:2}.score-flash[hidden]{display:none}
 </style></head><body><main><header><div><h1>⚾ 架空野球観戦</h1><div class="muted">高校野球 Ver.6.9 — 観戦専用</div></div><div class="controls"><button id="start">新しい試合</button><button id="pause" class="secondary" disabled>一時停止</button><button id="next" class="secondary" disabled>1球進める</button><label class="watch-speed"><span>速度</span><select id="speed" aria-label="再生速度"><option value="1">標準</option><option value="2">2倍速</option><option value="4">4倍速</option></select></label><button id="watchInfo" class="secondary" hidden>試合情報</button></div></header>
 <section id="playDebug" class="card" hidden><h2>開発用プレー再生</h2><label>プレー <select id="debugPlay"><option value="pitch">投手の投球</option><option value="single">外野への単打</option><option value="flyHit">外野フライのヒット</option><option value="linerHit">外野ライナーのヒット</option><option value="relayLF">左翼前単打・中継</option><option value="relayCF">中堅前単打・中継</option><option value="relayRF">右翼前単打・中継</option><option value="relayHome">二塁走者・本塁返球（アウト固定）</option><option value="relayThird">一塁走者・三塁返球（セーフ固定）</option><option value="shortstop">遊撃手の二塁カバー・牽制</option></select></label> <button id="debugStart">再生</button> <button id="debugRestart">最初から再生</button><p class="muted">投球・外野打球・遊撃手の動作を固定条件で再生します。成績は更新しません。</p></section>
 <section class="card"><h2>試合生成の条件</h2><div class="flex" style="gap:12px">
@@ -83,7 +84,7 @@
 <label>グラウンド <select id="parkType"><option value="random">ランダム</option><option value="grass">内野芝</option><option value="clayInfield">内野土</option><option value="allDirt">全面土</option></select></label><label>球場形状 <select id="parkShape"><option value="random">ランダム（8種類）</option><option value="standard">① 標準</option><option value="wide">② 広い球場</option><option value="small">③ 狭い球場</option><option value="leftWide">④ 左翼が広い</option><option value="rightWide">⑤ 右翼が広い</option><option value="dome">⑥ ドーム</option><option value="grassPark">⑦ 内野芝の球場</option><option value="grassDome">⑧ 内野芝のドーム</option></select></label>
 </div><div class="muted" style="margin-top:8px">未指定の項目だけランダム抽選。選択内容は次の「新しい試合」から反映されます。</div></section>
 <section class="card score-card"><div class="flex between"><span id="event" class="muted">試合開始で大会・学校・選手を生成します</span><span id="status">待機中</span></div><div class="teams"><div class="team" id="away">先攻 —</div><div class="score" id="score">0 - 0<small>1回表</small></div><div class="team" id="home">後攻 —</div></div><div class="scoreboard-scroll" id="lines" tabindex="0" aria-label="イニング別スコアボード。横にスクロールできます"></div><div id="mobileLines" class="mobile-lines" aria-label="イニング別スコア"></div><div class="scoreboard-hint">横スクロールで各回を確認できます。チーム名と R・H・E は固定表示。</div></section>
-<div class="layout"><section class="card field-card"><div class="field-header"><h2>グラウンド</h2><span id="parkDescription" class="muted" style="font-size:12px"></span></div><div id="framePanel" hidden style="margin:8px 0"><label>打球コマ比較 <select id="frameType"><option value="fly">フライ安打</option><option value="liner">ライナー安打</option></select></label> <label>進捗 <select id="frameProgress"><option value="0">0%</option><option value="0.25">25%</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100%</option></select></label> <button id="showFrame">コマ表示</button> <span id="frameInfo"></span></div><div class="field-stage"><svg class="field" viewBox="0 -155 400 485" role="img" aria-label="俯瞰の野球場。外野が奥に広がり、守備位置を表示">
+<div class="layout"><section class="card field-card"><div class="field-header"><h2>グラウンド</h2><span id="parkDescription" class="muted" style="font-size:12px"></span></div><div id="framePanel" hidden style="margin:8px 0"><label>打球コマ比較 <select id="frameType"><option value="fly">フライ安打</option><option value="liner">ライナー安打</option></select></label> <label>進捗 <select id="frameProgress"><option value="0">0%</option><option value="0.25">25%</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100%</option></select></label> <button id="showFrame">コマ表示</button> <span id="frameInfo"></span></div><div class="field-stage"><div id="scoreFlash" class="score-flash" hidden role="status" aria-live="polite"></div><svg class="field" viewBox="0 -155 400 485" role="img" aria-label="俯瞰の野球場。外野が奥に広がり、守備位置を表示">
 <defs>
 <!-- Original tiny retro-uniform sprite drawn inside the existing moving fielder circles.
      Keeps cx/cy, data-position, hit tests and all existing animations unchanged. -->
@@ -246,7 +247,7 @@ function applyParkShape(shape){
  const note=$('parkDescription');
  if(note)note.textContent=`${p.name}｜${p.dimensions}（守備位置・フェンス判定・長打傾向に反映）`;
 }
-function init(){stop();plateResults=new WeakMap();platePending=new WeakMap();const category=$('category').value;if(!['random','high'].includes(category))throw Error('このカテゴリーはまだ実装されていません');const t=tournament(),levels=['新興・小規模','弱小','中堅','地方強豪','全国強豪'];const pick=()=>{let x=Math.random();return x<.1?0:x<.4?1:x<.8?2:x<.95?3:4};let a=pick(),b=pick();if(t.kind.includes('全国')){a=Math.max(a,2);b=Math.max(b,2)}const away=team(t.p,a),home=team(t.q,b);if(away.name===home.name)home.name+='第二';document.querySelector('.field').style.background=t.time==='ナイター'?'#061626':'#113a2b';const requestedPark=$('parkType').value;let parkStyle=['grass','clayInfield','allDirt'].includes(requestedPark)?requestedPark:choose(['grass','clayInfield','allDirt']);const requestedShape=$('parkShape').value;const parkShape=PARK_SHAPES[requestedShape]?requestedShape:choose(Object.keys(PARK_SHAPES));if(parkShape==='grassPark'||parkShape==='grassDome')parkStyle='grass';applyParkStyle(parkStyle);applyParkShape(parkShape);game={t,parkStyle,parkShape,teams:[away,home],inning:1,half:0,outs:0,balls:0,strikes:0,bases:[null,null,null],pitch:0,ended:false,events:[],totalPitches:0};activeRoster=0;$('rosterAway').disabled=$('rosterHome').disabled=false;$('pause').disabled=$('next').disabled=false;$('pause').textContent='一時停止';log('プレーボール！ '+away.name+' 対 '+home.name);log(t.kind==='練習試合'?'采配：練習試合（投手の早めの交代・積極的な試走を重視）':'采配：公式戦（局面に応じて犠打・スクイズ・勝負の継投を判断）');renderRoster(0);playing=true;render();schedule()}
+function init(){stop();resetScoreFlash();plateResults=new WeakMap();platePending=new WeakMap();const category=$('category').value;if(!['random','high'].includes(category))throw Error('このカテゴリーはまだ実装されていません');const t=tournament(),levels=['新興・小規模','弱小','中堅','地方強豪','全国強豪'];const pick=()=>{let x=Math.random();return x<.1?0:x<.4?1:x<.8?2:x<.95?3:4};let a=pick(),b=pick();if(t.kind.includes('全国')){a=Math.max(a,2);b=Math.max(b,2)}const away=team(t.p,a),home=team(t.q,b);if(away.name===home.name)home.name+='第二';document.querySelector('.field').style.background=t.time==='ナイター'?'#061626':'#113a2b';const requestedPark=$('parkType').value;let parkStyle=['grass','clayInfield','allDirt'].includes(requestedPark)?requestedPark:choose(['grass','clayInfield','allDirt']);const requestedShape=$('parkShape').value;const parkShape=PARK_SHAPES[requestedShape]?requestedShape:choose(Object.keys(PARK_SHAPES));if(parkShape==='grassPark'||parkShape==='grassDome')parkStyle='grass';applyParkStyle(parkStyle);applyParkShape(parkShape);game={t,parkStyle,parkShape,teams:[away,home],inning:1,half:0,outs:0,balls:0,strikes:0,bases:[null,null,null],pitch:0,ended:false,events:[],totalPitches:0};activeRoster=0;$('rosterAway').disabled=$('rosterHome').disabled=false;$('pause').disabled=$('next').disabled=false;$('pause').textContent='一時停止';log('プレーボール！ '+away.name+' 対 '+home.name);log(t.kind==='練習試合'?'采配：練習試合（投手の早めの交代・積極的な試走を重視）':'采配：公式戦（局面に応じて犠打・スクイズ・勝負の継投を判断）');renderRoster(0);playing=true;render();schedule()}
 // One alignment contract for visuals, pursuit distance and fielding verdicts.
 // Shift only between pitches, never while a ball is in play.
 // Shortstop normally sets up a little deeper than second base, not as a mirror image.
@@ -366,7 +367,13 @@ function clearTacticalVisuals(){
 function stop(){const trail=$('foulTrail');if(trail)trail.setAttribute('d','');clearTacticalVisuals();const set=$('pitcherSet'),glance=$('pitcherGlance'),thrower=$('catcherThrowSprite');for(const el of [set,glance,thrower])if(el)el.setAttribute('visibility','hidden');for(const id of ['pitcherLeg','pitcherArm','catcherCall']){const el=$(id);if(el)el.setAttribute('visibility','hidden')}const glove=$('catcherGlove');if(glove){glove.setAttribute('r','5');glove.setAttribute('fill','#b57943');glove.setAttribute('cx','207');glove.setAttribute('cy','302')}const crouch=$('catcherCrouch');if(crouch)crouch.setAttribute('d','M 193 320 Q 200 328 207 320');const knees=$('batterKnees');if(knees)knees.setAttribute('d','M -5 17 L -9 23 M 5 17 L 9 23');batterVisualLockedUntil=0;batterRunnerOnField=false;const batting=$('battingStance');if(batting)batting.setAttribute('visibility','hidden');const coverLayer=$('firstBaseCoverForeground');if(coverLayer)coverLayer.replaceChildren();const covering=$('fielders');if(covering&&covering.querySelector){for(const type of ['circle','text']){const el=covering.querySelector(type+'[data-position="1B"]');if(el)el.setAttribute('opacity','1')}}playing=false;clearTimeout(timer);clearTimeout(flightTimer);for(const id of playTimers)clearTimeout(id);playTimers=[];timer=flightTimer=null;animationHoldUntil=0;animationToken++;pendingRunnerArrivals.clear();const moving=$('movingRunners');if(moving)moving.replaceChildren();const runner=$('batterRunner');if(runner){runner.style.transition='none';runner.setAttribute('visibility','hidden')}resetOutfieldPositions()}
 function log(msg){if(!game)return;const prefix=game.inning+'回'+(game.half?'裏':'表');game.events.push('【'+prefix+'】 '+msg);if(game.events.length>250)game.events.shift();$('log').replaceChildren(...game.events.slice(-90).reverse().map(s=>{let d=document.createElement('div');d.textContent=s;return d}))}
 function current(){return {bat:game.teams[game.half],def:game.teams[1-game.half]}}
-function addRuns(n,runnerIds=[]){const {bat}=current();bat.runs[game.inning-1]=(bat.runs[game.inning-1]||0)+n;for(const p of runnerIds)p.r++;if(game.half===1&&game.inning>=9&&total(1)>total(0))finish('サヨナラ')}
+// Presentation only: wall time is paused with the spectator controls, not the game clock.
+let scoreFlashTimer=null,scoreFlashRemaining=0,scoreFlashStarted=0;
+function resetScoreFlash(){clearTimeout(scoreFlashTimer);scoreFlashTimer=null;scoreFlashRemaining=0;const el=$('scoreFlash');if(el)el.hidden=true}
+function resumeScoreFlash(){if(!scoreFlashRemaining||scoreFlashTimer)return;scoreFlashStarted=Date.now();scoreFlashTimer=setTimeout(()=>resetScoreFlash(),scoreFlashRemaining)}
+function pauseScoreFlash(){if(!scoreFlashTimer)return;clearTimeout(scoreFlashTimer);scoreFlashTimer=null;scoreFlashRemaining=Math.max(1,scoreFlashRemaining-(Date.now()-scoreFlashStarted))}
+function showScoreFlash(){const el=$('scoreFlash');if(!el||!game)return;clearTimeout(scoreFlashTimer);scoreFlashTimer=null;el.textContent=total(0)+' – '+total(1);el.hidden=false;scoreFlashRemaining=2000;if(playing||game.ended)resumeScoreFlash()}
+function addRuns(n,runnerIds=[]){const {bat}=current();bat.runs[game.inning-1]=(bat.runs[game.inning-1]||0)+n;for(const p of runnerIds)p.r++;if(n>0)showScoreFlash();if(game.half===1&&game.inning>=9&&total(1)>total(0))finish('サヨナラ')}
 function total(i){return game.teams[i].runs.reduce((a,b)=>a+(b||0),0)}
 function batter(){let t=current().bat;return t.players[[5,6,7,8,9,10,11,12,13][t.bat%9]]}
 function pitcher(){return current().def.players[current().def.pitcher]}
@@ -712,6 +719,7 @@ function groundHomeForcePlan(direction,fielder,timing,runner,outs,loaded){
  return {receiveAt,runnerAt,callAt,throwMs,decisionMs,
   forceOut:!!loaded&&outs<2&&receiveAt+25<runnerAt&&callAt<=decisionMs};
 }
+let groundRunnerReaction=null;
 function groundBall(p){
  const b=game.bases,pi=pitcher(),baseDirection=choose(GROUND_DIRECTIONS),fielder=groundDefender(baseDirection);
  // Most balls are near the fielder; some test the gap and reward quick gloves.
@@ -805,6 +813,7 @@ function groundBall(p){
  }
  creditRuns(scored,p,false);
  log(`${p.name} ${direction.label}、一塁アウト。${scored.length?' 三塁走者が生還。':''}`);
+ if(direction.defender==='1B'&&b[0]&&game.outs<3)groundRunnerReaction={id:b[0].id,bagAt:timing.arrive};
  animateGround('out',direction,p.speed,fielder.arm,timing);
 }
 // An outfielder's actual attributes determine whether the batted ball is caught.
@@ -1198,6 +1207,21 @@ function runnerChoreography(from,to,speed,close=null){
  const arrival=startDelay+(legs-1)*segment+finalMs;
  return {startDelay,segments,arrival,mode:pursuit?'charge':stopping?'stop':'run',close:!!close};
 }
+// A forced runner breaks for second, then returns after the first baseman touches first.
+// Runs only when the already-resolved play leaves that same runner on first.
+function animateFirstGroundReturn(beforeBases,halfAtStart,inningAtStart){
+ const plan=groundRunnerReaction,p=beforeBases[0];
+ if(!plan||!p||plan.id!==p.id||!game||game.half!==halfAtStart||game.inning!==inningAtStart||game.bases[0]?.id!==p.id)return;
+ const layer=$('movingRunners'),base=$('runners');if(!layer)return;
+ const marker=base?.querySelector?.('circle[data-runner="'+p.id+'"]');if(marker)marker.setAttribute('opacity','0');
+ const runner=document.createElementNS('http://www.w3.org/2000/svg','circle');
+ runner.setAttribute('cx','323');runner.setAttribute('cy','169');runner.setAttribute('r','8');runner.setAttribute('data-ground-return-runner',p.id);layer.append(runner);
+ const token=animationToken,start=70,bagAt=Math.max(start+1,plan.bagAt),turn=[289,135],returnMs=350;
+ const later=(ms,fn)=>playTimers.push(setTimeout(()=>{if(token===animationToken)fn()},ms));
+ later(start,()=>moveRunnerRoundBase(runner,turn,bagAt-start,'run',token));
+ later(bagAt,()=>moveRunnerRoundBase(runner,[323,169],returnMs,'stop',token));
+ later(bagAt+returnMs+30,()=>{runner.setAttribute('visibility','hidden');if(marker)marker.setAttribute('opacity','1')});
+}
 function animateBaseRunners(beforeBases,beforeRuns,halfAtStart,inningAtStart){
  if(!game||game.half!==halfAtStart||game.inning!==inningAtStart)return;
  const layer=$('movingRunners'),staticLayer=$('runners');if(!layer)return;
@@ -1329,7 +1353,7 @@ function resolvePitch(){
  platePending.delete(p);renderBatterResults();
 }
 function resolvePitchCore(){if(!game||game.ended)return;
-game.homePlayOutId=null;game.thirdBasePlay=null;game.forceOutVisual=null;game.stealVisual=null;game.crossPlayVisual=null;game.flyReturn=false;
+groundRunnerReaction=null;game.homePlayOutId=null;game.thirdBasePlay=null;game.forceOutVisual=null;game.stealVisual=null;game.crossPlayVisual=null;game.flyReturn=false;
 const beforeBases=game.bases.slice(),beforeRuns=new Map(beforeBases.filter(Boolean).map(p=>[p.id,p.r])),halfAtStart=game.half,inningAtStart=game.inning;
 if(tactics()){if(game.ended){render();return}
  if(game.outs>=3)endHalf();else maybeChangePitcher();
@@ -1356,7 +1380,7 @@ if(!complete&&game.strikes>=3){notePlateResult(p,x<.54?'見逃し三振':'三振
 if(complete){bat.bat++;game.balls=game.strikes=0}
 if(game.ended){render();return}
 if(game.outs>=3)endHalf();else{if(!complete&&trySteal()&&game.outs>=3)endHalf();else maybeChangePitcher()}
-render(beforeBases);animateBaseRunners(beforeBases,beforeRuns,halfAtStart,inningAtStart);if(game.crossPlayVisual)animateClosePlayGestures(game.crossPlayVisual);if(game.flyReturn)animateFlyLeadAndReturn(beforeBases,halfAtStart,inningAtStart);if(game.stealVisual&&game.stealVisual.inning===game.inning&&game.stealVisual.half===game.half)animateStealPlay(game.stealVisual);if(activeRoster===0||activeRoster===1)renderRoster(activeRoster)}
+render(beforeBases);animateBaseRunners(beforeBases,beforeRuns,halfAtStart,inningAtStart);animateFirstGroundReturn(beforeBases,halfAtStart,inningAtStart);if(game.crossPlayVisual)animateClosePlayGestures(game.crossPlayVisual);if(game.flyReturn)animateFlyLeadAndReturn(beforeBases,halfAtStart,inningAtStart);if(game.stealVisual&&game.stealVisual.inning===game.inning&&game.stealVisual.half===game.half)animateStealPlay(game.stealVisual);if(activeRoster===0||activeRoster===1)renderRoster(activeRoster)}
 
 // 1球の演出が終わるまでは、次の投球を開始しない。
 const PITCH_TYPES=[
@@ -2544,5 +2568,5 @@ function updateWatchLayout(){
 }
 $('watchInfo').onclick=()=>{watchDetailsOpen=!watchDetailsOpen;updateWatchLayout();if(typeof window!=='undefined')window.scrollTo(0,0)};
 
-$('start').onclick=()=>{if(game&&!game.ended&&!confirm('進行中の試合を破棄して新しい試合を始めますか？'))return;try{init()}catch(e){console.error(e);$('status').textContent='開始エラー';$('event').textContent='開始できません: '+(e&&e.message?e.message:String(e));}};$('pause').onclick=()=>{if(!game||game.ended)return;playing=!playing;$('pause').textContent=playing?'一時停止':'再開';render();if(playing)schedule();else {clearTimeout(timer);clearTimeout(flightTimer);flightTimer=null;animationToken++;clearTacticalVisuals();resetOutfieldPositions()}};$('next').onclick=()=>{if(!game||game.ended)return;stop();$('pause').textContent='再開';pitch()};$('speed').onchange=()=>{if(playing)schedule()};$('rosterAway').onclick=()=>renderRoster(0);$('rosterHome').onclick=()=>renderRoster(1);$('closeDetail').onclick=()=>$('detail').close();$('clear').onclick=()=>{if(confirm('保存済みの試合履歴をすべて削除しますか？')){localStorage.removeItem(KEY);historyRender()}};historyRender();
+$('start').onclick=()=>{if(game&&!game.ended&&!confirm('進行中の試合を破棄して新しい試合を始めますか？'))return;try{init()}catch(e){console.error(e);$('status').textContent='開始エラー';$('event').textContent='開始できません: '+(e&&e.message?e.message:String(e));}};$('pause').onclick=()=>{if(!game||game.ended)return;playing=!playing;$('pause').textContent=playing?'一時停止':'再開';render();if(playing){resumeScoreFlash();schedule()}else {pauseScoreFlash();document.querySelectorAll('[data-ground-return-runner]').forEach(el=>el.remove());clearTimeout(timer);clearTimeout(flightTimer);flightTimer=null;animationToken++;clearTacticalVisuals();resetOutfieldPositions()}};$('next').onclick=()=>{if(!game||game.ended)return;stop();$('pause').textContent='再開';pitch()};$('speed').onchange=()=>{if(playing)schedule()};$('rosterAway').onclick=()=>renderRoster(0);$('rosterHome').onclick=()=>renderRoster(1);$('closeDetail').onclick=()=>$('detail').close();$('clear').onclick=()=>{if(confirm('保存済みの試合履歴をすべて削除しますか？')){localStorage.removeItem(KEY);historyRender()}};historyRender();
 </script></body></html>

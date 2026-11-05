@@ -1,0 +1,17 @@
+'use strict';
+const {chromium}=require('playwright'),path=require('node:path'),{pathToFileURL}=require('node:url'),assert=require('node:assert/strict');
+(async()=>{const browser=await chromium.launch({headless:true,executablePath:process.env.FIXTURE_CHROMIUM_PATH,args:['--no-sandbox','--disable-dev-shm-usage']});try{
+ for(const width of [375,390]){
+  const page=await browser.newPage({viewport:{width,height:width===375?667:844}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto(pathToFileURL(path.resolve(__dirname,'../index.html')).href);await page.click('#start');await page.click('#pause');await page.evaluate(()=>stop());
+  const id=await page.evaluate((initialOuts)=>{const p=current().bat.players[1];game.bases=[p,null,null];game.outs=initialOuts;render();const before=game.bases.slice(),random=Math.random,values=[.99,.5,.99,.5,.5,.99,.99,.99];let i=0;Math.random=()=>values[i++]??.99;try{groundRunnerReaction=null;groundBall(batter())}finally{Math.random=random}if(!groundRunnerReaction||game.outs!==initialOuts+1||game.bases[0]?.id!==p.id)throw Error('fixed first-base grounder did not retain runner');render(before);animateFirstGroundReturn(before,game.half,game.inning);return p.id},width===375?0:1);
+  const runner=page.locator('[data-ground-return-runner]');await page.waitForFunction(()=>{const e=document.querySelector('[data-ground-return-runner]');return e&&+e.getAttribute('cx')<320},null,{timeout:1500});
+  await page.waitForTimeout(850);const end=await runner.evaluate(e=>[+e.getAttribute('cx'),+e.getAttribute('cy'),e.getAttribute('visibility')]);assert.ok(Math.hypot(end[0]-323,end[1]-169)<1&&end[2]==='hidden','returns to first');assert.equal(await page.evaluate(()=>game.bases[0].id),id);
+  await page.evaluate(()=>{playing=true;addRuns(2);});assert.equal(await page.locator('#scoreFlash').textContent(),'2 – 0');assert.equal(await page.locator('#scoreFlash').isVisible(),true);
+  await page.waitForTimeout(250);await page.click('#pause');await page.waitForTimeout(2100);assert.equal(await page.locator('#scoreFlash').isVisible(),true,'paused banner remains');
+  await page.selectOption('#speed','2');await page.click('#pause');await page.waitForTimeout(1900);assert.equal(await page.locator('#scoreFlash').isVisible(),false,'banner expires after resume');
+  await page.click('#pause');await page.evaluate(()=>{game.half=1;playing=true;addRuns(1)});assert.equal(await page.locator('#scoreFlash').textContent(),'2 – 1');
+  const rect=await page.locator('#scoreFlash').boundingBox();assert.ok(rect.x>=0&&rect.x+rect.width<=width,'banner fits screen');if(process.env.FIXTURE_SCREENSHOT_DIR)await page.screenshot({path:path.join(process.env.FIXTURE_SCREENSHOT_DIR,'score-'+width+'.png')});
+  await page.evaluate(()=>{init();stop()});assert.equal(await page.locator('#scoreFlash').isVisible(),false,'new game clears banner');assert.deepEqual(errors,[]);console.log('RUNNER/SCORE BROWSER PASS',width);await page.close();
+ }
+}finally{await browser.close()}})().catch(e=>{console.error(e);process.exitCode=1});
