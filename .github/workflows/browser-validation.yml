@@ -1,7 +1,7 @@
 name: Outfield browser validation
 on:
   push:
-    branches: [backup/outfield-display-unverified]
+    branches: [backup/outfield-display-unverified, validation/scoreboard-12-innings]
     paths:
       - '.github/workflows/browser-validation.yml'
       - 'tests/outfield-display-browser.cjs'

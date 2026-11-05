@@ -56,6 +56,7 @@
  body.watching .mobile-lines th,body.watching .mobile-lines td{padding:2px 0;text-align:center;border-bottom:1px solid #375247;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
  body.watching .mobile-lines tr>*:not(:first-child){box-shadow:inset -1px 0 #314c3d}
  body.watching .mobile-lines th:first-child,body.watching .mobile-lines td:first-child{width:80px;text-align:left}
+ body.watching .mobile-lines th.two-digit-inning{width:21px}
  body.watching .mobile-lines .total-cell{width:24px;font-weight:700;background:#284439}
  body.watching .layout{display:contents}
  body.watching .field-card{order:1;flex:1 1 0;min-height:0;min-width:0;margin:0;padding:3px 5px;display:flex;flex-direction:column;gap:3px;border-radius:7px;overflow:auto}
@@ -2591,7 +2592,7 @@ function updateWatchLayout(){
  // Keep up to 12 innings legible; exceptionally long games wrap to another table.
  for(let start=0;start<n;start+=12){
   const end=Math.min(start+12,n);
-  const head=Array.from({length:end-start},(_,j)=>`<th scope="col" class="${start+j===game.inning-1?'current-inning':''}">${start+j+1}</th>`).join('');
+  const head=Array.from({length:end-start},(_,j)=>`<th scope="col" class="${start+j===game.inning-1?'current-inning ':''}${start+j+1>=10?'two-digit-inning':''}">${start+j+1}</th>`).join('');
   const rows=game.teams.map((team,side)=>`<tr><th scope="row" aria-label="${esc(team.name)}" title="${esc(team.name)}" class="${!game.ended&&side===game.half?'attack-team':''}">${esc(team.name.length>6?team.name.slice(0,2)+'…'+team.name.slice(-3):team.name)}</th>${Array.from({length:end-start},(_,j)=>{const i=start+j,live=!game.ended&&side===game.half&&i===game.inning-1;return `<td>${team.runs[i]??(live?'':'−')}</td>`}).join('')}<td class="total-cell">${total(side)}</td><td class="total-cell">${team.hits}</td><td class="total-cell">${team.errors}</td></tr>`).join('');
   tables.push(`<table><thead><tr><th scope="col">TEAM</th>${head}<th scope="col" class="total-cell">R</th><th scope="col" class="total-cell">H</th><th scope="col" class="total-cell">E</th></tr></thead><tbody>${rows}</tbody></table>`);
  }
