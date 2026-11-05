@@ -11,7 +11,7 @@ const {chromium}=require('playwright'),path=require('node:path'),{pathToFileURL}
    if(output)await page.screenshot({path:path.join(output,`${width}-${play}-pitch.png`)});
    for(const [step,delay] of [[1,650],[2,400],[3,400],[4,400]]){
     await page.waitForTimeout(delay);
-    if(output)await page.screenshot({path:path.join(output,`${width}-${play}-${step}.png`)});
+    if(output){await page.screenshot({path:path.join(output,`${width}-${play}-${step}.png`)});await page.locator('svg.field').screenshot({path:path.join(output,`${width}-${play}-${step}-field.png`)});}
    }
    console.log(new Date().toISOString(),width,play,'frames captured');
   }
@@ -22,7 +22,7 @@ const {chromium}=require('playwright'),path=require('node:path'),{pathToFileURL}
   if(width<600){const d=await page.evaluate(()=>({w:document.documentElement.scrollWidth,h:document.documentElement.scrollHeight,iw:innerWidth,ih:innerHeight}));assert.ok(d.w<=d.iw&&d.h<=d.ih+1,JSON.stringify(d));}
   if(output)await page.screenshot({path:path.join(output,`${width}-normal.png`)});
   await page.click('#pause');await page.selectOption('#speed','2');await page.click('#pause');await page.waitForFunction(()=>document.querySelector('#pitchMotion').textContent.includes('km/h'),null,{timeout:15000});
-  await page.click('#start');assert.equal(await page.locator('#pitchMotion').textContent(),'');
+  page.once('dialog',dialog=>dialog.accept());await page.click('#start');assert.equal(await page.locator('#pitchMotion').textContent(),'');
   console.log(new Date().toISOString(),width,'normal pitch controls PASS');await page.close();page=null;
  }
 } catch(e){if(page&&process.env.FIXTURE_SCREENSHOT_DIR)await page.screenshot({path:path.join(process.env.FIXTURE_SCREENSHOT_DIR,'failure.png')}).catch(()=>{});throw e}finally{await browser.close()}})().catch(e=>{console.error(new Date().toISOString(),e);process.exitCode=1});
