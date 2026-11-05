@@ -728,7 +728,7 @@ function groundHomeForcePlan(direction,fielder,timing,runner,outs,loaded){
  return {receiveAt,runnerAt,callAt,throwMs,decisionMs,
   forceOut:!!loaded&&outs<2&&receiveAt+25<runnerAt&&callAt<=decisionMs};
 }
-let groundRunnerReaction=null;
+let groundRunnerReaction=null,groundThirdOutAt=null;
 function groundBall(p){
  const b=game.bases,pi=pitcher(),baseDirection=choose(GROUND_DIRECTIONS),fielder=groundDefender(baseDirection);
  // Most balls are near the fielder; some test the gap and reward quick gloves.
@@ -822,7 +822,8 @@ function groundBall(p){
  }
  creditRuns(scored,p,false);
  log(`${p.name} ${direction.label}、一塁アウト。${scored.length?' 三塁走者が生還。':''}`);
- if(direction.defender==='1B'&&b[0]&&game.outs<3)groundRunnerReaction={id:b[0].id,bagAt:timing.arrive};
+ // A runner left on first reacts to any infield groundout, returning after the out at first.
+ if(b[0])groundRunnerReaction={id:b[0].id,bagAt:timing.arrive,thirdOut:game.outs>=3,decisionAt:Math.max(timing.arrive,timing.runnerMs)+110};
  animateGround('out',direction,p.speed,fielder.arm,timing);
 }
 // An outfielder's actual attributes determine whether the batted ball is caught.
@@ -1229,9 +1230,15 @@ function animateFirstGroundReturn(beforeBases,halfAtStart,inningAtStart){
  const later=(ms,fn)=>playTimers.push(setTimeout(()=>{if(token===animationToken)fn()},ms));
  // A short straight break avoids the wide base-rounding curve, which first
  // pushed the runner away from second. Ownership retires the outgoing frames.
- later(start,()=>moveGroundFielder(runner,null,turn,bagAt-start,token,{relayOwner:'ground-runner'}));
- later(bagAt,()=>moveGroundFielder(runner,null,[323,169],returnMs,token,{relayOwner:'ground-runner'}));
- later(bagAt+returnMs+30,()=>{runner.setAttribute('visibility','hidden');if(marker)marker.setAttribute('opacity','1')});
+ if(plan.thirdOut){
+  // Keep the runner visible through the established first-base out call.
+  later(start,()=>moveGroundFielder(runner,null,turn,Math.max(1,plan.decisionAt-start),token,{relayOwner:'ground-runner'}));
+  later(plan.decisionAt,()=>runner.remove());
+ }else{
+  later(start,()=>moveGroundFielder(runner,null,turn,bagAt-start,token,{relayOwner:'ground-runner'}));
+  later(bagAt,()=>moveGroundFielder(runner,null,[323,169],returnMs,token,{relayOwner:'ground-runner'}));
+  later(bagAt+returnMs+30,()=>{runner.setAttribute('visibility','hidden');if(marker)marker.setAttribute('opacity','1')});
+ }
 }
 function animateBaseRunners(beforeBases,beforeRuns,halfAtStart,inningAtStart){
  if(!game||game.half!==halfAtStart||game.inning!==inningAtStart)return;
@@ -1363,10 +1370,10 @@ function resolvePitch(){
  const observedGame=game,team=current().bat,p=batter(),turn=team.bat;
  platePending.delete(p);resolvePitchCore();
  if(game===observedGame&&team.bat===turn+1){const list=plateResults.get(p)||[];list.push(platePending.get(p)||'打席終了');plateResults.set(p,list)}
- platePending.delete(p);renderBatterResults();
+ platePending.delete(p);if((!groundRunnerReaction?.thirdOut&&groundThirdOutAt===null)||game.ended)renderBatterResults();
 }
 function resolvePitchCore(){if(!game||game.ended)return;
-beginVisualScoring();groundRunnerReaction=null;game.homePlayOutId=null;game.thirdBasePlay=null;game.forceOutVisual=null;game.stealVisual=null;game.crossPlayVisual=null;game.flyReturn=false;
+beginVisualScoring();groundRunnerReaction=null;groundThirdOutAt=null;game.homePlayOutId=null;game.thirdBasePlay=null;game.forceOutVisual=null;game.stealVisual=null;game.crossPlayVisual=null;game.flyReturn=false;
 const beforeBases=game.bases.slice(),beforeRuns=new Map(beforeBases.filter(Boolean).map(p=>[p.id,p.r])),halfAtStart=game.half,inningAtStart=game.inning;
 if(tactics()){if(game.ended){render();return}
  if(game.outs>=3)endHalf();else maybeChangePitcher();
@@ -1392,7 +1399,12 @@ if(!complete&&game.balls>=4){showPitchResult('フォアボール','ball');walk(p
 if(!complete&&game.strikes>=3){notePlateResult(p,x<.54?'見逃し三振':'三振');batterReactionVisual('strikeout',p,animationToken);showPitchResult('三振！','strike');outBatter(p,true);log(`${p.name} 三振！`);complete=true}
 if(complete){bat.bat++;game.balls=game.strikes=0}
 if(game.ended){render();return}
+// The rules advance immediately, but preserve the pre-play display until the
+// already scheduled third-out call; do not extend the existing play deadline.
+const thirdGround=game.outs>=3?(groundRunnerReaction?.thirdOut?groundRunnerReaction:groundThirdOutAt!==null?{decisionAt:groundThirdOutAt}:null):null;
+if(thirdGround&&groundRunnerReaction?.thirdOut)animateFirstGroundReturn(beforeBases,halfAtStart,inningAtStart);
 if(game.outs>=3)endHalf();else{if(!complete&&trySteal()&&game.outs>=3)endHalf();else maybeChangePitcher()}
+if(thirdGround&&!game.ended){const token=animationToken;playTimers.push(setTimeout(()=>{if(token===animationToken)render()},thirdGround.decisionAt));return}
 render(beforeBases);animateBaseRunners(beforeBases,beforeRuns,halfAtStart,inningAtStart);animateFirstGroundReturn(beforeBases,halfAtStart,inningAtStart);if(game.crossPlayVisual)animateClosePlayGestures(game.crossPlayVisual);if(game.flyReturn)animateFlyLeadAndReturn(beforeBases,halfAtStart,inningAtStart);if(game.stealVisual&&game.stealVisual.inning===game.inning&&game.stealVisual.half===game.half)animateStealPlay(game.stealVisual);if(activeRoster===0||activeRoster===1)renderRoster(activeRoster)}
 
 // 1球の演出が終わるまでは、次の投球を開始しない。
@@ -1933,6 +1945,7 @@ function animateGround(outcome,direction,batterSpeed=55,arm=55,timing=null){
  // Do not call the play at first before both the throw and batter-runner arrive.
  const decisionMs=Math.max(arrival,runnerMs)+110;
  const forceCallAt=atSecond?Math.max(firstArrival+70,game.forceOutVisual?.forceCallAt||0):0;
+ if(outcome==='double'&&game.outs>=3)groundThirdOutAt=Math.max(decisionMs,forceCallAt+140);
  const holdUntil=Math.max(decisionMs,runnerMs,forceCallAt)+290;
  animationHoldUntil=Math.max(animationHoldUntil,Date.now()+holdUntil+330);
  ball.style.transition='none';ball.setAttribute('cx','200');ball.setAttribute('cy','283');ball.setAttribute('r','4');
@@ -2581,5 +2594,5 @@ function updateWatchLayout(){
 }
 $('watchInfo').onclick=()=>{watchDetailsOpen=!watchDetailsOpen;updateWatchLayout();if(typeof window!=='undefined')window.scrollTo(0,0)};
 
-$('start').onclick=()=>{if(game&&!game.ended&&!confirm('進行中の試合を破棄して新しい試合を始めますか？'))return;try{init()}catch(e){console.error(e);$('status').textContent='開始エラー';$('event').textContent='開始できません: '+(e&&e.message?e.message:String(e));}};$('pause').onclick=()=>{if(!game||game.ended)return;playing=!playing;$('pause').textContent=playing?'一時停止':'再開';render();if(playing){resumeScoreFlash();schedule()}else {pauseScoreFlash();document.querySelectorAll('[data-ground-return-runner]').forEach(el=>el.remove());clearTimeout(timer);clearTimeout(flightTimer);flightTimer=null;animationToken++;clearTacticalVisuals();resetOutfieldPositions()}};$('next').onclick=()=>{if(!game||game.ended)return;stop();$('pause').textContent='再開';pitch()};$('speed').onchange=()=>{if(playing)schedule()};$('rosterAway').onclick=()=>renderRoster(0);$('rosterHome').onclick=()=>renderRoster(1);$('closeDetail').onclick=()=>$('detail').close();$('clear').onclick=()=>{if(confirm('保存済みの試合履歴をすべて削除しますか？')){localStorage.removeItem(KEY);historyRender()}};historyRender();
+$('start').onclick=()=>{if(game&&!game.ended&&!confirm('進行中の試合を破棄して新しい試合を始めますか？'))return;try{init()}catch(e){console.error(e);$('status').textContent='開始エラー';$('event').textContent='開始できません: '+(e&&e.message?e.message:String(e));}};$('pause').onclick=()=>{if(!game||game.ended)return;playing=!playing;$('pause').textContent=playing?'一時停止':'再開';render();if(playing){resumeScoreFlash();schedule()}else {pauseScoreFlash();document.querySelectorAll('[data-ground-return-runner]').forEach(el=>el.remove());clearTimeout(timer);clearTimeout(flightTimer);flightTimer=null;animationToken++;clearTacticalVisuals();resetOutfieldPositions()}};$('next').onclick=()=>{if(!game||game.ended)return;stop();if(groundRunnerReaction?.thirdOut||groundThirdOutAt!==null)render();$('pause').textContent='再開';pitch()};$('speed').onchange=()=>{if(playing)schedule()};$('rosterAway').onclick=()=>renderRoster(0);$('rosterHome').onclick=()=>renderRoster(1);$('closeDetail').onclick=()=>$('detail').close();$('clear').onclick=()=>{if(confirm('保存済みの試合履歴をすべて削除しますか？')){localStorage.removeItem(KEY);historyRender()}};historyRender();
 </script></body></html>
