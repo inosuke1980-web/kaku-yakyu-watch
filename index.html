@@ -365,7 +365,7 @@ function clearTacticalVisuals(){
  const catcher=$('catcherThrowSprite');if(catcher)catcher.setAttribute('visibility','hidden');
  const glove=$('catcherGlove');if(glove){glove.setAttribute('cy','302');glove.setAttribute('cx','207')}
 }
-function stop(){resetOutCall();const trail=$('foulTrail');if(trail)trail.setAttribute('d','');clearTacticalVisuals();const set=$('pitcherSet'),glance=$('pitcherGlance'),thrower=$('catcherThrowSprite');for(const el of [set,glance,thrower])if(el)el.setAttribute('visibility','hidden');for(const id of ['pitcherLeg','pitcherArm','catcherCall']){const el=$(id);if(el)el.setAttribute('visibility','hidden')}const glove=$('catcherGlove');if(glove){glove.setAttribute('r','5');glove.setAttribute('fill','#b57943');glove.setAttribute('cx','207');glove.setAttribute('cy','302')}const crouch=$('catcherCrouch');if(crouch)crouch.setAttribute('d','M 193 320 Q 200 328 207 320');const knees=$('batterKnees');if(knees)knees.setAttribute('d','M -5 17 L -9 23 M 5 17 L 9 23');batterVisualLockedUntil=0;batterRunnerOnField=false;const batting=$('battingStance');if(batting)batting.setAttribute('visibility','hidden');const coverLayer=$('firstBaseCoverForeground');if(coverLayer)coverLayer.replaceChildren();const covering=$('fielders');if(covering&&covering.querySelector){for(const type of ['circle','text']){const el=covering.querySelector(type+'[data-position="1B"]');if(el)el.setAttribute('opacity','1')}}playing=false;clearTimeout(timer);clearTimeout(flightTimer);for(const id of playTimers)clearTimeout(id);playTimers=[];timer=flightTimer=null;animationHoldUntil=0;animationToken++;pendingRunnerArrivals.clear();const moving=$('movingRunners');if(moving)moving.replaceChildren();const runner=$('batterRunner');if(runner){runner.style.transition='none';runner.setAttribute('visibility','hidden')}resetOutfieldPositions()}
+function stop(){pendingCaughtFly=null;resetOutCall();const trail=$('foulTrail');if(trail)trail.setAttribute('d','');clearTacticalVisuals();const set=$('pitcherSet'),glance=$('pitcherGlance'),thrower=$('catcherThrowSprite');for(const el of [set,glance,thrower])if(el)el.setAttribute('visibility','hidden');for(const id of ['pitcherLeg','pitcherArm','catcherCall']){const el=$(id);if(el)el.setAttribute('visibility','hidden')}const glove=$('catcherGlove');if(glove){glove.setAttribute('r','5');glove.setAttribute('fill','#b57943');glove.setAttribute('cx','207');glove.setAttribute('cy','302')}const crouch=$('catcherCrouch');if(crouch)crouch.setAttribute('d','M 193 320 Q 200 328 207 320');const knees=$('batterKnees');if(knees)knees.setAttribute('d','M -5 17 L -9 23 M 5 17 L 9 23');batterVisualLockedUntil=0;batterRunnerOnField=false;const batting=$('battingStance');if(batting)batting.setAttribute('visibility','hidden');const coverLayer=$('firstBaseCoverForeground');if(coverLayer)coverLayer.replaceChildren();const covering=$('fielders');if(covering&&covering.querySelector){for(const type of ['circle','text']){const el=covering.querySelector(type+'[data-position="1B"]');if(el)el.setAttribute('opacity','1')}}playing=false;clearTimeout(timer);clearTimeout(flightTimer);for(const id of playTimers)clearTimeout(id);playTimers=[];timer=flightTimer=null;animationHoldUntil=0;animationToken++;pendingRunnerArrivals.clear();const moving=$('movingRunners');if(moving)moving.replaceChildren();const runner=$('batterRunner');if(runner){runner.style.transition='none';runner.setAttribute('visibility','hidden')}resetOutfieldPositions()}
 function log(msg){if(!game)return;const prefix=game.inning+'回'+(game.half?'裏':'表');game.events.push('【'+prefix+'】 '+msg);if(game.events.length>250)game.events.shift();$('log').replaceChildren(...game.events.slice(-90).reverse().map(s=>{let d=document.createElement('div');d.textContent=s;return d}))}
 function current(){return {bat:game.teams[game.half],def:game.teams[1-game.half]}}
 // Presentation only: wall time is paused with the spectator controls, not the game clock.
@@ -375,7 +375,7 @@ function resumeScoreFlash(){if(!scoreFlashRemaining||scoreFlashTimer)return;scor
 function pauseScoreFlash(){if(!scoreFlashTimer)return;clearTimeout(scoreFlashTimer);scoreFlashTimer=null;scoreFlashRemaining=Math.max(1,scoreFlashRemaining-(Date.now()-scoreFlashStarted))}
 function showScoreFlash(scores=[total(0),total(1)]){const el=$('scoreFlash');if(!el||!game)return;clearTimeout(scoreFlashTimer);scoreFlashTimer=null;el.textContent=scores[0]+' – '+scores[1];el.hidden=false;scoreFlashRemaining=2000;if(playing||game.ended)resumeScoreFlash()}
 // Display-only event context. It never influences results or the game clock.
-let activeOutPlay=null,outCallTimer=null,outCallRemaining=0,outCallStarted=0,outPlaySequence=0;
+let activeOutPlay=null,outCallTimer=null,outCallRemaining=0,outCallStarted=0,outPlaySequence=0,pendingCaughtFly=null;
 function resetOutCall(){clearTimeout(outCallTimer);outCallTimer=null;outCallRemaining=0;const el=$('outCall');if(el)el.hidden=true}
 function pauseOutCall(){if(outCallTimer){clearTimeout(outCallTimer);outCallTimer=null;outCallRemaining=Math.max(1,outCallRemaining-(Date.now()-outCallStarted))}}
 function resumeOutCall(){if(!outCallRemaining||outCallTimer)return;outCallStarted=Date.now();outCallTimer=setTimeout(resetOutCall,outCallRemaining)}
@@ -2126,7 +2126,13 @@ function animate(kind,targetInfo=null,runnerSpeed=55,hitBases=null){
  const target=targetInfo?targetInfo.point:targets[kind]||targets.single;
  const start=[200,283],duration=targetInfo?.flight?targetInfo.flightMs:(kind==='linerHit'||kind==='linerHit2')?540:kind==='linerOut'?460:kind==='fly'||kind==='outfieldError'?1150:kind==='home'?1250:830;
  const visualType=outfieldVisualType(kind,targetInfo),isFly=visualType.fly,isLiner=visualType.liner;
- if(targetInfo?.caught&&activeOutPlay){scheduleOutCall(activeOutPlay,game.outs,duration+60);if(game.outs>=3)activeOutPlay.deferAt=duration+60}
+ if(targetInfo?.caught&&activeOutPlay){
+  const play=activeOutPlay,outNumber=game.outs;
+  pendingCaughtFly={play,outNumber,kind,targetInfo,start,target,hitBases,duration,elapsed:0,begun:performance.now(),ball,shadow,isFly,isLiner,nearest:null,label:null,destination:null,chaseMs:0};
+  const pending=pendingCaughtFly;
+  playTimers.push(setTimeout(()=>{if(token===animationToken&&pendingCaughtFly===pending){pendingCaughtFly=null;announceOut(play,outNumber)}},duration+60));
+  if(outNumber>=3)play.deferAt=duration+60;
+ }
  animationHoldUntil=Math.max(animationHoldUntil,Date.now()+duration+300);
  if(shadow){shadow.setAttribute('rx','0');shadow.setAttribute('ry','0')}
  ball.style.transition='none';ball.setAttribute('cx',start[0]);ball.setAttribute('cy',start[1]);ball.setAttribute('r','4');
@@ -2137,6 +2143,7 @@ function animate(kind,targetInfo=null,runnerSpeed=55,hitBases=null){
   const x=Number(nearest.getAttribute('cx')),y=Number(nearest.getAttribute('cy'));
   const label=field.querySelector('text[data-position="'+nearest.getAttribute('data-position')+'"]');
   const pursuit=outfieldPursuitPlan(kind,targetInfo,[x,y],duration);
+  if(pendingCaughtFly?.play===activeOutPlay&&targetInfo?.caught){pendingCaughtFly.nearest=nearest;pendingCaughtFly.label=label;pendingCaughtFly.destination=pursuit?pursuit.pickup:target;pendingCaughtFly.chaseMs=pursuit?pursuit.chaseMs:Math.round(duration*.86)}
   const recoveringSingle=hitBases===1&&!targetInfo?.caught&&kind!=='outfieldError'&&!targetInfo?.dropped;
   let chaseOwner;
   const move=(point,ms)=>{chaseOwner=moveGroundFielder(nearest,label,point,ms,token,{relayOwner:recoveringSingle?'outfield-pickup':null})};
@@ -2220,6 +2227,35 @@ function animate(kind,targetInfo=null,runnerSpeed=55,hitBases=null){
   if(t<1)requestAnimationFrame(step);else if(shadow){shadow.setAttribute('rx','0');shadow.setAttribute('ry','0')}
  }
  requestAnimationFrame(step);
+}
+// Resume a caught fly from the frozen frame using the same ball trajectory and
+// fielder movement as the original play. It owns no result or random numbers.
+function pauseCaughtFly(){
+ const p=pendingCaughtFly;if(!p||p.play.game!==game||p.play.token!==animationToken)return false;
+ p.elapsed=Math.min(p.duration+60,p.elapsed+Math.max(0,performance.now()-p.begun));
+ p.holdRemaining=Math.max(0,animationHoldUntil-Date.now());return true;
+}
+function resumeCaughtFly(){
+ const p=pendingCaughtFly;if(!p||p.play.game!==game)return false;
+ p.play.token=animationToken;p.begun=performance.now();const token=animationToken;
+ animationHoldUntil=Math.max(animationHoldUntil,Date.now()+p.holdRemaining);
+ if(p.nearest&&p.destination)moveGroundFielder(p.nearest,p.label,p.destination,Math.max(1,p.chaseMs-p.elapsed),token);
+ function step(now){
+  if(token!==animationToken||pendingCaughtFly!==p)return;
+  const t=Math.min(1,(p.elapsed+now-p.begun)/p.duration);
+  const {x,y,visibleY}=outfieldFrame(p.kind,p.targetInfo,p.start,p.target,p.hitBases,t);
+  p.ball.setAttribute('cx',x.toFixed(1));p.ball.setAttribute('cy',visibleY.toFixed(1));
+  p.ball.setAttribute('r',String(p.isFly?4.5+2*Math.sin(Math.PI*t):p.isLiner?4.2:4));
+  if(p.shadow){p.shadow.setAttribute('cx',x.toFixed(1));p.shadow.setAttribute('cy',y.toFixed(1));p.shadow.setAttribute('rx',String(t<1?(p.isFly?5+3*Math.sin(Math.PI*t):p.isLiner?5:0):0));p.shadow.setAttribute('ry',String(t<1?(p.isFly?2.5:1.5):0))}
+  if(t<1)requestAnimationFrame(step);
+ }
+ if(p.elapsed<p.duration)requestAnimationFrame(step);
+ playTimers.push(setTimeout(()=>{
+  if(token!==animationToken||pendingCaughtFly!==p)return;
+  pendingCaughtFly=null;announceOut(p.play,p.outNumber);
+  if(p.outNumber===3&&!game.ended)render();
+ },Math.max(0,p.duration+60-p.elapsed)));
+ return true;
 }
 // The hit outcome and earned runs remain owned by the simulator. This is a visual
 // outfielder -> relay -> home/base throw only (never an extra out or run).
@@ -2620,5 +2656,5 @@ function updateWatchLayout(){
 }
 $('watchInfo').onclick=()=>{watchDetailsOpen=!watchDetailsOpen;updateWatchLayout();if(typeof window!=='undefined')window.scrollTo(0,0)};
 
-$('start').onclick=()=>{if(game&&!game.ended&&!confirm('進行中の試合を破棄して新しい試合を始めますか？'))return;try{init()}catch(e){console.error(e);$('status').textContent='開始エラー';$('event').textContent='開始できません: '+(e&&e.message?e.message:String(e));}};$('pause').onclick=()=>{if(!game||game.ended)return;playing=!playing;$('pause').textContent=playing?'一時停止':'再開';render();if(playing){resumeScoreFlash();resumeOutCall();schedule()}else {pauseScoreFlash();pauseOutCall();document.querySelectorAll('[data-ground-return-runner]').forEach(el=>el.remove());clearTimeout(timer);clearTimeout(flightTimer);flightTimer=null;animationToken++;clearTacticalVisuals();resetOutfieldPositions()}};$('next').onclick=()=>{if(!game||game.ended)return;stop();if(groundRunnerReaction?.thirdOut||groundThirdOutAt!==null)render();$('pause').textContent='再開';pitch()};$('speed').onchange=()=>{if(playing)schedule()};$('rosterAway').onclick=()=>renderRoster(0);$('rosterHome').onclick=()=>renderRoster(1);$('closeDetail').onclick=()=>$('detail').close();$('clear').onclick=()=>{if(confirm('保存済みの試合履歴をすべて削除しますか？')){localStorage.removeItem(KEY);historyRender()}};historyRender();
+$('start').onclick=()=>{if(game&&!game.ended&&!confirm('進行中の試合を破棄して新しい試合を始めますか？'))return;try{init()}catch(e){console.error(e);$('status').textContent='開始エラー';$('event').textContent='開始できません: '+(e&&e.message?e.message:String(e));}};$('pause').onclick=()=>{if(!game||game.ended)return;playing=!playing;$('pause').textContent=playing?'一時停止':'再開';if(playing){if(!resumeCaughtFly())render();resumeScoreFlash();resumeOutCall();schedule()}else {const frozenFly=pauseCaughtFly();if(!frozenFly)render();pauseScoreFlash();pauseOutCall();document.querySelectorAll('[data-ground-return-runner]').forEach(el=>el.remove());clearTimeout(timer);clearTimeout(flightTimer);flightTimer=null;animationToken++;clearTacticalVisuals();if(!frozenFly)resetOutfieldPositions()}};$('next').onclick=()=>{if(!game||game.ended)return;stop();if(groundRunnerReaction?.thirdOut||groundThirdOutAt!==null)render();$('pause').textContent='再開';pitch()};$('speed').onchange=()=>{if(playing)schedule()};$('rosterAway').onclick=()=>renderRoster(0);$('rosterHome').onclick=()=>renderRoster(1);$('closeDetail').onclick=()=>$('detail').close();$('clear').onclick=()=>{if(confirm('保存済みの試合履歴をすべて削除しますか？')){localStorage.removeItem(KEY);historyRender()}};historyRender();
 </script></body></html>
