@@ -798,3 +798,6 @@ GitHub Actions run 42116123147、検証SHA 08e30408ce44b7fb56e01c4b9d89f7eba8953
 次工程は実際のアウト成立時刻を既存の groundForceTimeline、groundThirdOutAt、outfield flight、stealPlayPlan、三振捕手到達から取得する表示用イベントにまとめ、第三アウトの旧イニング描画の保持・終戦時の破棄・二者連続アウト・停止再開・得点演出優先順を固定試験とChromiumで検証する。試合のルール状態・判定・RNGは変更しない。失敗ケースを再現する固定試験以外に表示・ゲーム本体は変更しない。ベスプレライク’27動画の動作は今回未視聴。
 
 構文、out-change-study、animation-motion、debug-plays、ground-timing、smoke、8球場×1000試合はPASS。8球場の未完了0・得点不一致0。今回の試験はDOMモックであり、Chromium視覚確認・375px／390px確認・依頼の全9固定ケースは未実施。二遊間初期位置、1B→二塁送球、中継時刻、ショート瞬間移動、サヨナラ得点、死球、投球位置と判定の共有、外野打球軌道は未解決。C1・B2m未採用を維持。
+
+
+追記：Chromium調査は別ブランチ `validation/out-change-investigation` の Actions run 42211950492 で実施。固定試験と mobile-watch-layout はPASS。375×667、390×844 の通常守備配置・画面全体を画像で確認し、12回表示を含む同テストもPASS。ただしアウト／チェンジは未実装のためその実画面・9ケースの確認ではない。上記の「Chromium視覚確認・375px／390px確認は未実施」はアウト演出についての記述として読む。iPhone実機未確認。
