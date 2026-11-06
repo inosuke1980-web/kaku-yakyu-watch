@@ -1386,7 +1386,7 @@ function resolvePitch(){
  const observedGame=game,team=current().bat,p=batter(),turn=team.bat;
  platePending.delete(p);resolvePitchCore();
  if(game===observedGame&&team.bat===turn+1){const list=plateResults.get(p)||[];list.push(platePending.get(p)||'打席終了');plateResults.set(p,list)}
- platePending.delete(p);if((!groundRunnerReaction?.thirdOut&&groundThirdOutAt===null)||game.ended)renderBatterResults();
+ platePending.delete(p);if((!groundRunnerReaction?.thirdOut&&groundThirdOutAt===null&&!(activeOutPlay?.startOuts===2&&activeOutPlay?.deferAt!==null))||game.ended)renderBatterResults();
 }
 function resolvePitchCore(){if(!game||game.ended)return;
 activeOutPlay={id:++outPlaySequence,game,token:animationToken,inning:game.inning,half:game.half,startOuts:game.outs,seen:new Set(),deferAt:null};
