@@ -5,6 +5,9 @@ on:
     paths:
       - '.github/workflows/browser-validation.yml'
       - 'tests/outfield-display-browser.cjs'
+      - 'tests/out-visual-browser.cjs'
+      - 'tests/out-visual-step-pending.cjs'
+      - 'tests/out-visual-pause-pending.cjs'
       - 'index.html'
   workflow_dispatch:
 permissions:
