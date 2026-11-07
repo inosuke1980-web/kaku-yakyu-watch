@@ -7,8 +7,8 @@ const fs=require('node:fs');
   page.on('pageerror',e=>errors.push(e.message));
   await page.clock.install({time:new Date('2026-11-07T00:00:00Z')});
   await page.clock.pauseAt(new Date('2026-11-07T00:00:01Z'));
-  await page.goto(pathToFileURL(path.resolve(__dirname,'../index.html')).href+'?debug=plays');
-  await page.evaluate(()=>{stop();playing=false;render()});
+  await page.goto(pathToFileURL(path.resolve(__dirname,'../index.html')).href);
+  await page.evaluate(()=>{init();stop();playing=false;render()});
   const text=await page.locator('#batterToday').innerText();assert.match(text,/ミート/);assert.match(text,/球威/);assert.doesNotMatch(text,/変化球/);
   const swapped=await page.evaluate(()=>{const old=[batter().name,pitcher().name];current().bat.bat++;current().def.pitcher=1;renderBatterResults();return {old,now:[batter().name,pitcher().name],text:$('batterToday').innerText}});
   for(let i=0;i<2;i++){assert.notEqual(swapped.old[i],swapped.now[i]);assert.ok(swapped.text.includes(swapped.now[i]));}
