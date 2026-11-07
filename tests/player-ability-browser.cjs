@@ -1,0 +1,10 @@
+'use strict';
+const {chromium}=require('playwright'),{pathToFileURL}=require('node:url'),path=require('node:path'),assert=require('node:assert/strict');
+(async()=>{const b=await chromium.launch({headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});try{for(const width of [375,390]){
+ const p=await b.newPage({viewport:{width,height:844}}),errors=[];p.on('pageerror',e=>errors.push(e.message));await p.goto(pathToFileURL(path.resolve(__dirname,'../index.html')).href);await p.click('#start');await p.click('#pause');await p.evaluate(()=>{stop();render()});
+ let ui=await p.locator('#batterToday').innerText();assert.match(ui,/ミート/);assert.match(ui,/球威/);assert.doesNotMatch(ui,/変化球/);
+ const names=await p.evaluate(()=>{const a=pitcher().name;current().def.pitcher=1;renderBatterResults();return [a,pitcher().name,document.querySelector('#batterToday').innerText]});assert.ok(names[2].includes(names[1]));
+ await p.evaluate(()=>{showBattingStance(batter(),true);animateBatterTake(batter(),'strike')});let before=await p.locator('#batterBat').getAttribute('x2');await p.waitForTimeout(100);assert.equal(await p.locator('#batterBat').getAttribute('x2'),before);
+ await p.waitForTimeout(300);await p.evaluate(()=>animateBatterSwing(batter(),false));await p.waitForTimeout(80);const after=await p.locator('#batterBat').getAttribute('x2');assert.notEqual(after,before);if(process.env.FIXTURE_SCREENSHOT_DIR)await p.screenshot({path:path.join(process.env.FIXTURE_SCREENSHOT_DIR,`ability-swing-${width}.png`)});
+ const d=await p.evaluate(()=>({w:document.documentElement.scrollWidth,h:document.documentElement.scrollHeight,iw:innerWidth,ih:innerHeight,fieldScroll:document.querySelector('.field-card').scrollHeight>document.querySelector('.field-card').clientHeight+1}));assert.ok(d.w<=d.iw&&d.h<=d.ih+1&&!d.fieldScroll,JSON.stringify(d));assert.deepEqual(errors,[]);console.log('PLAYER BROWSER PASS',width,JSON.stringify(d));await p.close();
+}}finally{await b.close()}})().catch(e=>{console.error(e);process.exitCode=1});

@@ -1,10 +1,12 @@
 name: Outfield browser validation
 on:
   push:
-    branches: [backup/outfield-display-unverified]
+    branches: [validation/player-swing-display]
     paths:
       - '.github/workflows/browser-validation.yml'
       - 'tests/outfield-display-browser.cjs'
+      - 'tests/player-ability-browser.cjs'
+      - 'tests/player-ability-display.cjs'
       - 'index.html'
   workflow_dispatch:
 permissions:
@@ -26,7 +28,7 @@ jobs:
         run: |
           mkdir -p artifacts/screenshots artifacts/logs
           failed=0
-          for t in outfield-relay-browser first-ground-sequence-browser infield-ground-browser ground-force-browser runner-score-browser scoring-arrival-browser mobile-watch-layout outfield-display-browser animation-motion debug-plays outfield-relay-motion outfield-pitch-display smoke park-comparison; do
+          for t in outfield-relay-browser first-ground-sequence-browser infield-ground-browser ground-force-browser runner-score-browser scoring-arrival-browser mobile-watch-layout outfield-display-browser player-ability-browser player-ability-display batter-today animation-motion debug-plays outfield-relay-motion outfield-pitch-display smoke park-comparison; do
             echo "$(date -u +%FT%TZ) START $t" | tee -a artifacts/logs/status.txt
             FIXTURE_SCREENSHOT_DIR="$PWD/artifacts/screenshots" node "tests/$t.cjs" > "artifacts/logs/$t.log" 2>&1 || { echo "$(date -u +%FT%TZ) FAIL $t" | tee -a artifacts/logs/status.txt; failed=1; continue; }
             echo "$(date -u +%FT%TZ) PASS $t" | tee -a artifacts/logs/status.txt

@@ -1,0 +1,14 @@
+'use strict';
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const harness=fs.readFileSync(require('node:path').join(__dirname,'debug-plays.cjs'),'utf8');
+const scenario=new Function('require','__dirname',harness.slice(0,harness.indexOf('const normal=scenario('))+'\nreturn scenario;')(require,__dirname);
+const f=scenario('?debug=plays'),run=s=>vm.runInContext(s,f.c);
+for(const [v,g] of [[5,'E'],[34,'E'],[35,'D'],[49,'D'],[50,'C'],[64,'C'],[65,'B'],[79,'B'],[80,'A'],[99,'A']])assert.equal(run(`abilityGrade(${v})`),g);
+assert.equal(run("batterProfile({power:80,contact:60,speed:40,eye:40})"),'強打型');
+assert.equal(run("batterProfile({power:50,contact:70,speed:75,eye:40})"),'俊足巧打型');
+assert.equal(run("pitcherProfile({stuff:85,control:60})"),'球威型');
+assert.equal(run("pitcherProfile({stuff:50,control:85})"),'制球型');
+run('renderBatterResults()');const html=f.nodes.get('batterToday').innerHTML;assert.match(html,/ミート/);assert.match(html,/球威/);assert.doesNotMatch(html,/変化球/);
+const before=run('pitcher().name');run('current().def.pitcher=1;renderBatterResults()');assert.match(f.nodes.get('batterToday').innerHTML,new RegExp(run('pitcher().name')));assert.notEqual(run('pitcher().name'),before);
+console.log('PLAYER ABILITY PASS: grades, roles and pitcher replacement');
+const counts=run(`(()=>{let seed=123456789;const old=Math.random;Math.random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296};const result={A:0,B:0,C:0,D:0,E:0};for(let i=0;i<1000;i++){const p=player('東京',i%20,i%5);for(const k of ['contact','power','eye','speed','stuff','control','stamina'])result[abilityGrade(p[k])]++}Math.random=old;return result})()`);assert.equal(Object.values(counts).reduce((a,b)=>a+b,0),7000);console.log('ABILITY DISTRIBUTION',JSON.stringify(counts));
