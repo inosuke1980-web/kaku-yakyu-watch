@@ -1369,7 +1369,7 @@ function plateResultsHTML(p){const results=todayPlateResults(p);return results.l
 function abilityGrade(value){return !Number.isFinite(value)?'—':value>=80?'A':value>=65?'B':value>=50?'C':value>=35?'D':'E'}
 function batterProfile(p){if(!p)return '';if(p.power>=70&&p.power>=p.contact+8)return '強打型';if(p.speed>=65&&p.contact>=60)return '俊足巧打型';if(p.eye>=65&&p.eye>=p.contact+5&&p.eye>=p.power+5)return '選球眼型';return 'バランス型'}
 function pitcherProfile(p){if(!p)return '';if(p.stuff>=70&&p.stuff>=p.control+8)return '球威型';if(p.control>=70&&p.control>=p.stuff+8)return '制球型';if(p.stuff>=65&&p.control>=65)return '本格派';return 'バランス型'}
-function renderBatterResults(){if(!game)return;const p=batter(),q=pitcher(),el=$('batterToday');if(el)el.innerHTML=`<strong>${current().bat.bat%9+1}番 ${esc(p.name)}（${esc(p.bats)}） ${batterProfile(p)}</strong><div class="ability-line">ミート ${abilityGrade(p.contact)}｜長打 ${abilityGrade(p.power)}｜選球 ${abilityGrade(p.eye)}｜走力 ${abilityGrade(p.speed)}</div><div class="ability-line">投手 ${esc(q.name)}（${esc(q.throws)}） ${pitcherProfile(q)}　球威 ${abilityGrade(q.stuff)}｜制球 ${abilityGrade(q.control)}｜体力 ${abilityGrade(q.stamina)}</div><div class="plate-results">${plateResultsHTML(p)}</div>`}
+function renderBatterResults(){if(!game)return;const p=batter(),q=pitcher(),el=$('batterToday');if(el)el.innerHTML=`<strong>${current().bat.bat%9+1}番 ${esc(p.name)}（${esc(p.bats)}） ${batterProfile(p)}</strong><div class="ability-line">ミート ${abilityGrade(p.contact)}｜長打 ${abilityGrade(p.power)}｜選球 ${abilityGrade(p.eye)}｜走力 ${abilityGrade(p.speed)}</div><div class="ability-line">投手 ${esc(q.name)}（${esc(q.throws)}） ${pitcherProfile(q)}　球威 ${abilityGrade(q.stuff)}｜制球 ${abilityGrade(q.control)}｜スタミナ ${abilityGrade(q.stamina)}</div><div class="plate-results">${plateResultsHTML(p)}</div>`}
 function resolvePitch(){
  if(!game||game.ended)return;
  const observedGame=game,team=current().bat,p=batter(),turn=team.bat;
@@ -2429,7 +2429,8 @@ function showBattingStance(player,force=false){
   bat.setAttribute('x2',plan.batEnd[0]);bat.setAttribute('y2',plan.batEnd[1]);
  }
  const label=$('batterHandLabel');if(label)label.textContent=plan.hand;
- const jersey=$('batterJersey');if(jersey)jersey.setAttribute('fill',plan.jersey);
+ const jersey=$('batterJersey');if(jersey){jersey.setAttribute('fill',plan.jersey);jersey.setAttribute('transform','')}
+ group.setAttribute('data-swing','no');
 }
 // A completed plate appearance stays in the original batting box through
 // contact. Do not show the NEXT batter while the current one is running.
@@ -2451,7 +2452,8 @@ function animateBatterTake(player,call){
  batterVisualLockedUntil=Date.now()+310;
  group.setAttribute('data-visual-phase',call==='ball'?'take-ball':'take-strike');
  batterReactionVisual(call,player,token);
- bat.setAttribute('y2',plan.batEnd[1]+5);
+ // A take keeps the bat in its set position; no swing silhouette.
+ bat.setAttribute('y2',plan.batEnd[1]);
  playTimers.push(setTimeout(()=>{
   if(token!==animationToken)return;
   bat.setAttribute('y2',plan.batEnd[1]);
@@ -2473,7 +2475,7 @@ function animateBatterSwing(player,inPlay=false){
  bat.setAttribute('y2','7');
  const jersey=$('batterJersey');if(jersey)jersey.setAttribute('transform','rotate('+(swingSign*18)+' 0 12)');
  // Continue through contact using the same animation token, with no RNG.
- const begun=performance.now();function followThrough(now){if(token!==animationToken)return;const t=Math.min(1,Math.max(0,(now-begun)/150));bat.setAttribute('x2',String(swingSign*(15+11*t)));bat.setAttribute('y2',String(7+8*t));if(t<1)requestAnimationFrame(followThrough)}requestAnimationFrame(followThrough);
+ const begun=performance.now();function followThrough(now){if(token!==animationToken||group.getAttribute('data-swing')!=='yes')return;const t=Math.min(1,Math.max(0,(now-begun)/150));bat.setAttribute('x2',String(swingSign*(15+11*t)));bat.setAttribute('y2',String(7+8*t));if(t<1)requestAnimationFrame(followThrough)}requestAnimationFrame(followThrough);
  playTimers.push(setTimeout(()=>{
   if(token!==animationToken)return;
   bat.setAttribute('x2',plan.batEnd[0]);bat.setAttribute('y2',plan.batEnd[1]);if(jersey)jersey.setAttribute('transform','');
