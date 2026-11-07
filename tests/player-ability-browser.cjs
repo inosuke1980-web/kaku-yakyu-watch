@@ -5,7 +5,8 @@ const fs=require('node:fs');
  for(const [width,height] of [[375,667],[390,844]]){
   const page=await browser.newPage({viewport:{width,height}}),errors=[];
   page.on('pageerror',e=>errors.push(e.message));
-  await page.clock.install();
+  await page.clock.install({time:new Date('2026-11-07T00:00:00Z')});
+  await page.clock.pauseAt(new Date('2026-11-07T00:00:01Z'));
   await page.goto(pathToFileURL(path.resolve(__dirname,'../index.html')).href+'?debug=plays');
   await page.evaluate(()=>{stop();playing=false;render()});
   const text=await page.locator('#batterToday').innerText();assert.match(text,/ミート/);assert.match(text,/球威/);assert.doesNotMatch(text,/変化球/);
@@ -16,7 +17,7 @@ const fs=require('node:fs');
    await page.evaluate(({hand,kind})=>{
     stop();game.ended=false;game.inning=1;game.half=0;game.outs=0;game.balls=0;game.strikes=kind.endsWith('K')?2:0;game.bases=[null,null,null];current().bat.bat=0;batter().bats=hand;
     tactics=()=>false;trySteal=()=>false;maybeChangePitcher=()=>{};
-    const rolls=kind==='take'||kind==='calledK'?[.45]:kind==='whiff'||kind==='swingK'?[.72]:kind==='foul'?[.6]:kind==='hit'?[.9,0,.5]:kind==='ground'?[.9,.99]:[.9,.31];let i=0;Math.random=()=>rolls[i++]??.5;
+    const rolls=kind==='take'||kind==='calledK'?[.45]:kind==='whiff'||kind==='swingK'?[.72]:kind==='foul'?[.6]:kind==='hit'?[.9,0,.5]:kind==='ground'?[.9,.99]:[.9,clamp(.105+(batter().contact-(pitcher().control+pitcher().stuff)/2)*.0013,.055,.23)+.15];let i=0;Math.random=()=>rolls[i++]??.5;
     render();resolvePitchCore();
    },{hand,kind});
    const frames=[];
