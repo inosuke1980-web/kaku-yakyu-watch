@@ -8,6 +8,7 @@ on:
       - 'tests/out-visual-browser.cjs'
       - 'tests/first-ground-sequence-browser.cjs'
       - 'tests/out-visual-step-pending.cjs'
+      - 'tests/out-visual-ground-pause-study.cjs'
       - 'tests/out-visual-pause-pending.cjs'
       - 'index.html'
   workflow_dispatch:
