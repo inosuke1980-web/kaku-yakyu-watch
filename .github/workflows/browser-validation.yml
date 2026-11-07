@@ -11,6 +11,7 @@ on:
       - 'tests/out-visual-ground-pause-study.cjs'
       - 'tests/out-visual-pause-pending.cjs'
       - 'index.html'
+      - 'docs/development-handoff.md'
   workflow_dispatch:
 permissions:
   contents: read
