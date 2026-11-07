@@ -14,7 +14,7 @@ const t=scenario('?debug=plays');vm.runInContext(`stop();playing=true;game.outs=
 t.advance(500);t.nodes.get('pause').onclick();
 const atPause=[t.nodes.get('ball').getAttribute('cx'),t.nodes.get('ball').getAttribute('cy')];
 const pitches=vm.runInContext('game.totalPitches',t.c);
-t.nodes.get('next').onclick();t.nodes.get('next').onclick();
+t.nodes.get('next').onclick();t.nodes.get('next').onclick();t.nodes.get('speed').onchange();
 assert.equal(vm.runInContext('!!pendingCaughtFly',t.c),true,'one-pitch step must preserve the unfinished fly');
 assert.equal(vm.runInContext('game.totalPitches',t.c),pitches,'no new pitch while fly is pending');
 t.advance(300);assert.equal(t.nodes.get('outCall').hidden,true,'no call before catch');
