@@ -28,7 +28,7 @@ const fs=require('node:fs');
    }
    const taken=kind==='take'||kind==='calledK';
    if(taken){assert.deepEqual(frames[0].bat,frames[1].bat);assert.equal(frames[0].swing,'no');assert.ok(!frames[0].body);}
-   else {assert.equal(frames[0].swing,'yes');assert.notDeepEqual(frames[0].bat,frames[2].bat);assert.match(frames[1].body,/rotate/);assert.equal(frames[3].swing,'no');}
+   else {assert.deepEqual(frames[0].bat,[hand==='右打'?'19':'-19','-2']);assert.equal(frames[0].swing,'yes');assert.notDeepEqual(frames[0].bat,frames[2].bat);assert.match(frames[1].body,/rotate/);assert.equal(frames[3].swing,'no');}
    console.log('VERDICT FRAMES',width,hand,kind,JSON.stringify(frames));
   }
   // Restore ordinary watch mode for full-screen layout and extra innings.
