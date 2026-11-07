@@ -819,3 +819,9 @@ main 816dccd を起点とする validation/player-swing-display で検証。既�
 ローカルの構文（smoke内）、能力表示、animation-motion、debug-plays、outfield-relay-motion、outfield-pitch-display、ground-timing、out-change-study、smokeはPASS。main起点と変更後それぞれ8球場×1000試合を完走、未完了0・得点不一致0、球場別の固定seed集計JSONが完全一致。全投球の逐次状態一致を保証する検査ではない。生成JSONと大量ログはコミットしない。
 
 Chromium検証はActionsの結果と画像確認後に追記する。公開はその確認まで保留。アウト・チェンジ表示、内野ゴロ停止再開、盗塁死、外野手座標ジャンプ、1B→二塁送球、中継時刻、死球、投球位置と判定の共有、ベスプレライク ’27動画研究を引き継ぐ。C1・B2m未採用。最終SHA・remote一致は最終報告と履歴を参照。
+
+最終Chromium確認：Actions run 42372120836、対象SHA 007aae2d3e99001bb133a85d03f13240fae79d73、Playwright 1.56.1 / Chromium 141。既存ブラウザ6件、mobile-watch-layout、outfield-display-browser、player-ability-browser、player-ability-display、out-change-study、ground-timing、batter-today、animation-motion、debug-plays、outfield-relay-motion、outfield-pitch-display、smoke、park-comparisonの19検査すべてPASS。8球場×1000試合の未完了0・得点不一致0。URL: https://github.com/inosuke1980-web/kaku-yakyu-watch/actions/runs/42372120836 。成果物13574795215（14日保持）。
+
+375×667・390×844の左右打者×8結果×5フレームを保存。見逃し・空振り・打球開始の両幅の画像を実際に確認し、構え維持と振り抜きの差を観察。バット先端と打球開始点[200,283]の一致は実DOMで検査。画像確認は固定フレームに限り、全プレーの自然さ・実iPhone/Safariの動作は未保証。375×667、390×664/844、375×812、390×568、PC幅のレイアウト試験、12回・18回・safe-area試験PASS。390×568の12打席履歴画像も目視確認。モバイルは直近3打席へ折りたたみ、「全打席」から既存の選手詳細を開く。スコア欄とSVGの設定は変更していない。
+
+一塁走者時の守備は既存ブラウザ回帰で維持を確認。内野基本座標は不変更。候補と依存関係は仕様書を参照。全検査を確認した能力表示・スイング・履歴折りたたみのみmainへの反映対象とする。この追記以降の変更は文書のみで、検証対象の実装とテストは同一。公開反映とremote HEAD・未コミット状態は最終報告で記録する。元の作業ツリーとout-visual-eventsは変更しない。
