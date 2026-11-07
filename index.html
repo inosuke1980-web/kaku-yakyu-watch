@@ -2475,7 +2475,7 @@ function animateBatterSwing(player,inPlay=false){
  bat.setAttribute('y2','7');
  const jersey=$('batterJersey');if(jersey)jersey.setAttribute('transform','rotate('+(swingSign*18)+' 0 12)');
  // Continue through contact using the same animation token, with no RNG.
- const begun=performance.now();function followThrough(now){if(token!==animationToken||group.getAttribute('data-swing')!=='yes')return;const t=Math.min(1,Math.max(0,(now-begun)/150));bat.setAttribute('x2',String(swingSign*(15+11*t)));bat.setAttribute('y2',String(7+8*t));if(t<1)requestAnimationFrame(followThrough)}requestAnimationFrame(followThrough);
+ const begun=performance.now();function followThrough(now){if(token!==animationToken||group.getAttribute('data-swing')!=='yes')return;const t=Math.min(1,Math.max(0,(now-begun)/(inPlay?60:150)));bat.setAttribute('x2',String(swingSign*(15+11*t)));bat.setAttribute('y2',String(7+8*t));if(t<1)requestAnimationFrame(followThrough)}requestAnimationFrame(followThrough);
  playTimers.push(setTimeout(()=>{
   if(token!==animationToken)return;
   bat.setAttribute('x2',plan.batEnd[0]);bat.setAttribute('y2',plan.batEnd[1]);if(jersey)jersey.setAttribute('transform','');
