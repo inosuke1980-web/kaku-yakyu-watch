@@ -22,8 +22,10 @@ for(const [width,height] of [[375,667],[390,844]]){
   await page.clock.runFor(1300);const flying=await snapshot(label+'-flight');assert.equal(flying.banner,false);assert.equal(flying.score,null);assert.equal(flying.pitch,1);
   await page.evaluate(()=>$('pause').onclick());const paused=await snapshot(label+'-paused-flight');await page.clock.runFor(700);const still=await snapshot(label+'-still-flight');assert.equal(still.elapsed,paused.elapsed);assert.deepEqual(still.ball,paused.ball);assert.deepEqual(still.runners,paused.runners);
   await page.evaluate(()=>$('pause').onclick());await page.clock.runFor(150);const edge=await snapshot(label+'-arrival');assert.equal(edge.banner,true);assert.ok(edge.elapsed>=1400);assert.match(edge.kind,new RegExp(['ソロ','2ラン','3ラン','満塁'][count]));if(count===3)assert.equal(edge.title,'満塁ホームラン！');
+  if(speed!==1)await page.evaluate(()=>{$('speed').value=$('speed').value==='2'?'4':'2';$('speed').onchange()});
   await page.clock.runFor(180);const scored=await snapshot(label+'-first-score');if(count>=2)assert.ok(scored.visual[walkoff?1:0]>0);else assert.equal(scored.score,null);
   await page.evaluate(()=>$('pause').onclick());const shown=await snapshot(label+'-paused-banner');await page.clock.runFor(800);const held=await snapshot(label+'-held-banner');assert.equal(held.elapsed,shown.elapsed);assert.equal(held.banner,true);
+  if(label==='solo'){await page.evaluate(()=>$('pause').onclick());await page.clock.runFor(180);await page.evaluate(()=>$('pause').onclick())}
   await page.evaluate(()=>{$('next').onclick();$('next').onclick();$('next').onclick()});await page.clock.runFor(2700);const done=await snapshot(label+'-done');assert.equal(done.banner,false);assert.equal(done.visual[walkoff?1:0],count+1);assert.equal(done.pitch,1);assert.equal(done.ended,walkoff);
   const scoring=await page.evaluate(()=>hrScores);assert.equal(new Set(scoring.map(x=>x.id)).size,count+1);assert.equal(scoring.length,count+1);assert.ok(scoring.every(x=>x.at>=1400));
   if(walkoff)assert.equal(await page.locator('#next').isDisabled(),true);

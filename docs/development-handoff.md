@@ -833,3 +833,5 @@ Chromium検証はActionsの結果と画像確認後に追記する。公開は�
 4種類の文字・選手名・当日の本塁打数を実データから表示。到達は既存打球の最終描画フレームに接続。ホームランだけの一時停止可能な時計を導入し、既存の描画・走塁を再利用する。サヨナラは規則確定後もHR描画を保持。仕様はdocs/home-run-presentation.md。Chromium・回帰検査完了前はmain公開しない。
 
 内野守備位置、アウト・チェンジ表示、非HR内野ゴロの停止再開、盗塁死、ショート瞬間移動、一塁手から二塁への送球、外野中継時刻、死球、投球位置と判定の共有、ベスプレライク ’27動画研究は未解決。選球/制球の逆方向効果と投手スタミナの疲労未接続も維持。C1・B2m未採用。
+
+ローカルの構文/smoke、home-run-presentation、animation-motion、debug-plays、batter-today、ground-timing、outfield-relay-motion、outfield-pitch-displayはPASS。変更前後それぞれ8球場×1000試合が完走し、未完了0・得点不一致0、全球場の固定seed集計JSONが一致。さらにhome-run-engine-parityで20試合の各投球後の規則状態・全選手データ・RNG消費数を起点5584b7bと照合する。Chromiumの最終結果はActionsと最終報告で確認する。

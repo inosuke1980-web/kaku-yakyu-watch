@@ -376,8 +376,8 @@ let homeRunPresentation=null,homeRunTaskId=-1;
 function resetHomeRunPresentation(){homeRunPresentation=null;const el=$('homeRunBanner');if(el)el.hidden=true}
 function visualPerformanceNow(){return homeRunPresentation?homeRunPresentation.perf+homeRunPresentation.elapsed:performance.now()}
 function visualDateNow(){return homeRunPresentation?homeRunPresentation.date+homeRunPresentation.elapsed:Date.now()}
-function visualFrame(callback){const h=homeRunPresentation;if(!h)return requestAnimationFrame(callback);h.frames.push(callback);return 0}
-function visualTimeout(callback,delay){const h=homeRunPresentation;if(!h)return setTimeout(callback,delay);h.tasks.push({at:h.elapsed+Math.max(0,delay),callback,id:homeRunTaskId--});return homeRunTaskId+1}
+function visualFrame(callback){const h=homeRunPresentation;if(!h)return requestAnimationFrame(now=>{const current=homeRunPresentation;if(current)current.frames.push(callback);else callback(now)});h.frames.push(callback);return 0}
+function visualTimeout(callback,delay){const h=homeRunPresentation;if(!h){const started=performance.now();return setTimeout(()=>{const current=homeRunPresentation;if(current)current.tasks.push({at:Math.max(current.elapsed,started+delay-current.perf),callback,id:homeRunTaskId--});else callback()},delay)}h.tasks.push({at:h.elapsed+Math.max(0,delay),callback,id:homeRunTaskId--});return homeRunTaskId+1}
 function beginHomeRunPresentation(player,runs,flightMs){
  resetHomeRunPresentation();
  const h=homeRunPresentation={game,token:animationToken,elapsed:0,perf:performance.now(),date:Date.now(),last:performance.now(),running:true,frames:[],tasks:[],flightMs,name:player.name,runs,hr:player.hr+1,arrived:false,pausedAt:null};

@@ -18,3 +18,7 @@ const w=scenario('?debug=plays'),r=s=>vm.runInContext(s,w.c);
 r("stop();playing=true;game.inning=9;game.half=1;for(const t of game.teams)t.runs=[0,0,0,0,0,0,0,0,0];game.bases=[current().bat.players[1],current().bat.players[2],current().bat.players[3]];const old=game.bases.slice(),runs=new Map(old.map(p=>[p.id,p.r]));beginVisualScoring();hit(batter(),4);animateBaseRunners(old,runs,1,9)");
 assert.equal(r('game.ended'),true);w.advance(1500);assert.equal(w.nodes.get('homeRunBanner').hidden,false);w.advance(3000);assert.equal(r('visualScoring.pending.size'),0);assert.equal(r('visualScoring.scores[1]'),4);assert.equal(w.nodes.get('homeRunBanner').hidden,true);
 console.log('WALKOFF GRAND SLAM PASS: ended rules preserve ball, runners and announcement');
+const immediate=scenario('?debug=plays'),ir=s=>vm.runInContext(s,immediate.c);
+ir("stop();playing=true;game.bases=[null,null,null];beginVisualScoring();animateBatterSwing(batter(),true);hit(batter(),4);controlHomeRunPresentation()");
+const pose=immediate.nodes.get('batterBat').getAttribute('x2');immediate.advance(500);assert.equal(immediate.nodes.get('batterBat').getAttribute('x2'),pose);assert.equal(ir('homeRunPresentation.elapsed'),0);ir('controlHomeRunPresentation(true)');immediate.advance(1600);assert.equal(immediate.nodes.get('homeRunBanner').hidden,false);
+console.log('IMMEDIATE PAUSE PASS: adopted swing frames and timers freeze with the ball');
