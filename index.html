@@ -389,7 +389,7 @@ function beginHomeRunPresentation(player,runs,flightMs){
    const frames=h.frames.splice(0);for(const callback of frames)callback(h.perf+h.elapsed);
    const due=h.tasks.filter(t=>t.at<=h.elapsed).sort((a,b)=>a.at-b.at);h.tasks=h.tasks.filter(t=>t.at>h.elapsed);
    for(const task of due){if(homeRunPresentation!==h)return;task.callback()}
-   if(h.arrived&&!h.frames.length&&!h.tasks.length){homeRunPresentation=null;if(game.ended){$('pause').disabled=true;$('next').disabled=true}return}
+   if(h.arrived&&!h.frames.length&&!h.tasks.length){homeRunPresentation=null;$('pause').textContent=playing?'一時停止':'再開';if(game.ended){$('pause').disabled=true;$('next').disabled=true}return}
   }else h.last=now;
   requestAnimationFrame(pump);
  }
@@ -409,8 +409,8 @@ function showHomeRunArrival(){
 }
 function controlHomeRunPresentation(step=false){
  const h=homeRunPresentation;if(!h||h.game!==game)return false;
- if(step){clearTimeout(timer);timer=null;if(!h.running){h.running=true;h.last=performance.now();if(h.pausedAt!==null){animationHoldUntil+=Date.now()-h.pausedAt;h.pausedAt=null}resumeScoreFlash()}playing=false;$('pause').textContent='再開';return true}
- playing=!playing;h.running=playing;$('pause').textContent=playing?'一時停止':'再開';
+ if(step){clearTimeout(timer);timer=null;if(!h.running){h.running=true;h.last=performance.now();if(h.pausedAt!==null){animationHoldUntil+=Date.now()-h.pausedAt;h.pausedAt=null}resumeScoreFlash()}playing=false;$('pause').textContent=h.running?'一時停止':'再開';return true}
+ playing=!h.running;h.running=playing;$('pause').textContent=playing?'一時停止':'再開';
  if(playing){h.last=performance.now();if(h.pausedAt!==null){animationHoldUntil+=Date.now()-h.pausedAt;h.pausedAt=null}resumeScoreFlash();schedule()}
  else {h.pausedAt=Date.now();clearTimeout(timer);timer=null;pauseScoreFlash()}
  return true;
@@ -2549,7 +2549,7 @@ f.append(c,label)})}}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function renderRoster(side){if(!game)return;activeRoster=side;let t=game.teams[side];$('roster').innerHTML=`<div class="muted">${esc(t.name)}（${['新興・小規模','弱小','中堅','地方強豪','全国強豪'][t.level]}｜戦力 ${esc(t.profile?.rank||'?')}｜${esc(t.profile?.previousSummer||'実績未設定')}）</div><table><tr><th>番号・名前</th><th>学年</th><th>位置</th><th>打率</th><th>安打</th></tr>${t.players.map((p,i)=>`<tr class="player" data-i="${i}"><td>${p.number} ${esc(p.name)}</td><td>${p.grade}</td><td>${p.pos}</td><td>${p.ab?(p.h/p.ab).toFixed(3):'.---'}</td><td>${p.h}</td></tr>`).join('')}</table>`;document.querySelectorAll('.player').forEach(el=>el.addEventListener('click',()=>detail(t.players[+el.dataset.i])))}
 function detail(p){$('detailTitle').textContent=p.name;$('detailBody').innerHTML=`<p>${p.grade}年 / ${p.pos} / ${p.throws}${p.bats} / ${p.height}cm ${p.weight}kg</p><p>背番号 ${p.number}｜出身：${esc(p.middle)}｜${p.club}</p><p>球歴：${esc(p.bio)}</p><p>${[['ミート',p.contact],['長打',p.power],['選球眼',p.eye],['走力',p.speed],['守備',p.field],['肩',p.arm],['制球',p.control],['球威',p.stuff],['スタミナ',p.stamina]].map(([n,v])=>`<span class="pill">${n} ${v}</span>`).join('')}</p><p>当日成績：${p.ab}打数 ${p.h}安打 ${p.hr}本塁打 ${p.rbi}打点 ${p.bb}四球</p><p>投球：${p.pitches}球 ${p.outsPitched}アウト ${p.kP}奪三振</p><h3>今日の打席結果</h3><div class="plate-results">${plateResultsHTML(p)}</div>`;$('detail').showModal()}
-function finish(reason){if(game.ended)return;const endedTeam=current().bat;if(endedTeam.runs[game.inning-1]===null||endedTeam.runs[game.inning-1]===undefined)endedTeam.runs[game.inning-1]=0;game.ended=true;if(homeRunPresentation?.game===game){playing=false;clearTimeout(timer);timer=null;homeRunPresentation.running=true;$('pause').textContent='再開'}else stop();$('pause').disabled=!homeRunPresentation;$('next').disabled=!homeRunPresentation;log(`${reason}！ ${game.teams[0].name} ${total(0)} - ${total(1)} ${game.teams[1].name}`);saveGame();historyRender()}
+function finish(reason){if(game.ended)return;const endedTeam=current().bat;if(endedTeam.runs[game.inning-1]===null||endedTeam.runs[game.inning-1]===undefined)endedTeam.runs[game.inning-1]=0;game.ended=true;if(homeRunPresentation?.game===game){playing=false;clearTimeout(timer);timer=null;homeRunPresentation.running=true;$('pause').textContent='一時停止'}else stop();$('pause').disabled=!homeRunPresentation;$('next').disabled=!homeRunPresentation;log(`${reason}！ ${game.teams[0].name} ${total(0)} - ${total(1)} ${game.teams[1].name}`);saveGame();historyRender()}
 const KEY='kaku-yakyu-watch-v01-history';function getHistory(){try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch{return []}}
 function saveGame(){try{let h=getHistory();h.unshift({id:Date.now(),date:new Date().toLocaleString('ja-JP'),t:game.t,teams:game.teams.map(t=>({...t,used:undefined})),events:game.events.slice(-80),pitches:game.totalPitches});localStorage.setItem(KEY,JSON.stringify(h.slice(0,30)))}catch(e){log('保存できませんでした（ブラウザの保存領域をご確認ください）。')}}
 function historyRender(){let h=getHistory();$('history').replaceChildren();if(!h.length){$('history').textContent='保存済みの試合はありません。';return}h.forEach(g=>{let b=document.createElement('button');b.className='secondary';b.style.cssText='display:block;width:100%;text-align:left;margin-bottom:8px';b.textContent=`${g.date}｜${g.t.title}｜${g.teams[0].name} ${g.teams[0].runs.reduce((a,v)=>a+(v||0),0)} - ${g.teams[1].runs.reduce((a,v)=>a+(v||0),0)} ${g.teams[1].name}`;b.onclick=()=>showSaved(g);$('history').append(b)})}

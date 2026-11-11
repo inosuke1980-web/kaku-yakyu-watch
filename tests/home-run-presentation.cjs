@@ -16,7 +16,7 @@ for(const count of [0,1,2,3]){
 }
 const w=scenario('?debug=plays'),r=s=>vm.runInContext(s,w.c);
 r("stop();playing=true;game.inning=9;game.half=1;for(const t of game.teams)t.runs=[0,0,0,0,0,0,0,0,0];game.bases=[current().bat.players[1],current().bat.players[2],current().bat.players[3]];const old=game.bases.slice(),runs=new Map(old.map(p=>[p.id,p.r]));beginVisualScoring();hit(batter(),4);animateBaseRunners(old,runs,1,9)");
-assert.equal(r('game.ended'),true);w.advance(1500);assert.equal(w.nodes.get('homeRunBanner').hidden,false);w.advance(3000);assert.equal(r('visualScoring.pending.size'),0);assert.equal(r('visualScoring.scores[1]'),4);assert.equal(w.nodes.get('homeRunBanner').hidden,true);
+assert.equal(r('game.ended'),true);w.advance(1500);assert.equal(w.nodes.get('homeRunBanner').hidden,false);r('controlHomeRunPresentation()');const held=r('homeRunPresentation.elapsed');w.advance(800);assert.equal(r('homeRunPresentation.elapsed'),held);r('controlHomeRunPresentation(true)');w.advance(3000);assert.equal(r('visualScoring.pending.size'),0);assert.equal(r('visualScoring.scores[1]'),4);assert.equal(w.nodes.get('homeRunBanner').hidden,true);
 console.log('WALKOFF GRAND SLAM PASS: ended rules preserve ball, runners and announcement');
 const immediate=scenario('?debug=plays'),ir=s=>vm.runInContext(s,immediate.c);
 ir("stop();playing=true;game.bases=[null,null,null];beginVisualScoring();animateBatterSwing(batter(),true);hit(batter(),4);controlHomeRunPresentation()");

@@ -19,7 +19,7 @@ for(const [width,height] of [[375,667],[390,844]]){
    globalThis.hrScores=[];const realArrival=fixtureRealArrival;scoreRunnerArrived=(id,token)=>{const had=visualScoring?.pending.has(id);realArrival(id,token);if(had&&!visualScoring?.pending.has(id))hrScores.push({id,at:homeRunPresentation?.elapsed,scores:visualScoring.scores.slice()})};
   });
   assert.equal(await page.evaluate(()=>fixtureHitter.hr-fixtureHr),1);
-  await page.clock.runFor(1300);const flying=await snapshot(label+'-flight');assert.equal(flying.banner,false);assert.equal(flying.score,null);assert.equal(flying.pitch,1);
+  await page.clock.runFor(label==='grand'?1390:1300);const flying=await snapshot(label+'-flight');assert.equal(flying.banner,false);assert.equal(flying.score,null);assert.equal(flying.pitch,1);
   await page.evaluate(()=>$('pause').onclick());const paused=await snapshot(label+'-paused-flight');await page.clock.runFor(700);const still=await snapshot(label+'-still-flight');assert.equal(still.elapsed,paused.elapsed);assert.deepEqual(still.ball,paused.ball);assert.deepEqual(still.runners,paused.runners);
   await page.evaluate(()=>$('pause').onclick());await page.clock.runFor(150);const edge=await snapshot(label+'-arrival');assert.equal(edge.banner,true);assert.ok(edge.elapsed>=1400);assert.match(edge.kind,new RegExp(['ソロ','2ラン','3ラン','満塁'][count]));if(count===3)assert.equal(edge.title,'満塁ホームラン！');
   if(speed!==1)await page.evaluate(()=>{$('speed').value=$('speed').value==='2'?'4':'2';$('speed').onchange()});
@@ -30,6 +30,7 @@ for(const [width,height] of [[375,667],[390,844]]){
   const scoring=await page.evaluate(()=>hrScores);assert.equal(new Set(scoring.map(x=>x.id)).size,count+1);assert.equal(scoring.length,count+1);assert.ok(scoring.every(x=>x.at>=1400));
   if(walkoff)assert.equal(await page.locator('#next').isDisabled(),true);
   const layout=await page.evaluate(()=>({w:document.documentElement.scrollWidth,h:document.documentElement.scrollHeight,iw:innerWidth,ih:innerHeight,fieldScroll:document.querySelector('.field-card').scrollHeight>document.querySelector('.field-card').clientHeight+1}));assert.ok(layout.w<=layout.iw&&layout.h<=layout.ih+1&&!layout.fieldScroll,JSON.stringify(layout));
+  if(!walkoff){await page.evaluate(()=>$('next').onclick());await page.clock.runFor(2300);assert.equal(await page.evaluate(()=>game.totalPitches),2);assert.equal(await page.locator('#homeRunBanner').isVisible(),false)}
   console.log('HOME RUN BROWSER PASS',width,label,'unique scoring',JSON.stringify(scoring));
  }
  // New game cancels every pending HR frame, reservation and announcement.
