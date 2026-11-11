@@ -368,7 +368,7 @@ console.log('FIRST BASE COVER CHECKS PASS',JSON.stringify(firstBaseCover));
    setTimeout:(cb,delay)=>{timers.push({at:now+delay,cb});return timers.length},
    showPitchResult:()=>{},animateBatterRun:()=>{}
   };
-  vm.createContext(context);
+  vm.createContext(context);vm.runInContext('const homeRunPresentation=null;function visualPerformanceNow(){return performance.now()}function visualDateNow(){return Date.now()}function visualFrame(f){return requestAnimationFrame(f)}function visualTimeout(f,ms){return setTimeout(f,ms)}',context);
   vm.runInContext(groundSource,context);
   vm.runInContext('animateGround('+JSON.stringify(outcome)+','+JSON.stringify({defender:position,point:position==='1B'?[290,182]:[158,156],label:'grounder'})+',55,55,{pickup:650,releaseMs:345,runnerMs:1550})',context);
   const advance=target=>{
@@ -422,7 +422,7 @@ console.log('FIRST BASE COVER CHECKS PASS',JSON.stringify(firstBaseCover));
    requestAnimationFrame:fn=>frames.push(fn),
    setTimeout:(fn,delay)=>{timers.push({at:now+delay,fn});return timers.length},
    clamp:(x,lo,hi)=>Math.max(lo,Math.min(hi,x))};
-  vm.createContext(context);vm.runInContext(ground,context);
+  vm.createContext(context);vm.runInContext('const homeRunPresentation=null;function visualPerformanceNow(){return performance.now()}function visualDateNow(){return Date.now()}function visualFrame(f){return requestAnimationFrame(f)}function visualTimeout(f,ms){return setTimeout(f,ms)}',context);vm.runInContext(ground,context);
   context.showFirstCoverSprite(first,label,token,600,defender,1200,1800);
   const progress=(until)=>{
    while(now<until){now=Math.min(now+20,until);

@@ -12,7 +12,7 @@ function run(outcome){
  performance:{now:()=>now},clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),runnerFirstMs:()=>1550,throwFlightMs:()=>340,fielderReleaseMs:()=>225,
  current:()=>({def:{players:Array.from({length:20},()=>({field:55,arm:55}))}}),
  $:id=>id==='fielders'?field:id==='ball'?ball:null,requestAnimationFrame:f=>frames.push(f),setTimeout:(f,ms)=>{timers.push({at:now+ms,f});return timers.length},showPitchResult:s=>calls.push({at:now,s}),animateBatterRun:()=>{}};
- vm.createContext(context);vm.runInContext(source,context);
+ vm.createContext(context);vm.runInContext('const homeRunPresentation=null;function visualPerformanceNow(){return performance.now()}function visualDateNow(){return Date.now()}function visualFrame(f){return requestAnimationFrame(f)}function visualTimeout(f,ms){return setTimeout(f,ms)}',context);vm.runInContext(source,context);
  vm.runInContext(`animateGround('${outcome}',{defender:'SS',point:[158,156]},55,55,{pickup:650,releaseMs:345,runnerMs:2000})`,context);
  function advance(t){while(now<t){now=Math.min(t,now+5);const due=timers.filter(x=>x.at<=now);timers=timers.filter(x=>x.at>now);due.forEach(x=>x.f());const f=frames;frames=[];f.forEach(x=>x(now));}}
  const receive=650+345+340,call=Math.max(receive+70,1445),label=outcome==='double'?'二塁アウト！':'二塁封殺！';
