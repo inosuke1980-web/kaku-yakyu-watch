@@ -20,6 +20,14 @@ const positions=['1B','2B','SS','3B'];
    assert.ok(pair.B.players.SS[1]<pair.B.players['2B'][1]);for(let i=0;i<4;i++)for(let j=i+1;j<4;j++)assert.ok(Math.hypot(...pair.B.players[positions[i]].map((x,k)=>x-pair.B.players[positions[j]][k]))>=24);
    report.push({width,hand,bases,...pair});
   }
+  for(const situation of ['bunt','in','deep']){
+   const pair={};
+   for(const variant of ['A','B']){
+    const p=pages[variant];pair[variant]=await p.evaluate(situation=>{stop();game.half=0;game.inning=situation==='bunt'?1:8;game.outs=situation==='bunt'?0:1;game.ended=false;for(const t of game.teams)t.runs=Array.from({length:game.inning},()=>0);if(situation==='deep')game.teams[1].runs[0]=5;game.bases=situation==='bunt'?[current().bat.players[1],null,null]:situation==='in'?[null,null,current().bat.players[1]]:[null,null,null];batter().bats='右打';applyDefensiveAlignment(false);render();return {name:defensiveAlignment().name,rule:defensiveAlignment().positions,players:Object.fromEntries(['1B','2B','SS','3B'].map(n=>{const e=document.querySelector('circle[data-position="'+n+'"]');return [n,[+e.getAttribute('cx'),+e.getAttribute('cy')]]}))}},situation);
+    if(out)await p.screenshot({path:path.join(out,`infield-${variant}-${width}-${situation}.png`)});
+   }
+   assert.deepEqual(pair.A.rule,pair.B.rule);assert.equal(pair.A.name,pair.B.name);report.push({width,situation,...pair});
+  }
   await pages.A.close();const p=pages.B,errors=[];p.on('pageerror',e=>errors.push(e.message));
   const cases=[{name:'1B',d:.9},{name:'2B-gap',d:.6},{name:'SS-gap',d:.35},{name:'3B',d:.1},{name:'force',d:.35,q:.99,slow:true},{name:'double',d:.35,q:.01,slow:true},{name:'pickoff-1',special:'pickoff',base:0},{name:'pickoff-2',special:'pickoff',base:1},{name:'steal-safe',special:'steal',safe:true},{name:'steal-out',special:'steal',safe:false},{name:'infield-fly',special:'fly'}];
   for(const c of cases){
@@ -27,7 +35,7 @@ const positions=['1B','2B','SS','3B'];
     stop();game.ended=false;game.inning=1;game.half=0;game.outs=c.slow?0:1;game.balls=1;game.strikes=0;game.totalPitches=0;for(const t of game.teams)t.runs=[0];batter().bats=c.name==='SS-gap'?'左打':'右打';batter().speed=c.slow?5:55;for(const f of current().def.players){f.field=c.slow?99:55;f.speed=c.slow?99:55;f.arm=c.slow?99:55}
     game.bases=c.slow?[current().bat.players[1],null,null]:[null,null,null];if(c.special==='pickoff'){game.bases[c.base]=current().bat.players[1]}if(c.special==='steal')game.bases[0]=current().bat.players[1];if(game.bases[0])game.bases[0].speed=c.slow?5:55;
     applyDefensiveAlignment(false);render();
-    globalThis.infieldFrames=[];globalThis.collectInfield=true;const started=performance.now();function readFrame(now){const xy=pos=>{const e=document.querySelector('circle[data-position="'+pos+'"]');return [+e.getAttribute('cx'),+e.getAttribute('cy')]};infieldFrames.push({t:now-started,players:Object.fromEntries(['1B','2B','SS','3B'].map(n=>[n,xy(n)])),ball:[+$('ball').getAttribute('cx'),+$('ball').getAttribute('cy')],cover:[...document.querySelectorAll('#firstBaseCoverForeground circle')].map(e=>[+e.getAttribute('cx'),+e.getAttribute('cy')])});if(collectInfield)requestAnimationFrame(readFrame)}
+    globalThis.infieldFrames=[];globalThis.collectInfield=true;globalThis.infieldCaptureId=(globalThis.infieldCaptureId||0)+1;const captureId=infieldCaptureId;const started=performance.now();globalThis.infieldStarted=started;function readFrame(now){if(!collectInfield||captureId!==infieldCaptureId)return;const xy=pos=>{const e=document.querySelector('circle[data-position="'+pos+'"]');return [+e.getAttribute('cx'),+e.getAttribute('cy')]};infieldFrames.push({t:now-started,players:Object.fromEntries(['1B','2B','SS','3B'].map(n=>[n,xy(n)])),ball:[+$('ball').getAttribute('cx'),+$('ball').getAttribute('cy')],cover:[...document.querySelectorAll('#firstBaseCoverForeground circle')].map(e=>[+e.getAttribute('cx'),+e.getAttribute('cy')])});if(collectInfield)requestAnimationFrame(readFrame)}
     requestAnimationFrame(readFrame);const origins=Object.fromEntries(['1B','2B','SS','3B'].map(n=>{const e=document.querySelector('circle[data-position="'+n+'"]');return [n,[+e.getAttribute('cx'),+e.getAttribute('cy')]]}));
     if(c.special==='pickoff')animatePickoffReturn(c.base,animationToken);
     else if(c.special==='steal'){const r=game.bases[0];if(c.safe)game.bases=[null,r,null];render();animateStealPlay({id:r.id,speed:55,safe:c.safe})}
@@ -37,10 +45,10 @@ const positions=['1B','2B','SS','3B'];
    },c);
    if(c.slow)assert.equal(initial.force?.outcome,c.name);
    for(const target of [0,32,160,400,650,1000,1500,2300,3200]){
-    const elapsed=await p.evaluate(()=>infieldFrames.at(-1)?.t||0);await p.clock.runFor(Math.max(0,target-elapsed));
+    const elapsed=await p.evaluate(()=>performance.now()-infieldStarted);await p.clock.runFor(Math.max(0,target-elapsed));
     if(out)await p.screenshot({path:path.join(out,`infield-play-${width}-${c.name}-${target}.png`)});
    }
-   const frames=await p.evaluate(()=>{collectInfield=false;return infieldFrames});assert.ok(frames.length>30);
+   const frames=await p.evaluate(()=>{collectInfield=false;infieldCaptureId++;return infieldFrames});assert.ok(frames.length>30);
    for(let i=1;i<frames.length;i++){const a=frames[i-1],z=frames[i];if(z.t-a.t<=25)for(const pos of positions){const jump=Math.hypot(...z.players[pos].map((x,k)=>x-a.players[pos][k]));assert.ok(jump<18,`${width} ${c.name} ${pos}: jump ${jump} at ${z.t}`)}}
    for(const pos of positions)assert.ok(Math.hypot(...frames.at(-1).players[pos].map((x,i)=>x-initial.origins[pos][i]))<1,`${c.name} ${pos} returns to displayed origin`);
    if(out)fs.writeFileSync(path.join(out,`infield-frames-${width}-${c.name}.json`),JSON.stringify({initial,frames}));console.log('INFIELD SEQUENCE PASS',width,c.name,frames.length);

@@ -15,7 +15,7 @@ function engine(file){
  return {run:s=>vm.runInContext(s,c),draws:()=>draws};
 }
 const a=engine(baseline),b=engine(path.join(__dirname,'../index.html'));
-const state=`JSON.stringify({inning:game.inning,half:game.half,outs:game.outs,balls:game.balls,strikes:game.strikes,pitch:game.pitch,totalPitches:game.totalPitches,bases:game.bases.map(p=>p?.id??null),ended:game.ended,teams:game.teams.map(t=>({bat:t.bat,pitcher:t.pitcher,runs:t.runs,hits:t.hits,errors:t.errors,players:t.players}))})`;
+const state=`JSON.stringify({inning:game.inning,half:game.half,outs:game.outs,balls:game.balls,strikes:game.strikes,pitch:game.pitch,totalPitches:game.totalPitches,bases:game.bases.map(p=>p?.id??null),ended:game.ended,pitchText:document.getElementById('pitchResult').textContent,teams:game.teams.map(t=>({bat:t.bat,pitcher:t.pitcher,runs:t.runs,hits:t.hits,errors:t.errors,players:t.players,plateResults:t.players.map(p=>todayPlateResults(p))}))})`;
 let total=0,hrs=0;
 for(let n=0;n<20;n++){
  a.run('init()');b.run('init()');assert.equal(a.run(state),b.run(state),'initial state');
