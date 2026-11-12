@@ -341,7 +341,7 @@ const firstBaseCover=vm.runInContext(`(()=>{
 assert.equal(firstBaseCover.length,16);
 assert.ok(firstBaseCover.every(x=>x.cover==='1B'&&x.needed),'first baseman must cover first on ground balls');
 assert.ok(firstBaseCover.filter(x=>x.position==='1B').every(x=>x.backup==='2B'),'second baseman should be designated backup when first baseman fields ball');
-assert.match(html,/const base=\{P:\[200,203\],\.\.\.parkOutfieldPositions\(\),\.\.\.defensiveAlignment\(\)\.positions\}/,'first baseman must reset to active alignment');
+assert.match(html,/const base=\{P:\[200,203\],\.\.\.parkOutfieldPositions\(\),\.\.\.displayDefensiveAlignment\(\)\.positions\}/,'first baseman must reset to active alignment');
 console.log('FIRST BASE COVER CHECKS PASS',JSON.stringify(firstBaseCover));
 
 {
@@ -938,8 +938,8 @@ const cornerDepthAudit=vm.runInContext(`(()=>{
 assert.deepEqual(Array.from(cornerDepthAudit.first),[282,149],'first baseman must play deeper than the bag');
 assert.deepEqual(Array.from(cornerDepthAudit.third),[118,149],'third baseman must play deeper than the bag');
 assert.ok(cornerDepthAudit.nearFirst.reachable&&cornerDepthAudit.nearThird.reachable,'corner fielders should cover balls near their normal depth');
-assert.match(html,/\.\.\.\['1B','2B','SS','3B'\]\.map\(name=>\[name,\.\.\.defensiveAlignment\(\)\.positions\[name\]\]\)/,'initial infield rendering must use active alignment');
-assert.match(html,/const base=\{P:\[200,203\],\.\.\.parkOutfieldPositions\(\),\.\.\.defensiveAlignment\(\)\.positions\}/,'fielder reset must use active alignment');
+assert.match(html,/\.\.\.\['1B','2B','SS','3B'\]\.map\(name=>\[name,\.\.\.displayDefensiveAlignment\(\)\.positions\[name\]\]\)/,'initial infield rendering must use active alignment');
+assert.match(html,/const base=\{P:\[200,203\],\.\.\.parkOutfieldPositions\(\),\.\.\.displayDefensiveAlignment\(\)\.positions\}/,'fielder reset must use active alignment');
 console.log('CORNER INFIELDERS STANDARD DEPTH PASS');
 
 const situationalInfieldAudit=vm.runInContext(`(()=>{
